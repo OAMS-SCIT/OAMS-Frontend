@@ -1,129 +1,339 @@
-﻿'use client';
+'use client';
 
-import { useState } from 'react';
-import { X, Info } from 'lucide-react';
-import { User, UserRole } from '@/types';
-import { mockDesignations } from '@/lib/mock-data';
+import { useEffect, useRef, useState } from 'react';
+import { X, Info, CheckCircle, Copy, Check, Search, ChevronDown } from 'lucide-react';
+import { UserRole } from '@/types';
+import { ApiError, createUser, getDesignations } from '@/lib/api';
+import type { DesignationListItem } from '@/types';
 
 interface Props {
   onClose: () => void;
-  onSave: (user: User) => void;
+  onSave: () => void;
+}
+
+interface FormState {
+  firstName: string;
+  lastName: string;
+  email: string;
+  contactNumber: string;
+  designationId: string;
+  role: UserRole;
+  status: 'Active' | 'Inactive';
 }
 
 export function CreateUserDrawer({ onClose, onSave }: Props) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     firstName: '', lastName: '', email: '', contactNumber: '',
-    designationId: '', role: 'Employee' as UserRole, status: 'Active' as 'Active' | 'Inactive',
+    designationId: '', role: 'Employee', status: 'Active',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
-  const set = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })); };
+  const [designations, setDesignations] = useState<DesignationListItem[]>([]);
+  const [designationsLoading, setDesignationsLoading] = useState(true);
+  const [designationsError, setDesignationsError] = useState<string | null>(null);
+
+  // Searchable designation dropdown state
+  const [designationSearch, setDesignationSearch] = useState('');
+  const [designationOpen, setDesignationOpen] = useState(false);
+  const designationRef = useRef<HTMLDivElement>(null);
+
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    getDesignations()
+      .then(data => setDesignations(data))
+      .catch(err => setDesignationsError(err instanceof Error ? err.message : 'Failed to load designations.'))
+      .finally(() => setDesignationsLoading(false));
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (designationRef.current && !designationRef.current.contains(e.target as Node)) {
+        setDesignationOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedDesignation = designations.find(d => d.id === form.designationId) ?? null;
+
+  const filteredDesignations = designations.filter(d =>
+    !designationSearch || d.name.toLowerCase().includes(designationSearch.toLowerCase())
+  );
+
+  const selectDesignation = (d: DesignationListItem) => {
+    setForm(f => ({ ...f, designationId: d.id }));
+    setErrors(e => ({ ...e, designationId: '' }));
+    setDesignationSearch('');
+    setDesignationOpen(false);
+  };
+
+  const clearDesignation = () => {
+    setForm(f => ({ ...f, designationId: '' }));
+    setDesignationSearch('');
+  };
+
+  const set = (k: keyof FormState, v: string) => {
+    setForm(f => ({ ...f, [k]: v }));
+    setErrors(e => ({ ...e, [k]: '' }));
+  };
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.firstName) e.firstName = 'First name is required';
-    if (!form.lastName) e.lastName = 'Last name is required';
+    if (!form.firstName.trim()) e.firstName = 'First name is required';
+    if (!form.lastName.trim()) e.lastName = 'Last name is required';
     if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Valid email is required';
     if (!form.designationId) e.designationId = 'Designation is required';
     return e;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const e = validate();
     if (Object.keys(e).length > 0) { setErrors(e); return; }
-    const designation = mockDesignations.find(d => d.id === form.designationId);
-    const initials = (form.firstName[0] + form.lastName[0]).toUpperCase();
-    const colors = ['#1E3A8A', '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B'];
-    const newUser: User = {
-      id: `usr${Date.now()}`,
-      firstName: form.firstName, lastName: form.lastName,
-      email: form.email, contactNumber: form.contactNumber,
-      designationId: form.designationId, designationTitle: designation?.title || '',
-      role: form.role, status: form.status,
-      avatarInitials: initials,
-      avatarColor: colors[form.firstName.charCodeAt(0) % colors.length],
-    };
-    onSave(newUser);
+
+    setSubmitting(true);
+    try {
+      const result = await createUser({
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim(),
+        contactNumber: form.contactNumber.trim() || undefined,
+        designationId: form.designationId,
+        role: form.role,
+        status: form.status,
+      });
+      setTempPassword(result.tempPassword);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 409) {
+          setErrors(prev => ({ ...prev, email: 'This email is already in use' }));
+        } else if (err.status === 404) {
+          setErrors(prev => ({ ...prev, designationId: 'Selected designation no longer exists' }));
+        } else {
+          setErrors(prev => ({ ...prev, _form: err.message }));
+        }
+      } else {
+        setErrors(prev => ({ ...prev, _form: 'Something went wrong. Please try again.' }));
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!tempPassword) return;
+    await navigator.clipboard.writeText(tempPassword);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDone = () => {
+    onSave();
+    onClose();
   };
 
   return (
     <>
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(15,36,96,0.45)' }} onClick={onClose} />
+      <div className="fixed inset-0 z-40" style={{ background: 'rgba(15,36,96,0.45)' }} onClick={tempPassword ? undefined : onClose} />
       <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col" style={{ width: 480, background: '#fff', boxShadow: '-8px 0 32px rgba(0,0,0,0.14)' }}>
+
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #E2E8F0' }}>
-          <h2 className="font-bold" style={{ fontSize: 18, color: '#1E293B' }}>Create New User</h2>
-          <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 transition-colors">
-            <X className="w-5 h-5" style={{ color: '#64748B' }} />
-          </button>
+          <h2 className="font-bold" style={{ fontSize: 18, color: '#1E293B' }}>
+            {tempPassword ? 'User Created' : 'Create New User'}
+          </h2>
+          {!tempPassword && (
+            <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 transition-colors">
+              <X className="w-5 h-5" style={{ color: '#64748B' }} />
+            </button>
+          )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="First Name" required error={errors.firstName}>
-              <input type="text" value={form.firstName} onChange={e => set('firstName', e.target.value)} className="fi" placeholder="First name" />
-            </FormField>
-            <FormField label="Last Name" required error={errors.lastName}>
-              <input type="text" value={form.lastName} onChange={e => set('lastName', e.target.value)} className="fi" placeholder="Last name" />
-            </FormField>
-          </div>
-          <FormField label="Email Address" required error={errors.email}>
-            <input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="fi" placeholder="email@company.com" />
-          </FormField>
-          <FormField label="Contact Number">
-            <input type="text" value={form.contactNumber} onChange={e => set('contactNumber', e.target.value)} className="fi" placeholder="+1 (555) 000-0000" />
-          </FormField>
-          <FormField label="Designation" required error={errors.designationId}>
-            <select value={form.designationId} onChange={e => set('designationId', e.target.value)} className="fi">
-              <option value="">Select designation...</option>
-              {mockDesignations.filter(d => d.status === 'Active').map(d => (
-                <option key={d.id} value={d.id}>{d.title}</option>
-              ))}
-            </select>
-          </FormField>
+        {tempPassword ? (
+          /* ── Success state ── */
+          <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
+            <div className="flex items-center justify-center rounded-full" style={{ width: 56, height: 56, background: '#ECFDF5' }}>
+              <CheckCircle className="w-8 h-8" style={{ color: '#22C55E' }} />
+            </div>
+            <div>
+              <p className="font-semibold mb-1" style={{ fontSize: 16, color: '#1E293B' }}>
+                {form.firstName} {form.lastName} has been created
+              </p>
+              <p style={{ fontSize: 13, color: '#64748B' }}>
+                Share the temporary password below with the user. It will not be shown again.
+              </p>
+            </div>
 
-          {/* Role */}
-          <div>
-            <label className="block mb-2" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>Role <span style={{ color: '#EF4444' }}>*</span></label>
-            <div className="flex gap-2">
-              {(['Admin', 'Employee'] as UserRole[]).map(r => (
-                <button key={r} onClick={() => setForm(f => ({ ...f, role: r }))}
-                  className="flex-1 rounded-lg py-2.5 border font-medium transition-all"
-                  style={{
-                    fontSize: 13,
-                    borderColor: form.role === r ? '#1E3A8A' : '#E2E8F0',
-                    background: form.role === r ? '#EFF6FF' : '#fff',
-                    color: form.role === r ? '#1E3A8A' : '#64748B',
-                  }}>
-                  {r}
+            <div className="w-full rounded-xl p-4" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+              <p style={{ fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
+                Temporary Password
+              </p>
+              <div className="flex items-center gap-3">
+                <code className="flex-1 rounded-lg px-3 py-2 font-mono font-semibold"
+                  style={{ fontSize: 14, color: '#1E3A8A', background: '#EFF6FF', border: '1px solid #BFDBFE', letterSpacing: '0.5px' }}>
+                  {tempPassword}
+                </code>
+                <button onClick={handleCopy}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 font-medium transition-colors"
+                  style={{ fontSize: 13, background: copied ? '#ECFDF5' : '#F1F5F9', color: copied ? '#059669' : '#475569', border: '1px solid', borderColor: copied ? '#A7F3D0' : '#E2E8F0' }}>
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? 'Copied' : 'Copy'}
                 </button>
-              ))}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 w-full rounded-xl p-3" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+              <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#D97706' }} />
+              <p style={{ fontSize: 12, color: '#92400E' }}>
+                This password is shown <strong>only once</strong>. Copy it before closing this panel.
+              </p>
             </div>
           </div>
+        ) : (
+          /* ── Form ── */
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            {errors._form && (
+              <div className="rounded-lg p-3" style={{ background: '#FEF2F2', border: '1px solid #FECACA', fontSize: 13, color: '#DC2626' }}>
+                {errors._form}
+              </div>
+            )}
 
-          {/* Info box */}
-          <div className="flex items-start gap-3 rounded-xl p-3" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-            <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#2563EB' }} />
-            <p style={{ fontSize: 12, color: '#1D4ED8' }}>Only Admin role users will have login access. Employee accounts are for asset tracking only.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="First Name" required error={errors.firstName}>
+                <input type="text" value={form.firstName} onChange={e => set('firstName', e.target.value)} className="fi" placeholder="First name" />
+              </FormField>
+              <FormField label="Last Name" required error={errors.lastName}>
+                <input type="text" value={form.lastName} onChange={e => set('lastName', e.target.value)} className="fi" placeholder="Last name" />
+              </FormField>
+            </div>
+
+            <FormField label="Email Address" required error={errors.email}>
+              <input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="fi" placeholder="email@company.com" />
+            </FormField>
+
+            <FormField label="Contact Number">
+              <input type="text" value={form.contactNumber} onChange={e => set('contactNumber', e.target.value)} className="fi" placeholder="+94 77 000 0000" />
+            </FormField>
+
+            {/* Searchable Designation Dropdown */}
+            <FormField label="Designation" required error={errors.designationId}>
+              {designationsLoading ? (
+                <div className="fi" style={{ color: '#94A3B8' }}>Loading designations…</div>
+              ) : designationsError ? (
+                <div className="fi" style={{ color: '#EF4444', fontSize: 12 }}>{designationsError}</div>
+              ) : (
+                <div ref={designationRef} className="relative">
+                  {selectedDesignation ? (
+                    /* Selected state */
+                    <div className="flex items-center justify-between rounded-lg border px-3 py-2.5"
+                      style={{ borderColor: errors.designationId ? '#EF4444' : '#3B82F6', background: '#EFF6FF' }}>
+                      <span className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{selectedDesignation.name}</span>
+                      <button onClick={clearDesignation} className="text-blue-400 hover:text-blue-600 transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    /* Search input */
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#94A3B8' }} />
+                      <input
+                        type="text"
+                        value={designationSearch}
+                        onChange={e => { setDesignationSearch(e.target.value); setDesignationOpen(true); }}
+                        onFocus={() => setDesignationOpen(true)}
+                        placeholder="Search designation..."
+                        className="w-full rounded-lg border pl-9 pr-8 py-2.5 focus:outline-none"
+                        style={{ borderColor: errors.designationId ? '#EF4444' : '#CBD5E1', fontSize: 13, color: '#1E293B' }}
+                      />
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#94A3B8' }} />
+                    </div>
+                  )}
+
+                  {/* Dropdown list */}
+                  {designationOpen && !selectedDesignation && (
+                    <div className="absolute w-full z-10 rounded-xl shadow-lg mt-1 overflow-hidden"
+                      style={{ background: '#fff', border: '1px solid #E2E8F0', maxHeight: 200, overflowY: 'auto' }}>
+                      {filteredDesignations.length === 0 ? (
+                        <div className="px-4 py-3" style={{ fontSize: 13, color: '#94A3B8' }}>No designations found</div>
+                      ) : (
+                        filteredDesignations.map(d => (
+                          <button key={d.id}
+                            className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors"
+                            style={{ fontSize: 13, color: '#1E293B' }}
+                            onMouseDown={e => { e.preventDefault(); selectDesignation(d); }}>
+                            {d.name}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </FormField>
+
+            {/* Role */}
+            <div>
+              <label className="block mb-2" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
+                Role <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <div className="flex gap-2">
+                {(['Admin', 'Employee'] as UserRole[]).map(r => (
+                  <button key={r} onClick={() => setForm(f => ({ ...f, role: r }))}
+                    className="flex-1 rounded-lg py-2.5 border font-medium transition-all"
+                    style={{
+                      fontSize: 13,
+                      borderColor: form.role === r ? '#1E3A8A' : '#E2E8F0',
+                      background: form.role === r ? '#EFF6FF' : '#fff',
+                      color: form.role === r ? '#1E3A8A' : '#64748B',
+                    }}>
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-xl p-3" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+              <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#2563EB' }} />
+              <p style={{ fontSize: 12, color: '#1D4ED8' }}>Only Admin role users will have login access. Employee accounts are for asset tracking only.</p>
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block mb-2" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>Status</label>
+              <button
+                onClick={() => setForm(f => ({ ...f, status: f.status === 'Active' ? 'Inactive' : 'Active' }))}
+                className="flex items-center gap-2 rounded-full px-4 py-2"
+                style={{ background: form.status === 'Active' ? '#ECFDF5' : '#F8FAFC', border: '1px solid', borderColor: form.status === 'Active' ? '#A7F3D0' : '#E2E8F0' }}>
+                <div className="rounded-full" style={{ width: 10, height: 10, background: form.status === 'Active' ? '#22C55E' : '#94A3B8' }} />
+                <span style={{ fontSize: 13, fontWeight: 500, color: form.status === 'Active' ? '#059669' : '#64748B' }}>{form.status}</span>
+              </button>
+            </div>
           </div>
+        )}
 
-          {/* Status toggle */}
-          <div>
-            <label className="block mb-2" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>Status</label>
-            <button
-              onClick={() => setForm(f => ({ ...f, status: f.status === 'Active' ? 'Inactive' : 'Active' }))}
-              className="flex items-center gap-2 rounded-full px-4 py-2"
-              style={{ background: form.status === 'Active' ? '#ECFDF5' : '#F8FAFC', border: '1px solid', borderColor: form.status === 'Active' ? '#A7F3D0' : '#E2E8F0' }}>
-              <div className="rounded-full" style={{ width: 10, height: 10, background: form.status === 'Active' ? '#22C55E' : '#94A3B8' }} />
-              <span style={{ fontSize: 13, fontWeight: 500, color: form.status === 'Active' ? '#059669' : '#64748B' }}>{form.status}</span>
-            </button>
-          </div>
-        </div>
-
+        {/* Footer */}
         <div className="flex items-center gap-3 px-6 py-4 justify-end" style={{ borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-          <button onClick={onClose} className="rounded-lg border px-5 py-2.5 font-medium hover:bg-gray-50 transition-colors"
-            style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>Cancel</button>
-          <button onClick={handleSave} className="rounded-lg px-5 py-2.5 font-semibold text-white hover:opacity-90 transition-colors"
-            style={{ fontSize: 14, background: '#1E3A8A' }}>Create User</button>
+          {tempPassword ? (
+            <button onClick={handleDone}
+              className="rounded-lg px-5 py-2.5 font-semibold text-white hover:opacity-90 transition-colors"
+              style={{ fontSize: 14, background: '#1E3A8A' }}>
+              Done
+            </button>
+          ) : (
+            <>
+              <button onClick={onClose} className="rounded-lg border px-5 py-2.5 font-medium hover:bg-gray-50 transition-colors"
+                style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>Cancel</button>
+              <button onClick={handleSave} disabled={submitting}
+                className="rounded-lg px-5 py-2.5 font-semibold text-white hover:opacity-90 transition-colors disabled:opacity-60"
+                style={{ fontSize: 14, background: '#1E3A8A' }}>
+                {submitting ? 'Creating…' : 'Create User'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
