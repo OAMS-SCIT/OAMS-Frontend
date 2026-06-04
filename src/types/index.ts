@@ -109,3 +109,24 @@ export interface Employee {
 }
 
 export type AppRole = 'admin' | 'employee';
+
+export type CategoryStatusValue = 'Active' | 'Inactive';
+
+// Shape returned by the backend GET /api/categories list endpoint (OAMS-69).
+// Distinct from the mock `Category` type used by the not-yet-wired pages.
+export interface CategoryListItem {
+  id: string;
+  name: string;
+  description: string;
+  status: CategoryStatusValue;
+  attributeCount: number;
+  assetCount: number;
+  createdAt: string;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
