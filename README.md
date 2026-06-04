@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OAMS Frontend
 
-## Getting Started
+Office Asset Management System — Next.js frontend migrated from the Figma Make export.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Next.js 16** (App Router)
+- **React 19**
+- **TypeScript**
+- **Tailwind CSS v4**
+- **shadcn/ui** + Radix primitives
+- **Recharts** for dashboard analytics
+- **Lucide React** icons
+
+## Architecture
+
+```
+src/
+├── app/                    # Next.js App Router (routes only)
+│   ├── login/
+│   ├── admin/              # Admin portal routes
+│   └── employee/           # Employee portal routes
+├── components/
+│   ├── ui/                 # Reusable shadcn UI primitives
+│   ├── layout/             # App shell (sidebar + header)
+│   ├── overlays/           # Modals and drawers
+│   └── shared/             # Shared utilities (e.g. image fallback)
+├── features/               # Feature modules (domain UI)
+│   ├── auth/
+│   ├── dashboard/
+│   ├── assets/
+│   ├── assignments/
+│   ├── users/
+│   ├── categories/
+│   ├── employees/
+│   └── profile/
+├── lib/                    # Mock data and helpers
+├── providers/              # React context (app state)
+└── types/                  # Shared TypeScript types
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Routing** lives in `app/`; **UI and business presentation** live in `features/`; **shared primitives** in `components/`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+State is managed client-side via `AppProvider` with mock data (ready to swap for API calls later).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Getting started
 
-## Learn More
+```bash
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open [http://localhost:3000](http://localhost:3000) — you'll land on the login page.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Use any email/password to sign in. Choose **Admin** or **Preview Employee View**.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+| Command        | Description              |
+|----------------|--------------------------|
+| `npm run dev`  | Start development server |
+| `npm run build`| Production build         |
+| `npm run start`| Start production server  |
+| `npm run lint` | Run ESLint               |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Portals
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Role     | Base path   | Key screens                                      |
+|----------|-------------|--------------------------------------------------|
+| Admin    | `/admin/*`  | Dashboard, Inventory, Assignments, Users, Categories |
+| Employee | `/employee/*` | My Assets, History, Profile                    |
+
+## Notes
+
+- Frontend-only: no backend API yet; all data comes from `src/lib/mock-data.ts`.
+- The **Preview Mode Switcher** in the sidebar lets you toggle between admin and employee views (from the Figma prototype).
