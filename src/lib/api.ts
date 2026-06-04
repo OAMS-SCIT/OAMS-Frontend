@@ -1,15 +1,32 @@
 import type {
+  AuthUser,
   CategoryListItem,
   CategoryStatusValue,
+  LoginResponse,
   PaginatedResult,
 } from '@/types';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
-// Where the JWT lives for now (parked auth). A real login flow will own this
-// key; until then a valid admin token can be placed here manually.
-const TOKEN_STORAGE_KEY = 'oams_token';
+// localStorage key that holds the admin JWT. Owned by the auth provider
+// (auth-provider.tsx); read here to authenticate every API request.
+export const TOKEN_STORAGE_KEY = 'oams_token';
+
+export function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TOKEN_STORAGE_KEY);
+}
+
+export function setToken(token: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+}
+
+export function clearToken(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
 
 export class ApiError extends Error {
   status: number;
@@ -38,10 +55,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     }
   }
 
-  const token =
-    typeof window !== 'undefined'
-      ? localStorage.getItem(TOKEN_STORAGE_KEY)
-      : null;
+  const token = getToken();
 
   const response = await fetch(url.toString(), {
     ...rest,
@@ -54,6 +68,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   });
 
   if (!response.ok) {
+    // A 401 on an authenticated request means the token is missing/expired —
+    // drop it so the route guard sends the user back to /login.
+    if (response.status === 401 && token) {
+      clearToken();
+    }
     let message = `Request failed (${response.status})`;
     try {
       const errorBody = await response.json();
@@ -72,6 +91,28 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     return undefined as T;
   }
   return response.json() as Promise<T>;
+}
+
+// --- Auth (OAMS-15) ------------------------------------------------------
+
+export function login(email: string, password: string): Promise<LoginResponse> {
+  return request<LoginResponse>('/auth/login', {
+    method: 'POST',
+    body: { email, password },
+  });
+}
+
+export function getProfile(): Promise<AuthUser> {
+  return request<AuthUser>('/auth/profile');
+}
+
+export async function logout(): Promise<void> {
+  // Best-effort server-side hook; the real sign-out is clearing the token.
+  try {
+    await request('/auth/logout', { method: 'POST' });
+  } catch {
+    // Ignore — the token is cleared by the caller regardless.
+  }
 }
 
 export interface GetCategoriesParams {

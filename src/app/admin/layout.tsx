@@ -1,25 +1,21 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/app-layout';
-import { useApp } from '@/providers/app-provider';
+import { RequireAuth } from '@/components/auth/require-auth';
+import { useAuth } from '@/providers/auth-provider';
 
 export default function AdminPortalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const { setRole, logout } = useApp();
-
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
-  };
+  const { logout } = useAuth();
 
   return (
-    <AppLayout role="admin" onRoleSwitch={setRole} onLogout={handleLogout}>
-      {children}
-    </AppLayout>
+    <RequireAuth>
+      <AppLayout role="admin" onLogout={logout}>
+        {children}
+      </AppLayout>
+    </RequireAuth>
   );
 }

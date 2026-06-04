@@ -12,7 +12,7 @@ import { currentAdminUser, currentEmployeeUser } from '@/lib/mock-data';
 interface LayoutProps {
   children: ReactNode;
   role: AppRole;
-  onRoleSwitch: (role: AppRole) => void;
+  onRoleSwitch?: (role: AppRole) => void;
   onLogout?: () => void;
 }
 
@@ -30,7 +30,7 @@ const employeeNavItems = [
   { path: '/employee/history', label: 'My History', icon: History },
 ];
 
-export function AppLayout({ children, role, onRoleSwitch, onLogout }: LayoutProps) {
+export function AppLayout({ children, role, onLogout }: LayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const navItems = role === 'admin' ? adminNavItems : employeeNavItems;
@@ -60,37 +60,6 @@ export function AppLayout({ children, role, onRoleSwitch, onLogout }: LayoutProp
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.5px', textTransform: 'uppercase', marginTop: 1 }}>
               {role === 'admin' ? 'Admin Portal' : 'Employee Portal'}
             </div>
-          </div>
-        </div>
-
-        {/* Role Switcher */}
-        <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-            Preview Mode Switcher
-          </div>
-          <div className="flex rounded-lg overflow-hidden" style={{ background: 'rgba(0,0,0,0.25)', padding: 3 }}>
-            <button
-              onClick={() => { onRoleSwitch('admin'); router.push('/admin/dashboard'); }}
-              className="flex-1 rounded-md transition-all"
-              style={{
-                fontSize: 12, fontWeight: 600, padding: '5px 0',
-                background: role === 'admin' ? '#3B82F6' : 'transparent',
-                color: role === 'admin' ? '#fff' : 'rgba(255,255,255,0.5)',
-              }}
-            >
-              Admin
-            </button>
-            <button
-              onClick={() => { onRoleSwitch('employee'); router.push('/employee/dashboard'); }}
-              className="flex-1 rounded-md transition-all"
-              style={{
-                fontSize: 12, fontWeight: 600, padding: '5px 0',
-                background: role === 'employee' ? '#3B82F6' : 'transparent',
-                color: role === 'employee' ? '#fff' : 'rgba(255,255,255,0.5)',
-              }}
-            >
-              Employee
-            </button>
           </div>
         </div>
 
