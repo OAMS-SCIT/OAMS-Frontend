@@ -1,9 +1,14 @@
 ﻿'use client';
 
-import { User } from '@/types';
+interface AvatarUser {
+  firstName: string;
+  lastName: string;
+  avatarInitials?: string;
+  avatarColor?: string;
+}
 
 interface AvatarProps {
-  user?: User | null;
+  user?: AvatarUser | null;
   name?: string;
   size?: number;
 }

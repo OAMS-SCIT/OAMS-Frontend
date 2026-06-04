@@ -2,8 +2,14 @@ import type {
   AuthUser,
   CategoryListItem,
   CategoryStatusValue,
+  CreateUserPayload,
+  CreateUserResponse,
+  DesignationListItem,
   LoginResponse,
   PaginatedResult,
+  UserListItem,
+  UserRole,
+  UserStatus,
 } from '@/types';
 
 const API_BASE_URL =
@@ -114,6 +120,51 @@ export async function logout(): Promise<void> {
     // Ignore — the token is cleared by the caller regardless.
   }
 }
+
+// --- Users ------------------------------------------------------------------
+
+export interface GetUsersParams {
+  search?: string;
+  role?: UserRole | '';
+  status?: UserStatus | '';
+  page?: number;
+  limit?: number;
+}
+
+export function getUsers(
+  params: GetUsersParams = {},
+): Promise<PaginatedResult<UserListItem>> {
+  const query: Record<string, string | number | undefined> = {
+    search: params.search,
+    role: params.role || undefined,
+    status: params.status || undefined,
+    page: params.page,
+    limit: params.limit,
+  };
+  return request<PaginatedResult<UserListItem>>('/users', { query });
+}
+
+export function updateUserStatus(id: string, status: UserStatus): Promise<UserListItem> {
+  return request<UserListItem>(`/users/${id}/status`, {
+    method: 'PATCH',
+    body: { status },
+  });
+}
+
+export function createUser(payload: CreateUserPayload): Promise<CreateUserResponse> {
+  return request<CreateUserResponse>('/users', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+// --- Designations -----------------------------------------------------------
+
+export function getDesignations(): Promise<DesignationListItem[]> {
+  return request<DesignationListItem[]>('/designations');
+}
+
+// --- Categories -------------------------------------------------------------
 
 export interface GetCategoriesParams {
   search?: string;

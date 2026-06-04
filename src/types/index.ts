@@ -124,11 +124,50 @@ export interface CategoryListItem {
   createdAt: string;
 }
 
+// Shape returned by the backend GET /api/designations endpoint.
+export interface DesignationListItem {
+  id: string;
+  name: string;
+}
+
+// POST /api/users request body
+export interface CreateUserPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  contactNumber?: string;
+  designationId: string;
+  role: UserRole;
+  status?: UserStatus;
+}
+
+// POST /api/users response (201)
+export interface CreateUserResponse {
+  user: UserListItem;
+  tempPassword: string;
+}
+
 export interface PaginatedResult<T> {
   data: T[];
   total: number;
   page: number;
   limit: number;
+}
+
+// Shape returned by the backend GET /api/users list endpoint.
+// Distinct from the mock `User` type used by not-yet-wired pages.
+export interface UserListItem {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  contactNumber: string;
+  designation: { id: string; name: string } | null;
+  role: UserRole;
+  status: UserStatus;
+  profilePicture: string | null;
+  isFirstLogin: boolean;
+  createdAt: string;
 }
 
 // Authenticated user as returned by the backend auth endpoints
