@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
+import { AuthProvider } from '@/providers/auth-provider';
 import { AppProvider } from '@/providers/app-provider';
 import './globals.css';
 
@@ -22,10 +23,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
       <body className="min-h-full">
-        <AppProvider>
-          {children}
-          <Toaster />
-        </AppProvider>
+        <AuthProvider>
+          <AppProvider>
+            {children}
+            <Toaster />
+          </AppProvider>
+        </AuthProvider>
       </body>
     </html>
   );

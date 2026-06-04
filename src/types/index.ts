@@ -130,3 +130,20 @@ export interface PaginatedResult<T> {
   page: number;
   limit: number;
 }
+
+// Authenticated user as returned by the backend auth endpoints
+// (POST /api/auth/login and GET /api/auth/profile). Admin-only system.
+export interface AuthUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  isFirstLogin: boolean;
+}
+
+export interface LoginResponse {
+  accessToken: string;
+  user: AuthUser;
+}

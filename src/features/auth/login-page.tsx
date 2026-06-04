@@ -1,25 +1,32 @@
 ﻿'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Monitor, Shield, UserCheck, Activity, Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
-import { AppRole } from '@/types';
+import { toast } from 'sonner';
+import { Monitor, Shield, UserCheck, Activity, Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 
 interface Props {
-  onLogin: (role: AppRole) => void;
+  /** Called when the admin submits valid-looking credentials. */
+  onSubmit: (email: string, password: string) => void;
+  /** True while the login request is in flight; disables the form. */
+  loading?: boolean;
+  /** Error message to show beneath the form (validation or API failure). */
+  error?: string | null;
 }
 
-export function LoginPage({ onLogin }: Props) {
-  const router = useRouter();
+export function LoginPage({ onSubmit, loading = false, error = null }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
 
-  const handleLogin = (role: AppRole) => {
-    if (!email || !password) { setError('Please enter your email and password.'); return; }
-    onLogin(role);
-    router.push(role === 'admin' ? '/admin/dashboard' : '/employee/dashboard');
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+    onSubmit(email, password);
+  };
+
+  const handleForgotPassword = () => {
+    // Full reset flow is a separate story; the backend mailer is disabled.
+    toast('Contact your administrator to reset your password.');
   };
 
   return (
@@ -92,23 +99,25 @@ export function LoginPage({ onLogin }: Props) {
           <p style={{ fontSize: 14, color: '#64748B', marginBottom: 28 }}>Sign in to OAMS Admin</p>
 
           {/* Form */}
-          <div className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
             <div>
-              <label className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>Email Address</label>
+              <label htmlFor="email" className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  className="w-full rounded-lg border pl-9 pr-3 py-2.5 focus:outline-none focus:ring-2"
+                <input id="email" name="email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)}
+                  disabled={loading}
+                  className="w-full rounded-lg border pl-9 pr-3 py-2.5 focus:outline-none focus:ring-2 disabled:opacity-60"
                   style={{ borderColor: '#CBD5E1', fontSize: 14 }}
                   placeholder="admin@company.com" />
               </div>
             </div>
             <div>
-              <label className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>Password</label>
+              <label htmlFor="password" className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
-                <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
-                  className="w-full rounded-lg border pl-9 pr-10 py-2.5 focus:outline-none focus:ring-2"
+                <input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}
+                  disabled={loading}
+                  className="w-full rounded-lg border pl-9 pr-10 py-2.5 focus:outline-none focus:ring-2 disabled:opacity-60"
                   style={{ borderColor: '#CBD5E1', fontSize: 14 }}
                   placeholder="••••••••" />
                 <button type="button" onClick={() => setShowPassword(s => !s)}
@@ -117,38 +126,22 @@ export function LoginPage({ onLogin }: Props) {
                 </button>
               </div>
               <div className="flex justify-end mt-1.5">
-                <button style={{ fontSize: 12, color: '#3B82F6' }} className="hover:underline">Forgot Password?</button>
+                <button type="button" onClick={handleForgotPassword} style={{ fontSize: 12, color: '#3B82F6' }} className="hover:underline">Forgot Password?</button>
               </div>
             </div>
 
-            {error && <p style={{ fontSize: 13, color: '#EF4444' }}>{error}</p>}
+            {error && <p role="alert" style={{ fontSize: 13, color: '#EF4444' }}>{error}</p>}
 
-            <button onClick={() => handleLogin('admin')}
-              className="w-full rounded-lg py-3 font-bold text-white hover:opacity-90 transition-colors"
+            <button type="submit" disabled={loading}
+              className="w-full flex items-center justify-center gap-2 rounded-lg py-3 font-bold text-white hover:opacity-90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               style={{ fontSize: 15, background: '#1E3A8A' }}>
-              Login as Admin
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {loading ? 'Signing in…' : 'Login'}
             </button>
-
-            <div className="relative flex items-center gap-3">
-              <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
-              <span style={{ fontSize: 12, color: '#94A3B8' }}>or</span>
-              <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
-            </div>
-
-            {/* Preview Employee */}
-            <button onClick={() => handleLogin('employee')}
-              className="w-full flex items-center justify-center gap-2 rounded-lg border py-2.5 font-medium hover:bg-gray-50 transition-colors"
-              style={{ fontSize: 14, color: '#475569', borderColor: '#E2E8F0' }}>
-              Preview Employee View <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+          </form>
 
           <p className="text-center mt-8" style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.5 }}>
-            Only authorized administrators and registered employees may access this system.
-          </p>
-
-          <p className="text-center mt-3 rounded-lg py-2" style={{ fontSize: 11, color: '#3B82F6', background: '#EFF6FF' }}>
-            Preview Mode — Demo credentials accepted
+            Only authorized administrators may access this system.
           </p>
         </div>
       </div>
