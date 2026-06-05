@@ -9,6 +9,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CreateUserDrawer } from '@/components/overlays/CreateUserDrawer';
+import { EditUserDrawer } from '@/components/overlays/EditUserDrawer';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
 import { ApiError, getUsers, updateUserStatus } from '@/lib/api';
 import { useAuth } from '@/providers/auth-provider';
@@ -24,6 +25,7 @@ export function UserManagement() {
   const [filterStatus, setFilterStatus] = useState<UserStatus | ''>('');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [editTarget, setEditTarget] = useState<UserListItem | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<UserListItem | null>(null);
   const [page, setPage] = useState(1);
 
@@ -220,7 +222,7 @@ export function UserManagement() {
                                     style={{ fontSize: 13, color: '#334155' }}>
                                     <Eye className="w-3.5 h-3.5" /> View Profile
                                   </button>
-                                  <button onClick={() => setOpenMenu(null)}
+                                  <button onClick={() => { setOpenMenu(null); setEditTarget(user); }}
                                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
                                     style={{ fontSize: 13, color: '#334155' }}>
                                     <Pencil className="w-3.5 h-3.5" /> Edit
@@ -331,6 +333,14 @@ export function UserManagement() {
         <CreateUserDrawer
           onClose={() => setShowCreate(false)}
           onSave={() => { setShowCreate(false); load(); }}
+        />
+      )}
+
+      {editTarget && (
+        <EditUserDrawer
+          user={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSave={() => { setEditTarget(null); load(); }}
         />
       )}
 
