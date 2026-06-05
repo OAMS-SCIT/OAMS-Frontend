@@ -7,6 +7,7 @@ import type {
   DesignationListItem,
   LoginResponse,
   PaginatedResult,
+  UpdateUserPayload,
   UserListItem,
   UserRole,
   UserStatus,
@@ -148,6 +149,13 @@ export function updateUserStatus(id: string, status: UserStatus): Promise<UserLi
   return request<UserListItem>(`/users/${id}/status`, {
     method: 'PATCH',
     body: { status },
+  });
+}
+
+export function updateUser(id: string, payload: UpdateUserPayload): Promise<UserListItem> {
+  return request<UserListItem>(`/users/${id}`, {
+    method: 'PATCH',
+    body: payload,
   });
 }
 

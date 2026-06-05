@@ -130,6 +130,15 @@ export interface DesignationListItem {
   name: string;
 }
 
+// PATCH /api/users/:id request body (all fields optional)
+export interface UpdateUserPayload {
+  firstName?: string;
+  lastName?: string;
+  contactNumber?: string;
+  designationId?: string;
+  role?: UserRole;
+}
+
 // POST /api/users request body
 export interface CreateUserPayload {
   firstName: string;
