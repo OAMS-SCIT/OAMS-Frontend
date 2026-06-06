@@ -1,9 +1,16 @@
+// ── Core domain enums ─────────────────────────────────────────────────────
 export type AssetStatus = 'Available' | 'Assigned' | 'Under Repair' | 'Reserved' | 'Lost/Stolen' | 'Retired';
+export type UpgradeType = 'Part Replaced' | 'Part Added';
+/** Statuses that can be set manually (Assigned is system-controlled). */
+export type ManualAssetStatus = Exclude<AssetStatus, 'Assigned'>;
 export type DeviceType = 'Laptop' | 'Monitor' | 'Keyboard' | 'Mouse' | 'Phone' | 'Tablet' | 'Headset' | 'Docking Station' | 'Printer' | 'Camera' | 'Other';
 export type UserRole = 'Admin' | 'Employee';
 export type UserStatus = 'Active' | 'Inactive';
 export type AssetCondition = 'New' | 'Good' | 'Fair' | 'Poor';
 export type AttributeType = 'Text' | 'Number' | 'Date' | 'Dropdown';
+export type CategoryStatusValue = 'Active' | 'Inactive';
+
+// ── Mock / legacy types (used by not-yet-fully-migrated components) ────────
 
 export interface CustomAttribute {
   id: string;
@@ -72,6 +79,7 @@ export interface UpgradeLog {
   loggedBy: string;
 }
 
+/** Legacy mock shape — used by mock-data.ts and not-yet-migrated drawers. */
 export interface Asset {
   id: string;
   name: string;
@@ -110,10 +118,9 @@ export interface Employee {
 
 export type AppRole = 'admin' | 'employee';
 
-export type CategoryStatusValue = 'Active' | 'Inactive';
+// ── API response shapes — Categories ─────────────────────────────────────
 
-// Shape returned by the backend GET /api/categories list endpoint (OAMS-69).
-// Distinct from the mock `Category` type used by the not-yet-wired pages.
+/** Returned by GET /api/categories (list). */
 export interface CategoryListItem {
   id: string;
   name: string;
@@ -124,13 +131,206 @@ export interface CategoryListItem {
   createdAt: string;
 }
 
-// Shape returned by the backend GET /api/designations endpoint.
+/** Single option inside a Dropdown attribute. */
+export interface AttributeOptionDetail {
+  id: string;
+  label: string;
+  isActive: boolean;
+}
+
+/** Full attribute definition returned by GET /api/categories/:id. */
+export interface AttributeDetail {
+  id: string;
+  label: string;
+  type: AttributeType;
+  isRequired: boolean;
+  isActive: boolean;
+  order: number;
+  options: AttributeOptionDetail[];
+}
+
+/** Returned by GET /api/categories/:id, POST /api/categories, PATCH /api/categories/:id. */
+export interface CategoryDetail {
+  id: string;
+  name: string;
+  description: string;
+  status: CategoryStatusValue;
+  assetCount: number;
+  attributes: AttributeDetail[];
+  createdAt: string;
+}
+
+// ── API payload shapes — Categories ──────────────────────────────────────
+
+export interface CreateAttributeOptionPayload {
+  label: string;
+}
+
+export interface CreateAttributePayload {
+  label: string;
+  type: AttributeType;
+  isRequired?: boolean;
+  order?: number;
+  options?: CreateAttributeOptionPayload[];
+}
+
+export interface CreateCategoryPayload {
+  name: string;
+  description?: string;
+  attributes?: CreateAttributePayload[];
+}
+
+export interface UpdateAttributeOptionPayload {
+  id?: string; // omit for new options
+  label: string;
+}
+
+export interface UpdateAttributePayload {
+  id?: string; // omit to create new attribute
+  label: string;
+  type: AttributeType;
+  isRequired?: boolean;
+  order?: number;
+  options?: UpdateAttributeOptionPayload[];
+}
+
+export interface UpdateCategoryPayload {
+  name?: string;
+  description?: string;
+  attributes?: UpdateAttributePayload[];
+}
+
+// ── API response shapes — Assets ──────────────────────────────────────────
+
+/** Returned in GET /api/assets list. */
+export interface AssetListItem {
+  id: string;
+  displayId: string;
+  name: string;
+  brand: string;
+  model: string;
+  serialNumber: string;
+  category: { id: string; name: string };
+  status: AssetStatus;
+  condition: AssetCondition;
+  location: string;
+  warrantyExpiryDate: string | null;
+  createdAt: string;
+}
+
+/** Custom attribute value returned in asset detail. */
+export interface AssetCustomAttributeValue {
+  attributeId: string;
+  label: string;
+  type: AttributeType;
+  value: string;
+}
+
+/** Returned by GET /api/assets/:id, POST /api/assets, PATCH /api/assets/:id. */
+export interface AssetDetail {
+  id: string;
+  displayId: string;
+  name: string;
+  description: string | null;
+  brand: string;
+  model: string;
+  serialNumber: string;
+  category: { id: string; name: string };
+  status: AssetStatus;
+  condition: AssetCondition;
+  location: string | null;
+  purchaseDate: string;
+  purchasePrice: number;
+  vendorName: string | null;
+  purchaseOrderRef: string | null;
+  warrantyStartDate: string | null;
+  warrantyExpiryDate: string | null;
+  warrantyProvider: string | null;
+  customAttributes: AssetCustomAttributeValue[];
+  assignmentHistoryCount: number;
+  upgradeLogCount: number;
+  createdBy: { id: string; firstName: string; lastName: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── API payload shapes — Assets ───────────────────────────────────────────
+
+export interface AttributeValuePayload {
+  attributeId: string;
+  value: string;
+}
+
+export interface CreateAssetPayload {
+  name: string;
+  description?: string;
+  brand: string;
+  model: string;
+  serialNumber: string;
+  categoryId: string;
+  condition: AssetCondition;
+  location?: string;
+  purchaseDate: string;
+  purchasePrice: number;
+  vendorName?: string;
+  purchaseOrderRef?: string;
+  warrantyStartDate?: string;
+  warrantyExpiryDate?: string;
+  warrantyProvider?: string;
+  customAttributes?: AttributeValuePayload[];
+}
+
+export interface UpdateAssetPayload extends Partial<Omit<CreateAssetPayload, 'categoryId'>> {}
+
+export interface UpdateAssetStatusPayload {
+  status: ManualAssetStatus;
+}
+
+// ── Upgrades ──────────────────────────────────────────────────────────────
+
+export interface AssetUpgrade {
+  id: string;
+  assetId: string;
+  upgradeDate: string;
+  upgradeType: UpgradeType;
+  specBefore: string | null;
+  specAfter: string;
+  cost: number;
+  vendorName: string;
+  notes: string | null;
+  loggedBy: { id: string; firstName: string; lastName: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateUpgradePayload {
+  upgradeDate: string;
+  upgradeType: UpgradeType;
+  specBefore?: string;
+  specAfter: string;
+  cost: number;
+  vendorName: string;
+  notes?: string;
+}
+
+export interface UpdateUpgradePayload extends Partial<CreateUpgradePayload> {}
+
+// ── Shared pagination ─────────────────────────────────────────────────────
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────
+
 export interface DesignationListItem {
   id: string;
   name: string;
 }
 
-// POST /api/users request body
 export interface CreateUserPayload {
   firstName: string;
   lastName: string;
@@ -141,21 +341,11 @@ export interface CreateUserPayload {
   status?: UserStatus;
 }
 
-// POST /api/users response (201)
 export interface CreateUserResponse {
   user: UserListItem;
   tempPassword: string;
 }
 
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-// Shape returned by the backend GET /api/users list endpoint.
-// Distinct from the mock `User` type used by not-yet-wired pages.
 export interface UserListItem {
   id: string;
   firstName: string;
@@ -170,8 +360,8 @@ export interface UserListItem {
   createdAt: string;
 }
 
-// Authenticated user as returned by the backend auth endpoints
-// (POST /api/auth/login and GET /api/auth/profile). Admin-only system.
+// ── Auth ──────────────────────────────────────────────────────────────────
+
 export interface AuthUser {
   id: string;
   firstName: string;

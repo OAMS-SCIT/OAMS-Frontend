@@ -1,18 +1,17 @@
-﻿'use client';
+'use client';
 
 import { ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, Tag, Users, ClipboardList, UserCog, LogOut,
-  User, Bell, Search, ChevronDown, Monitor, History,
+  Bell, Search, ChevronDown, Monitor, History,
 } from 'lucide-react';
 import { AppRole } from '@/types';
-import { currentAdminUser, currentEmployeeUser } from '@/lib/mock-data';
+import { useAuth } from '@/providers/auth-provider';
 
 interface LayoutProps {
   children: ReactNode;
   role: AppRole;
-  onRoleSwitch?: (role: AppRole) => void;
   onLogout?: () => void;
 }
 
@@ -30,29 +29,45 @@ const employeeNavItems = [
   { path: '/employee/history', label: 'My History', icon: History },
 ];
 
+/** Derive avatar initials from first + last name. */
+function getInitials(firstName?: string, lastName?: string) {
+  const f = firstName?.[0]?.toUpperCase() ?? '';
+  const l = lastName?.[0]?.toUpperCase() ?? '';
+  return f + l || '?';
+}
+
+/** Deterministic avatar colour from the user's name. */
+const AVATAR_COLOURS = [
+  '#1E3A8A', '#2563EB', '#0891B2', '#059669',
+  '#7C3AED', '#DB2777', '#D97706', '#DC2626',
+];
+function avatarColour(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLOURS[Math.abs(hash) % AVATAR_COLOURS.length];
+}
+
 export function AppLayout({ children, role, onLogout }: LayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useAuth();
+
   const navItems = role === 'admin' ? adminNavItems : employeeNavItems;
-  const currentUser = role === 'admin' ? currentAdminUser : currentEmployeeUser;
+  const profilePath = role === 'admin' ? '/admin/profile' : '/employee/profile';
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
-  const profilePath = role === 'admin' ? '/admin/profile' : '/employee/profile';
+  const initials = getInitials(user?.firstName, user?.lastName);
+  const fullName = user ? `${user.firstName} ${user.lastName}` : '…';
+  const colour = user ? avatarColour(fullName) : '#1E3A8A';
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#F8FAFC' }}>
       {/* Sidebar */}
-      <div
-        className="flex flex-col shrink-0"
-        style={{ width: 240, background: '#0F2460', color: '#fff' }}
-      >
+      <div className="flex flex-col shrink-0" style={{ width: 240, background: '#0F2460', color: '#fff' }}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-          <div
-            className="flex items-center justify-center rounded-lg"
-            style={{ width: 36, height: 36, background: '#3B82F6' }}
-          >
+          <div className="flex items-center justify-center rounded-lg" style={{ width: 36, height: 36, background: '#3B82F6' }}>
             <Monitor className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -63,7 +78,7 @@ export function AppLayout({ children, role, onLogout }: LayoutProps) {
           </div>
         </div>
 
-        {/* Nav Items */}
+        {/* Nav */}
         <nav className="flex-1 py-4 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -88,7 +103,7 @@ export function AppLayout({ children, role, onLogout }: LayoutProps) {
           })}
         </nav>
 
-        {/* User Profile Bottom */}
+        {/* User section */}
         <div className="border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           <button
             onClick={() => router.push(profilePath)}
@@ -96,17 +111,13 @@ export function AppLayout({ children, role, onLogout }: LayoutProps) {
           >
             <div
               className="flex items-center justify-center rounded-full shrink-0 text-white font-semibold"
-              style={{ width: 34, height: 34, background: currentUser.avatarColor || '#3B82F6', fontSize: 13 }}
+              style={{ width: 34, height: 34, background: colour, fontSize: 13 }}
             >
-              {currentUser.avatarInitials}
+              {initials}
             </div>
             <div className="flex-1 text-left min-w-0">
-              <div className="text-white font-medium truncate" style={{ fontSize: 13 }}>
-                {currentUser.firstName} {currentUser.lastName}
-              </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
-                {currentUser.designationTitle}
-              </div>
+              <div className="text-white font-medium truncate" style={{ fontSize: 13 }}>{fullName}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{user?.role ?? ''}</div>
             </div>
           </button>
           <button
@@ -120,57 +131,41 @@ export function AppLayout({ children, role, onLogout }: LayoutProps) {
         </div>
       </div>
 
-      {/* Main Area */}
+      {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header */}
-        <header
-          className="flex items-center gap-4 px-8 shrink-0"
-          style={{ height: 64, background: '#fff', borderBottom: '1px solid #E2E8F0' }}
-        >
-          {/* Breadcrumb placeholder */}
+        {/* Top header */}
+        <header className="flex items-center gap-4 px-8 shrink-0" style={{ height: 64, background: '#fff', borderBottom: '1px solid #E2E8F0' }}>
           <div className="flex-1 min-w-0">
             <BreadcrumbDisplay pathname={pathname} role={role} />
           </div>
 
-          {/* Global Search */}
           <div className="relative" style={{ width: 320 }}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
             <input
               type="text"
               placeholder="Search assets, users, serial numbers..."
               className="w-full rounded-lg border pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2"
-              style={{
-                borderColor: '#CBD5E1', background: '#F8FAFC', fontSize: 13,
-                '--tw-ring-color': '#3B82F6',
-              } as React.CSSProperties}
+              style={{ borderColor: '#CBD5E1', background: '#F8FAFC', fontSize: 13 }}
             />
           </div>
 
-          {/* Notification */}
           <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
             <Bell className="w-5 h-5" style={{ color: '#64748B' }} />
-            <span
-              className="absolute top-1 right-1 rounded-full"
-              style={{ width: 8, height: 8, background: '#EF4444' }}
-            />
+            <span className="absolute top-1 right-1 rounded-full" style={{ width: 8, height: 8, background: '#EF4444' }} />
           </button>
 
-          {/* Avatar dropdown */}
           <button className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-gray-100 transition-colors">
             <div
               className="flex items-center justify-center rounded-full text-white font-semibold"
-              style={{ width: 32, height: 32, background: currentUser.avatarColor || '#1E3A8A', fontSize: 12 }}
+              style={{ width: 32, height: 32, background: colour, fontSize: 12 }}
             >
-              {currentUser.avatarInitials}
+              {initials}
             </div>
-            <span className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>
-              {currentUser.firstName}
-            </span>
+            <span className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{user?.firstName ?? '…'}</span>
             <ChevronDown className="w-4 h-4" style={{ color: '#64748B' }} />
           </button>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 overflow-y-auto" style={{ padding: 32 }}>
           {children}
         </main>
