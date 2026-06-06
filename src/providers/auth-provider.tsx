@@ -29,6 +29,8 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<AuthUser>;
   /** Clear the session and redirect to /login. */
   logout: () => Promise<void>;
+  /** Re-fetch the current user (e.g. after a profile edit) to refresh the UI. */
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -84,9 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.replace('/login');
   }, [router]);
 
+  const refresh = useCallback(async () => {
+    const profile = await getProfile();
+    setUser(profile);
+  }, []);
+
   const value = useMemo(
-    () => ({ user, status, login, logout }),
-    [user, status, login, logout],
+    () => ({ user, status, login, logout, refresh }),
+    [user, status, login, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

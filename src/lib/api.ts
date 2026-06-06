@@ -16,8 +16,11 @@ import type {
   LoginResponse,
   ManualAssetStatus,
   PaginatedResult,
+  ProfileUser,
+  ResetPasswordPayload,
   UpdateAssetPayload,
   UpdateCategoryPayload,
+  UpdateProfilePayload,
   UpdateUpgradePayload,
   UpdateUserPayload,
   UserListItem,
@@ -25,7 +28,7 @@ import type {
   UserStatus,
 } from '@/types';
 
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 // localStorage key that holds the admin JWT. Owned by the auth provider
@@ -75,15 +78,23 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   const token = getToken();
+  const isFormData = body instanceof FormData;
 
   const response = await fetch(url.toString(), {
     ...rest,
     headers: {
-      'Content-Type': 'application/json',
+      // For FormData, let the browser set Content-Type (incl. the multipart
+      // boundary); only force JSON for plain-object bodies.
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body:
+      body === undefined
+        ? undefined
+        : isFormData
+          ? (body as FormData)
+          : JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -131,6 +142,36 @@ export async function logout(): Promise<void> {
   } catch {
     // Ignore — the token is cleared by the caller regardless.
   }
+}
+
+// ── Profile ───────────────────────────────────────────────────────────────
+
+export function getMyProfile(): Promise<ProfileUser> {
+  return request<ProfileUser>('/profile');
+}
+
+export function updateMyProfile(
+  payload: UpdateProfilePayload,
+): Promise<ProfileUser> {
+  return request<ProfileUser>('/profile', { method: 'PATCH', body: payload });
+}
+
+export function resetMyPassword(
+  payload: ResetPasswordPayload,
+): Promise<{ message: string }> {
+  return request<{ message: string }>('/profile/reset-password', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export function uploadProfilePicture(file: File): Promise<ProfileUser> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<ProfileUser>('/profile/picture', {
+    method: 'POST',
+    body: formData,
+  });
 }
 
 // ── Users ─────────────────────────────────────────────────────────────────
