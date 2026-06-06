@@ -10,6 +10,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PortalMenu } from '@/components/ui/PortalMenu';
 import { CreateUserDrawer } from '@/components/overlays/CreateUserDrawer';
+import { EditUserDrawer } from '@/components/overlays/EditUserDrawer';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
 import { ApiError, getUsers, updateUserStatus } from '@/lib/api';
 import { useAuth } from '@/providers/auth-provider';
@@ -25,6 +26,7 @@ export function UserManagement() {
   const [filterStatus, setFilterStatus] = useState<UserStatus | ''>('');
   const [openMenu, setOpenMenu] = useState<{ id: string; top: number; right: number } | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [editTarget, setEditTarget] = useState<UserListItem | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<UserListItem | null>(null);
   const [page, setPage] = useState(1);
 
@@ -334,6 +336,14 @@ export function UserManagement() {
         <CreateUserDrawer
           onClose={() => setShowCreate(false)}
           onSave={() => { setShowCreate(false); load(); }}
+        />
+      )}
+
+      {editTarget && (
+        <EditUserDrawer
+          user={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSave={() => { setEditTarget(null); load(); }}
         />
       )}
 

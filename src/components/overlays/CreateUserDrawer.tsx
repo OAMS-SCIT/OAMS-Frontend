@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, Info, CheckCircle, Copy, Check, Search, ChevronDown } from 'lucide-react';
+import { X, Info, Search, ChevronDown, CheckCircle, Mail } from 'lucide-react';
 import { UserRole } from '@/types';
 import { ApiError, createUser, getDesignations } from '@/lib/api';
 import type { DesignationListItem } from '@/types';
@@ -28,6 +28,7 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [created, setCreated] = useState(false);
 
   const [designations, setDesignations] = useState<DesignationListItem[]>([]);
   const [designationsLoading, setDesignationsLoading] = useState(true);
@@ -38,8 +39,6 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
   const [designationOpen, setDesignationOpen] = useState(false);
   const designationRef = useRef<HTMLDivElement>(null);
 
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     getDesignations()
@@ -97,7 +96,7 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
 
     setSubmitting(true);
     try {
-      const result = await createUser({
+      await createUser({
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim(),
@@ -106,7 +105,7 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
         role: form.role,
         status: form.status,
       });
-      setTempPassword(result.tempPassword);
+      setCreated(true);
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
@@ -124,37 +123,25 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
     }
   };
 
-  const handleCopy = async () => {
-    if (!tempPassword) return;
-    await navigator.clipboard.writeText(tempPassword);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDone = () => {
-    onSave();
-    onClose();
-  };
-
   return (
     <>
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(15,36,96,0.45)' }} onClick={tempPassword ? undefined : onClose} />
+      <div className="fixed inset-0 z-40" style={{ background: 'rgba(15,36,96,0.45)' }} onClick={created ? undefined : onClose} />
       <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col" style={{ width: 480, background: '#fff', boxShadow: '-8px 0 32px rgba(0,0,0,0.14)' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #E2E8F0' }}>
           <h2 className="font-bold" style={{ fontSize: 18, color: '#1E293B' }}>
-            {tempPassword ? 'User Created' : 'Create New User'}
+            {created ? 'User Created' : 'Create New User'}
           </h2>
-          {!tempPassword && (
+          {!created && (
             <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 transition-colors">
               <X className="w-5 h-5" style={{ color: '#64748B' }} />
             </button>
           )}
         </div>
 
-        {tempPassword ? (
-          /* ── Success state ── */
+        {created ? (
+          /* ── Success screen ── */
           <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
             <div className="flex items-center justify-center rounded-full" style={{ width: 56, height: 56, background: '#ECFDF5' }}>
               <CheckCircle className="w-8 h-8" style={{ color: '#22C55E' }} />
@@ -163,33 +150,14 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
               <p className="font-semibold mb-1" style={{ fontSize: 16, color: '#1E293B' }}>
                 {form.firstName} {form.lastName} has been created
               </p>
-              <p style={{ fontSize: 13, color: '#64748B' }}>
-                Share the temporary password below with the user. It will not be shown again.
+              <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.6 }}>
+                The account has been set up successfully.
               </p>
             </div>
-
-            <div className="w-full rounded-xl p-4" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-              <p style={{ fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-                Temporary Password
-              </p>
-              <div className="flex items-center gap-3">
-                <code className="flex-1 rounded-lg px-3 py-2 font-mono font-semibold"
-                  style={{ fontSize: 14, color: '#1E3A8A', background: '#EFF6FF', border: '1px solid #BFDBFE', letterSpacing: '0.5px' }}>
-                  {tempPassword}
-                </code>
-                <button onClick={handleCopy}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 font-medium transition-colors"
-                  style={{ fontSize: 13, background: copied ? '#ECFDF5' : '#F1F5F9', color: copied ? '#059669' : '#475569', border: '1px solid', borderColor: copied ? '#A7F3D0' : '#E2E8F0' }}>
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2 w-full rounded-xl p-3" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
-              <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#D97706' }} />
-              <p style={{ fontSize: 12, color: '#92400E' }}>
-                This password is shown <strong>only once</strong>. Copy it before closing this panel.
+            <div className="w-full flex items-start gap-3 rounded-xl p-4" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+              <Mail className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#2563EB' }} />
+              <p style={{ fontSize: 13, color: '#1D4ED8', lineHeight: 1.6, textAlign: 'left' }}>
+                The username and a temporary password have been sent to <strong>{form.email}</strong>.
               </p>
             </div>
           </div>
@@ -317,8 +285,8 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
 
         {/* Footer */}
         <div className="flex items-center gap-3 px-6 py-4 justify-end" style={{ borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-          {tempPassword ? (
-            <button onClick={handleDone}
+          {created ? (
+            <button onClick={() => { onSave(); onClose(); }}
               className="rounded-lg px-5 py-2.5 font-semibold text-white hover:opacity-90 transition-colors"
               style={{ fontSize: 14, background: '#1E3A8A' }}>
               Done
