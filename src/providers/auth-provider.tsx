@@ -75,6 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(accessToken);
     setUser(authUser);
     setStatus('authenticated');
+    // The login response omits profilePicture; enrich in the background so the
+    // sidebar/topbar avatars show the picture without waiting for a reload.
+    getProfile().then(setUser).catch(() => {});
     return authUser;
   }, []);
 

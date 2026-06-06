@@ -396,6 +396,8 @@ export interface AuthUser {
   role: UserRole;
   status: UserStatus;
   isFirstLogin: boolean;
+  /** Present from GET /auth/profile (login response omits it). */
+  profilePicture?: string | null;
 }
 
 export interface LoginResponse {

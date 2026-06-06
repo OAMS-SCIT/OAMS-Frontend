@@ -8,24 +8,10 @@ import type {
   UpdateProfilePayload,
 } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-
-const AVATAR_COLORS = [
-  '#1E3A8A', '#0E7490', '#9333EA', '#BE185D',
-  '#B45309', '#15803D', '#4338CA', '#0F766E',
-];
+import { avatarColor, avatarInitials } from '@/components/ui/Avatar';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png'];
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB — mirror the backend limit
-
-function initialsOf(first: string, last: string): string {
-  return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
-}
-
-function colorFor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
 
 interface Props {
   user: ProfileUser;
@@ -59,6 +45,7 @@ export function PersonalProfile({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   // Editable fields initialise from props once. The parent remounts this
   // component via `key={user.id}` when a different user loads, so there's no
@@ -74,7 +61,8 @@ export function PersonalProfile({
   const storedPicture = user.profilePicture
     ? `${imageBaseUrl}${user.profilePicture}`
     : null;
-  const avatarSrc = preview ?? storedPicture;
+  // Fall back to initials if the stored image fails to load (e.g. deleted file).
+  const avatarSrc = imgError ? null : preview ?? storedPicture;
 
   const nameDirty =
     firstName !== user.firstName ||
@@ -131,6 +119,7 @@ export function PersonalProfile({
       alert('Image must be 2 MB or smaller.');
       return;
     }
+    setImgError(false);
     setPreview(URL.createObjectURL(file));
     setUploading(true);
     try {
@@ -154,14 +143,15 @@ export function PersonalProfile({
                 <img
                   src={avatarSrc}
                   alt={`${user.firstName} ${user.lastName}`}
+                  onError={() => setImgError(true)}
                   className="rounded-full object-cover"
                   style={{ width: 96, height: 96 }}
                 />
               ) : (
                 <div
                   className="flex items-center justify-center rounded-full text-white font-bold"
-                  style={{ width: 96, height: 96, background: colorFor(user.id), fontSize: 32 }}>
-                  {initialsOf(user.firstName, user.lastName)}
+                  style={{ width: 96, height: 96, background: avatarColor(`${user.firstName} ${user.lastName}`), fontSize: 32 }}>
+                  {avatarInitials(`${user.firstName} ${user.lastName}`)}
                 </div>
               )}
               <button
