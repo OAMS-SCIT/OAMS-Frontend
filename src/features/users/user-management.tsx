@@ -8,6 +8,7 @@ import { mockDesignations } from '@/lib/mock-data';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PortalMenu } from '@/components/ui/PortalMenu';
 import { CreateUserDrawer } from '@/components/overlays/CreateUserDrawer';
 import { EditUserDrawer } from '@/components/overlays/EditUserDrawer';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
@@ -23,7 +24,7 @@ export function UserManagement() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterRole, setFilterRole] = useState<UserRole | ''>('');
   const [filterStatus, setFilterStatus] = useState<UserStatus | ''>('');
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<{ id: string; top: number; right: number } | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<UserListItem | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<UserListItem | null>(null);
@@ -208,51 +209,53 @@ export function UserManagement() {
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <div className="relative">
-                            <button onClick={() => setOpenMenu(openMenu === user.id ? null : user.id)}
-                              className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors" style={{ color: '#64748B' }}>
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
-                            {openMenu === user.id && (
-                              <>
-                                <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
-                                <div className="absolute right-0 z-20 rounded-xl shadow-lg overflow-hidden py-1" style={{ top: '100%', minWidth: 160, background: '#fff', border: '1px solid #E2E8F0' }}>
-                                  <button onClick={() => setOpenMenu(null)}
-                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-                                    style={{ fontSize: 13, color: '#334155' }}>
-                                    <Eye className="w-3.5 h-3.5" /> View Profile
+                          <button
+                            onClick={(e) => {
+                              if (openMenu?.id === user.id) { setOpenMenu(null); return; }
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setOpenMenu({ id: user.id, top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                            }}
+                            className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors"
+                            style={{ color: '#64748B' }}
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                          {openMenu?.id === user.id && (
+                            <PortalMenu anchor={openMenu} onClose={() => setOpenMenu(null)}>
+                              <button onClick={() => setOpenMenu(null)}
+                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
+                                style={{ fontSize: 13, color: '#334155' }}>
+                                <Eye className="w-3.5 h-3.5" /> View Profile
+                              </button>
+                              <button onClick={() => setOpenMenu(null)}
+                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
+                                style={{ fontSize: 13, color: '#334155' }}>
+                                <Pencil className="w-3.5 h-3.5" /> Edit
+                              </button>
+                              {(() => {
+                                const isSelf = currentUser?.id === user.id;
+                                const label = user.status === 'Active' ? 'Deactivate' : 'Activate';
+                                return isSelf && user.status === 'Active' ? (
+                                  <button disabled
+                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left opacity-40 cursor-not-allowed"
+                                    style={{ fontSize: 13, color: '#D97706' }}>
+                                    <UserX className="w-3.5 h-3.5" /> {label}
                                   </button>
-                                  <button onClick={() => { setOpenMenu(null); setEditTarget(user); }}
+                                ) : (
+                                  <button onClick={() => handleToggleStatus(user)}
                                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-                                    style={{ fontSize: 13, color: '#334155' }}>
-                                    <Pencil className="w-3.5 h-3.5" /> Edit
+                                    style={{ fontSize: 13, color: '#D97706' }}>
+                                    <UserX className="w-3.5 h-3.5" /> {label}
                                   </button>
-                                  {(() => {
-                                    const isSelf = currentUser?.id === user.id;
-                                    const label = user.status === 'Active' ? 'Deactivate' : 'Activate';
-                                    return isSelf && user.status === 'Active' ? (
-                                      <button disabled
-                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left opacity-40 cursor-not-allowed"
-                                        style={{ fontSize: 13, color: '#D97706' }}>
-                                        <UserX className="w-3.5 h-3.5" /> {label}
-                                      </button>
-                                    ) : (
-                                      <button onClick={() => handleToggleStatus(user)}
-                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-                                        style={{ fontSize: 13, color: '#D97706' }}>
-                                        <UserX className="w-3.5 h-3.5" /> {label}
-                                      </button>
-                                    );
-                                  })()}
-                                  <button onClick={() => setOpenMenu(null)}
-                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-                                    style={{ fontSize: 13, color: '#EF4444' }}>
-                                    <Trash2 className="w-3.5 h-3.5" /> Remove User
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
+                                );
+                              })()}
+                              <button onClick={() => setOpenMenu(null)}
+                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
+                                style={{ fontSize: 13, color: '#EF4444' }}>
+                                <Trash2 className="w-3.5 h-3.5" /> Remove User
+                              </button>
+                            </PortalMenu>
+                          )}
                         </td>
                       </tr>
                     ))}
