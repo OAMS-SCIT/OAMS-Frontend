@@ -202,7 +202,10 @@ export function PersonalProfile({
             <FormField label="Email Address">
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
-                <input type="email" value={user.email} readOnly className="pf-input pl-9" style={{ background: '#F8FAFC', color: '#94A3B8', cursor: 'not-allowed' }} />
+                {/* paddingLeft is set inline because the `.pf-input` padding
+                    shorthand (in the <style> below) would otherwise override a
+                    `pl-9` utility class and let the text sit under the icon. */}
+                <input type="email" value={user.email} readOnly className="pf-input" style={{ background: '#F8FAFC', color: '#94A3B8', cursor: 'not-allowed', paddingLeft: 36 }} />
               </div>
               <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>Email cannot be changed. Contact your administrator.</p>
             </FormField>
