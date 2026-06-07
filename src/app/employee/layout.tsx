@@ -10,7 +10,7 @@ export default function EmployeePortalLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { setRole, logout } = useApp();
+  const { logout } = useApp();
 
   const handleLogout = () => {
     logout();
@@ -18,7 +18,7 @@ export default function EmployeePortalLayout({
   };
 
   return (
-    <AppLayout role="employee" onRoleSwitch={setRole} onLogout={handleLogout}>
+    <AppLayout role="employee" onLogout={handleLogout}>
       {children}
     </AppLayout>
   );
