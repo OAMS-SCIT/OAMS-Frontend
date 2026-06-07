@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { AppRole } from '@/types';
 import { useAuth } from '@/providers/auth-provider';
+import { Avatar } from '@/components/ui/Avatar';
 
 interface LayoutProps {
   children: ReactNode;
@@ -29,24 +30,6 @@ const employeeNavItems = [
   { path: '/employee/history', label: 'My History', icon: History },
 ];
 
-/** Derive avatar initials from first + last name. */
-function getInitials(firstName?: string, lastName?: string) {
-  const f = firstName?.[0]?.toUpperCase() ?? '';
-  const l = lastName?.[0]?.toUpperCase() ?? '';
-  return f + l || '?';
-}
-
-/** Deterministic avatar colour from the user's name. */
-const AVATAR_COLOURS = [
-  '#1E3A8A', '#2563EB', '#0891B2', '#059669',
-  '#7C3AED', '#DB2777', '#D97706', '#DC2626',
-];
-function avatarColour(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLOURS[Math.abs(hash) % AVATAR_COLOURS.length];
-}
-
 export function AppLayout({ children, role, onLogout }: LayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -57,9 +40,7 @@ export function AppLayout({ children, role, onLogout }: LayoutProps) {
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
-  const initials = getInitials(user?.firstName, user?.lastName);
   const fullName = user ? `${user.firstName} ${user.lastName}` : '…';
-  const colour = user ? avatarColour(fullName) : '#1E3A8A';
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#F8FAFC' }}>
@@ -109,12 +90,7 @@ export function AppLayout({ children, role, onLogout }: LayoutProps) {
             onClick={() => router.push(profilePath)}
             className="w-full flex items-center gap-3 px-5 py-4 transition-colors hover:bg-white/5"
           >
-            <div
-              className="flex items-center justify-center rounded-full shrink-0 text-white font-semibold"
-              style={{ width: 34, height: 34, background: colour, fontSize: 13 }}
-            >
-              {initials}
-            </div>
+            <Avatar user={user} size={34} />
             <div className="flex-1 text-left min-w-0">
               <div className="text-white font-medium truncate" style={{ fontSize: 13 }}>{fullName}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{user?.role ?? ''}</div>
@@ -155,12 +131,7 @@ export function AppLayout({ children, role, onLogout }: LayoutProps) {
           </button>
 
           <button className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-gray-100 transition-colors">
-            <div
-              className="flex items-center justify-center rounded-full text-white font-semibold"
-              style={{ width: 32, height: 32, background: colour, fontSize: 12 }}
-            >
-              {initials}
-            </div>
+            <Avatar user={user} size={32} />
             <span className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{user?.firstName ?? '…'}</span>
             <ChevronDown className="w-4 h-4" style={{ color: '#64748B' }} />
           </button>

@@ -370,6 +370,22 @@ export interface UserListItem {
   createdAt: string;
 }
 
+// ── Profile ────────────────────────────────────────────────────────────────
+
+/** The logged-in user's full profile (shape returned by GET /profile). */
+export type ProfileUser = UserListItem;
+
+export interface UpdateProfilePayload {
+  firstName?: string;
+  lastName?: string;
+  contactNumber?: string;
+}
+
+export interface ResetPasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────
 
 export interface AuthUser {
@@ -380,6 +396,8 @@ export interface AuthUser {
   role: UserRole;
   status: UserStatus;
   isFirstLogin: boolean;
+  /** Present from GET /auth/profile (login response omits it). */
+  profilePicture?: string | null;
 }
 
 export interface LoginResponse {
