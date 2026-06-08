@@ -227,7 +227,7 @@ export function UserManagement() {
                                 style={{ fontSize: 13, color: '#334155' }}>
                                 <Eye className="w-3.5 h-3.5" /> View Profile
                               </button>
-                              <button onClick={() => setOpenMenu(null)}
+                              <button onClick={() => { setOpenMenu(null); setEditTarget(user); }}
                                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
                                 style={{ fontSize: 13, color: '#334155' }}>
                                 <Pencil className="w-3.5 h-3.5" /> Edit
