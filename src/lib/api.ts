@@ -218,6 +218,12 @@ export function createUser(payload: CreateUserPayload): Promise<CreateUserRespon
   });
 }
 
+export function deleteUser(id: string): Promise<{ message: string }> {
+  return request<{ message: string }>(`/users/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 // ── Designations ──────────────────────────────────────────────────────────
 
 export function getDesignations(): Promise<DesignationListItem[]> {
