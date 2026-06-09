@@ -317,7 +317,7 @@ export interface UpdateUpgradePayload extends Partial<CreateUpgradePayload> {}
 
 // ── Assignments ─────────────────────────────────────────────────────────────
 
-/** Returned by POST /api/assignments. */
+/** Returned by POST /api/assignments and the return/active endpoints. */
 export interface Assignment {
   id: string;
   asset: { id: string; name: string; displayId: string; serialNumber: string };
@@ -326,6 +326,10 @@ export interface Assignment {
   assignmentDate: string;
   expectedReturnDate: string | null;
   notes: string | null;
+  returnDate: string | null;
+  conditionAtReturn: AssetCondition | null;
+  returnNotes: string | null;
+  returnedAt: string | null;
   createdAt: string;
 }
 
@@ -336,6 +340,13 @@ export interface CreateAssignmentPayload {
   assignmentDate: string;
   expectedReturnDate?: string;
   notes?: string;
+}
+
+/** PATCH /api/assignments/:id/return request body. */
+export interface ReturnAssignmentPayload {
+  returnDate: string;
+  conditionAtReturn: AssetCondition;
+  returnNotes?: string;
 }
 
 // ── Shared pagination ─────────────────────────────────────────────────────

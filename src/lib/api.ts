@@ -21,6 +21,7 @@ import type {
   PaginatedResult,
   ProfileUser,
   ResetPasswordPayload,
+  ReturnAssignmentPayload,
   UpdateAssetPayload,
   UpdateCategoryPayload,
   UpdateProfilePayload,
@@ -409,6 +410,25 @@ export function createAssignment(
 ): Promise<Assignment> {
   return request<Assignment>('/assignments', {
     method: 'POST',
+    body: payload,
+  });
+}
+
+/** The active (not-yet-returned) assignment for an asset, or null if none. */
+export function getActiveAssignment(
+  assetId: string,
+): Promise<Assignment | null> {
+  return request<Assignment | null>('/assignments/active', {
+    query: { assetId },
+  });
+}
+
+export function returnAssignment(
+  id: string,
+  payload: ReturnAssignmentPayload,
+): Promise<Assignment> {
+  return request<Assignment>(`/assignments/${id}/return`, {
+    method: 'PATCH',
     body: payload,
   });
 }
