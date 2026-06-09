@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { X, Search, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
+import { ApiError, createAssignment, getUsers } from '@/lib/api';
 import type { AssetDetail, UserListItem } from '@/types';
 
 // Only the asset fields this panel needs to display.
@@ -10,13 +12,16 @@ type AssetLike = Pick<AssetDetail, 'id' | 'name' | 'displayId' | 'serialNumber'>
 interface Props {
   asset: AssetLike;
   onClose: () => void;
+  /** Called after the assignment is created so the parent can refresh the asset. */
+  onAssigned: () => void;
 }
 
 const today = () => new Date().toISOString().split('T')[0];
 
-export function AssignAssetDrawer({ asset, onClose }: Props) {
-  // Employee list is loaded in OAMS-105; the searchable dropdown UI is built here.
-  const [employees] = useState<UserListItem[]>([]);
+export function AssignAssetDrawer({ asset, onClose, onAssigned }: Props) {
+  const [employees, setEmployees] = useState<UserListItem[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useState(true);
+  const [employeesError, setEmployeesError] = useState<string | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [search, setSearch] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -26,6 +31,17 @@ export function AssignAssetDrawer({ asset, onClose }: Props) {
   const [expectedReturn, setExpectedReturn] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  // Only active employees are valid assignees.
+  useEffect(() => {
+    getUsers({ role: 'Employee', status: 'Active', limit: 100 })
+      .then((result) => setEmployees(result.data))
+      .catch((err) =>
+        setEmployeesError(err instanceof Error ? err.message : 'Failed to load assignees.'),
+      )
+      .finally(() => setEmployeesLoading(false));
+  }, []);
 
   // Close the dropdown on an outside click.
   useEffect(() => {
@@ -66,9 +82,25 @@ export function AssignAssetDrawer({ asset, onClose }: Props) {
     return Object.keys(e).length === 0;
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!validate()) return;
-    // The assignment is created in OAMS-105.
+    setSaving(true);
+    try {
+      await createAssignment({
+        assetId: asset.id,
+        employeeId: selectedEmployeeId,
+        assignmentDate,
+        expectedReturnDate: expectedReturn || undefined,
+        notes: notes.trim() || undefined,
+      });
+      toast.success(`"${asset.name}" assigned successfully.`);
+      onAssigned();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to assign asset.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -102,7 +134,15 @@ export function AssignAssetDrawer({ asset, onClose }: Props) {
               Select Assignee <span style={{ color: '#EF4444' }}>*</span>
             </label>
             <div ref={dropdownRef} className="relative">
-              {selected ? (
+              {employeesLoading ? (
+                <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: '#CBD5E1', fontSize: 13, color: '#94A3B8' }}>
+                  Loading assignees…
+                </div>
+              ) : employeesError ? (
+                <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: '#EF4444', fontSize: 12, color: '#EF4444' }}>
+                  {employeesError}
+                </div>
+              ) : selected ? (
                 <div className="flex items-center justify-between rounded-lg border px-3 py-2.5" style={{ borderColor: '#3B82F6', background: '#EFF6FF' }}>
                   <div>
                     <div className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{selected.firstName} {selected.lastName}</div>
@@ -187,10 +227,10 @@ export function AssignAssetDrawer({ asset, onClose }: Props) {
             style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>
             Cancel
           </button>
-          <button onClick={handleConfirm}
+          <button onClick={handleConfirm} disabled={saving}
             className="rounded-lg px-5 py-2.5 font-semibold text-white hover:opacity-90 transition-colors disabled:opacity-60"
             style={{ fontSize: 14, background: '#1E3A8A' }}>
-            Confirm Assignment
+            {saving ? 'Assigning…' : 'Confirm Assignment'}
           </button>
         </div>
       </div>

@@ -1,9 +1,11 @@
 import type {
+  Assignment,
   AssetDetail,
   AssetListItem,
   AssetStatus,
   AssetUpgrade,
   AuthUser,
+  CreateAssignmentPayload,
   CategoryDetail,
   CategoryListItem,
   CategoryStatusValue,
@@ -397,5 +399,16 @@ export function updateUpgrade(
 export function deleteUpgrade(id: string): Promise<{ message: string }> {
   return request<{ message: string }>(`/upgrades/${id}`, {
     method: 'DELETE',
+  });
+}
+
+// ── Assignments ─────────────────────────────────────────────────────────────
+
+export function createAssignment(
+  payload: CreateAssignmentPayload,
+): Promise<Assignment> {
+  return request<Assignment>('/assignments', {
+    method: 'POST',
+    body: payload,
   });
 }
