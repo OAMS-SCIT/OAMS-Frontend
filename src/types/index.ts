@@ -386,6 +386,41 @@ export interface ResetPasswordPayload {
   newPassword: string;
 }
 
+// ── API response shapes — Dashboard ───────────────────────────────────────
+
+/** Returned by GET /api/dashboard/summary. */
+export interface DashboardSummary {
+  totalAssets: number;
+  assigned: number;
+  available: number;
+  underRepair: number;
+  retired: number;
+  categoryBreakdown: DashboardCategoryBreakdown[];
+  recentAssets: DashboardRecentAsset[];
+  recentAssignments: DashboardRecentAssignment[];
+}
+
+export interface DashboardCategoryBreakdown {
+  categoryId: string;
+  categoryName: string;
+  assetCount: number;
+}
+
+export interface DashboardRecentAsset {
+  id: string;
+  assetName: string;
+  category: { id: string; name: string };
+  status: AssetStatus;
+  createdAt: string;
+}
+
+export interface DashboardRecentAssignment {
+  id: string;
+  asset: { id: string; assetName: string };
+  assignedTo: { id: string; firstName: string; lastName: string };
+  assignmentDate: string;
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────
 
 export interface AuthUser {

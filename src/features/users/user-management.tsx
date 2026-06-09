@@ -12,7 +12,7 @@ import { PortalMenu } from '@/components/ui/PortalMenu';
 import { CreateUserDrawer } from '@/components/overlays/CreateUserDrawer';
 import { EditUserDrawer } from '@/components/overlays/EditUserDrawer';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
-import { ApiError, getUsers, updateUserStatus } from '@/lib/api';
+import { ApiError, deleteUser, getUsers, updateUserStatus } from '@/lib/api';
 import { useAuth } from '@/providers/auth-provider';
 
 const PER_PAGE = 10;
@@ -28,6 +28,7 @@ export function UserManagement() {
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<UserListItem | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<UserListItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UserListItem | null>(null);
   const [page, setPage] = useState(1);
 
   const [users, setUsers] = useState<UserListItem[]>([]);
@@ -89,6 +90,23 @@ export function UserManagement() {
       load();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Failed to update status.');
+    }
+  };
+
+  const handleDeleteUser = (user: UserListItem) => {
+    setOpenMenu(null);
+    setDeleteTarget(user);
+  };
+
+  const executeDelete = async (user: UserListItem) => {
+    try {
+      await deleteUser(user.id);
+      toast.success(`${user.firstName} ${user.lastName} removed successfully.`);
+      load();
+    } catch (err) {
+      // 409: user has existing asset relations — backend message explains why
+      // and suggests deactivating instead. Surface it as-is.
+      toast.error(err instanceof ApiError ? err.message : 'Failed to remove user.');
     }
   };
 
@@ -227,7 +245,7 @@ export function UserManagement() {
                                 style={{ fontSize: 13, color: '#334155' }}>
                                 <Eye className="w-3.5 h-3.5" /> View Profile
                               </button>
-                              <button onClick={() => setOpenMenu(null)}
+                              <button onClick={() => { setOpenMenu(null); setEditTarget(user); }}
                                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
                                 style={{ fontSize: 13, color: '#334155' }}>
                                 <Pencil className="w-3.5 h-3.5" /> Edit
@@ -249,11 +267,19 @@ export function UserManagement() {
                                   </button>
                                 );
                               })()}
-                              <button onClick={() => setOpenMenu(null)}
-                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-                                style={{ fontSize: 13, color: '#EF4444' }}>
-                                <Trash2 className="w-3.5 h-3.5" /> Remove User
-                              </button>
+                              {currentUser?.id === user.id ? (
+                                <button disabled
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left opacity-40 cursor-not-allowed"
+                                  style={{ fontSize: 13, color: '#EF4444' }}>
+                                  <Trash2 className="w-3.5 h-3.5" /> Remove User
+                                </button>
+                              ) : (
+                                <button onClick={() => handleDeleteUser(user)}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
+                                  style={{ fontSize: 13, color: '#EF4444' }}>
+                                  <Trash2 className="w-3.5 h-3.5" /> Remove User
+                                </button>
+                              )}
                             </PortalMenu>
                           )}
                         </td>
@@ -354,6 +380,16 @@ export function UserManagement() {
           confirmLabel="Deactivate"
           onConfirm={() => { void executeStatusChange(confirmTarget, 'Inactive'); setConfirmTarget(null); }}
           onCancel={() => setConfirmTarget(null)}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Remove User"
+          description={`Permanently remove ${deleteTarget.firstName} ${deleteTarget.lastName}? This action cannot be undone. If they have any asset history, removal will be blocked — deactivate the account instead.`}
+          confirmLabel="Remove"
+          onConfirm={() => { void executeDelete(deleteTarget); setDeleteTarget(null); }}
+          onCancel={() => setDeleteTarget(null)}
         />
       )}
     </div>

@@ -12,6 +12,7 @@ import type {
   CreateUpgradePayload,
   CreateUserPayload,
   CreateUserResponse,
+  DashboardSummary,
   DesignationListItem,
   LoginResponse,
   ManualAssetStatus,
@@ -123,6 +124,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return response.json() as Promise<T>;
 }
 
+// ── Dashboard ─────────────────────────────────────────────────────────────
+
+export function getDashboardSummary(): Promise<DashboardSummary> {
+  return request<DashboardSummary>('/dashboard/summary');
+}
+
 // ── Auth ─────────────────────────────────────────────────────────────────
 
 export function login(email: string, password: string): Promise<LoginResponse> {
@@ -215,6 +222,12 @@ export function createUser(payload: CreateUserPayload): Promise<CreateUserRespon
   return request<CreateUserResponse>('/users', {
     method: 'POST',
     body: payload,
+  });
+}
+
+export function deleteUser(id: string): Promise<{ message: string }> {
+  return request<{ message: string }>(`/users/${id}`, {
+    method: 'DELETE',
   });
 }
 
