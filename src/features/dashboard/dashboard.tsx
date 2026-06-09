@@ -1,46 +1,100 @@
 ﻿'use client';
 
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Database, UserCheck, CheckCircle, Wrench, Archive,
-  ArrowRight, TrendingUp,
+  ArrowRight, RefreshCw,
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis,
 } from 'recharts';
-import { Asset } from '@/types';
-import { mockUsers } from '@/lib/mock-data';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
-
-interface DashboardProps {
-  assets: Asset[];
-}
+import { EmptyState } from '@/components/ui/EmptyState';
+import { getDashboardSummary } from '@/lib/api';
+import { useAuth } from '@/providers/auth-provider';
+import type { DashboardSummary } from '@/types';
 
 const CATEGORY_COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#94A3B8'];
 
-export function Dashboard({ assets }: DashboardProps) {
-  const router = useRouter();
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
 
-  const total = assets.length;
-  const assigned = assets.filter(a => a.status === 'Assigned').length;
-  const available = assets.filter(a => a.status === 'Available').length;
-  const underRepair = assets.filter(a => a.status === 'Under Repair').length;
-  const retired = assets.filter(a => a.status === 'Retired').length;
+export function Dashboard() {
+  const router = useRouter();
+  const { user } = useAuth();
+
+  const [data, setData] = useState<DashboardSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const summary = await getDashboardSummary();
+      setData(summary);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24">
+        <RefreshCw className="w-8 h-8 animate-spin mb-3" style={{ color: '#94A3B8' }} />
+        <p style={{ fontSize: 14, color: '#64748B' }}>Loading dashboard…</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <EmptyState
+        icon="assets"
+        title="Unable to load dashboard"
+        subtitle={error ?? 'Something went wrong. Please try again.'}
+        action={
+          <button
+            onClick={load}
+            className="rounded-lg px-4 py-2 font-medium hover:opacity-90"
+            style={{ background: '#3B82F6', color: '#fff', fontSize: 13 }}
+          >
+            Retry
+          </button>
+        }
+      />
+    );
+  }
+
+  const { totalAssets, assigned, available, underRepair, retired } = data;
+  const total = totalAssets;
 
   const kpiCards = [
-    { label: 'Total Assets', value: total, icon: Database, accent: '#3B82F6', bg: '#EFF6FF' },
+    { label: 'Total Assets', value: totalAssets, icon: Database, accent: '#3B82F6', bg: '#EFF6FF' },
     { label: 'Assigned Assets', value: assigned, icon: UserCheck, accent: '#3B82F6', bg: '#EFF6FF' },
     { label: 'Available Assets', value: available, icon: CheckCircle, accent: '#10B981', bg: '#ECFDF5' },
     { label: 'Under Repair', value: underRepair, icon: Wrench, accent: '#F59E0B', bg: '#FFFBEB' },
     { label: 'Retired Assets', value: retired, icon: Archive, accent: '#94A3B8', bg: '#F8FAFC' },
   ];
 
-  const categoryMap: Record<string, number> = {};
-  assets.forEach(a => { categoryMap[a.categoryName] = (categoryMap[a.categoryName] || 0) + 1; });
-  const categoryData = Object.entries(categoryMap).map(([name, count]) => ({
-    name, count, percentage: Math.round((count / total) * 100),
+  const categoryData = data.categoryBreakdown.map((cat) => ({
+    name: cat.categoryName,
+    count: cat.assetCount,
+    percentage: total ? Math.round((cat.assetCount / total) * 100) : 0,
   }));
 
   const statusData = [
@@ -50,16 +104,16 @@ export function Dashboard({ assets }: DashboardProps) {
     { name: 'Retired', count: retired, fill: '#94A3B8' },
   ];
 
-  const recentAssets = [...assets].sort((a, b) => b.registeredDate.localeCompare(a.registeredDate)).slice(0, 5);
-  const recentAssigned = assets.filter(a => a.status === 'Assigned' && a.assignedDate)
-    .sort((a, b) => (b.assignedDate || '').localeCompare(a.assignedDate || '')).slice(0, 5);
+  const welcomeName = user?.firstName ?? 'Admin';
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-bold" style={{ fontSize: 24, color: '#1E293B' }}>Dashboard</h1>
-          <p style={{ fontSize: 14, color: '#64748B', marginTop: 2 }}>Welcome back, Alex. Here's your asset overview.</p>
+          <p style={{ fontSize: 14, color: '#64748B', marginTop: 2 }}>
+            Welcome back, {welcomeName}. Here&apos;s your asset overview.
+          </p>
         </div>
         <div style={{ fontSize: 13, color: '#64748B', background: '#F1F5F9', borderRadius: 8, padding: '6px 12px' }}>
           {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -75,10 +129,6 @@ export function Dashboard({ assets }: DashboardProps) {
               <div className="flex items-center justify-between mb-3">
                 <div className="rounded-xl p-2.5" style={{ background: card.bg }}>
                   <Icon className="w-5 h-5" style={{ color: card.accent }} />
-                </div>
-                <div className="flex items-center gap-1" style={{ fontSize: 11, color: '#10B981' }}>
-                  <TrendingUp className="w-3 h-3" />
-                  <span>+2.4%</span>
                 </div>
               </div>
               <div className="font-bold" style={{ fontSize: 30, color: '#1E293B', lineHeight: 1.1 }}>{card.value}</div>
@@ -100,32 +150,36 @@ export function Dashboard({ assets }: DashboardProps) {
               View All Categories <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
-          <div className="flex items-center gap-8">
-            <div style={{ width: 180, height: 180 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={categoryData} dataKey="count" cx="50%" cy="50%" innerRadius={52} outerRadius={80} paddingAngle={3}>
-                    {categoryData.map((_, i) => <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v) => [v ?? 0, 'Assets']} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 space-y-3">
-              {categoryData.map((cat, i) => (
-                <div key={cat.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-full shrink-0" style={{ width: 10, height: 10, background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }} />
-                    <span style={{ fontSize: 13, color: '#334155' }}>{cat.name}</span>
+          {categoryData.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#94A3B8' }}>No assets registered yet.</p>
+          ) : (
+            <div className="flex items-center gap-8">
+              <div style={{ width: 180, height: 180 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={categoryData} dataKey="count" cx="50%" cy="50%" innerRadius={52} outerRadius={80} paddingAngle={3}>
+                      {categoryData.map((_, i) => <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip formatter={(v) => [v ?? 0, 'Assets']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex-1 space-y-3">
+                {categoryData.map((cat, i) => (
+                  <div key={cat.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-full shrink-0" style={{ width: 10, height: 10, background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }} />
+                      <span style={{ fontSize: 13, color: '#334155' }}>{cat.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold" style={{ fontSize: 13, color: '#1E293B' }}>{cat.count}</span>
+                      <span style={{ fontSize: 12, color: '#94A3B8', minWidth: 32 }}>{cat.percentage}%</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold" style={{ fontSize: 13, color: '#1E293B' }}>{cat.count}</span>
-                    <span style={{ fontSize: 12, color: '#94A3B8', minWidth: 32 }}>{cat.percentage}%</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="rounded-2xl p-6" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
@@ -161,30 +215,33 @@ export function Dashboard({ assets }: DashboardProps) {
               View All <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
-          <table className="w-full">
-            <thead>
-              <tr style={{ background: '#F8FAFC' }}>
-                {['Asset Name', 'Category', 'Status', 'Date Added'].map(h => (
-                  <th key={h} className="text-left px-6 py-2.5" style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recentAssets.map((asset, i) => (
-                <tr key={asset.id} className="cursor-pointer transition-colors hover:bg-blue-50/40"
-                  style={{ background: i % 2 === 0 ? '#fff' : '#F8FAFC', borderTop: '1px solid #F1F5F9' }}
-                  onClick={() => router.push(`/admin/inventory/${asset.id}`)}>
-                  <td className="px-6 py-3">
-                    <div className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{asset.name}</div>
-                    <div style={{ fontSize: 11, color: '#94A3B8' }}>{asset.brand}</div>
-                  </td>
-                  <td className="px-6 py-3" style={{ fontSize: 13, color: '#64748B' }}>{asset.categoryName}</td>
-                  <td className="px-6 py-3"><StatusBadge status={asset.status} /></td>
-                  <td className="px-6 py-3" style={{ fontSize: 13, color: '#64748B' }}>{asset.registeredDate}</td>
+          {data.recentAssets.length === 0 ? (
+            <EmptyState icon="assets" title="No assets yet" subtitle="Register your first asset to see it here." />
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr style={{ background: '#F8FAFC' }}>
+                  {['Asset Name', 'Category', 'Status', 'Date Added'].map(h => (
+                    <th key={h} className="text-left px-6 py-2.5" style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.recentAssets.map((asset, i) => (
+                  <tr key={asset.id} className="cursor-pointer transition-colors hover:bg-blue-50/40"
+                    style={{ background: i % 2 === 0 ? '#fff' : '#F8FAFC', borderTop: '1px solid #F1F5F9' }}
+                    onClick={() => router.push(`/admin/inventory/${asset.id}`)}>
+                    <td className="px-6 py-3">
+                      <div className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{asset.assetName}</div>
+                    </td>
+                    <td className="px-6 py-3" style={{ fontSize: 13, color: '#64748B' }}>{asset.category.name}</td>
+                    <td className="px-6 py-3"><StatusBadge status={asset.status} /></td>
+                    <td className="px-6 py-3" style={{ fontSize: 13, color: '#64748B' }}>{formatDate(asset.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         <div className="rounded-2xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
@@ -194,37 +251,40 @@ export function Dashboard({ assets }: DashboardProps) {
               View All <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
-          <table className="w-full">
-            <thead>
-              <tr style={{ background: '#F8FAFC' }}>
-                {['Asset Name', 'Assigned To', 'Date'].map(h => (
-                  <th key={h} className="text-left px-6 py-2.5" style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recentAssigned.map((asset, i) => {
-                const user = mockUsers.find(u => u.id === asset.assignedToId);
-                return (
-                  <tr key={asset.id} className="cursor-pointer transition-colors hover:bg-blue-50/40"
-                    style={{ background: i % 2 === 0 ? '#fff' : '#F8FAFC', borderTop: '1px solid #F1F5F9' }}
-                    onClick={() => router.push(`/admin/inventory/${asset.id}`)}>
-                    <td className="px-6 py-3">
-                      <div className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{asset.name}</div>
-                      <div style={{ fontSize: 11, color: '#94A3B8' }}>{asset.id}</div>
-                    </td>
-                    <td className="px-6 py-3">
-                      <div className="flex items-center gap-2">
-                        <Avatar user={user} size={26} />
-                        <span style={{ fontSize: 13, color: '#334155' }}>{asset.assignedTo}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-3" style={{ fontSize: 13, color: '#64748B' }}>{asset.assignedDate}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {data.recentAssignments.length === 0 ? (
+            <EmptyState icon="assignments" title="No assignments yet" subtitle="Assign an asset to an employee to see it here." />
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr style={{ background: '#F8FAFC' }}>
+                  {['Asset Name', 'Assigned To', 'Date'].map(h => (
+                    <th key={h} className="text-left px-6 py-2.5" style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentAssignments.map((assignment, i) => {
+                  const assigneeName = `${assignment.assignedTo.firstName} ${assignment.assignedTo.lastName}`;
+                  return (
+                    <tr key={assignment.id} className="cursor-pointer transition-colors hover:bg-blue-50/40"
+                      style={{ background: i % 2 === 0 ? '#fff' : '#F8FAFC', borderTop: '1px solid #F1F5F9' }}
+                      onClick={() => router.push(`/admin/inventory/${assignment.asset.id}`)}>
+                      <td className="px-6 py-3">
+                        <div className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{assignment.asset.assetName}</div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          <Avatar user={assignment.assignedTo} size={26} />
+                          <span style={{ fontSize: 13, color: '#334155' }}>{assigneeName}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3" style={{ fontSize: 13, color: '#64748B' }}>{formatDate(assignment.assignmentDate)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
