@@ -321,7 +321,7 @@ export interface UpdateUpgradePayload extends Partial<CreateUpgradePayload> {}
 export interface Assignment {
   id: string;
   asset: { id: string; name: string; displayId: string; serialNumber: string };
-  employee: { id: string; firstName: string; lastName: string };
+  assignee: { id: string; firstName: string; lastName: string };
   assignedBy: { id: string; firstName: string; lastName: string } | null;
   assignmentDate: string;
   expectedReturnDate: string | null;
@@ -332,7 +332,7 @@ export interface Assignment {
 /** POST /api/assignments request body. */
 export interface CreateAssignmentPayload {
   assetId: string;
-  employeeId: string;
+  assigneeId: string;
   assignmentDate: string;
   expectedReturnDate?: string;
   notes?: string;

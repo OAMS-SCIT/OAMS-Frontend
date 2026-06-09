@@ -33,9 +33,9 @@ export function AssignAssetDrawer({ asset, onClose, onAssigned }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  // Only active employees are valid assignees.
+  // Any active user (Admin or Employee) can be an assignee.
   useEffect(() => {
-    getUsers({ role: 'Employee', status: 'Active', limit: 100 })
+    getUsers({ status: 'Active', limit: 100 })
       .then((result) => setEmployees(result.data))
       .catch((err) =>
         setEmployeesError(err instanceof Error ? err.message : 'Failed to load assignees.'),
@@ -88,7 +88,7 @@ export function AssignAssetDrawer({ asset, onClose, onAssigned }: Props) {
     try {
       await createAssignment({
         assetId: asset.id,
-        employeeId: selectedEmployeeId,
+        assigneeId: selectedEmployeeId,
         assignmentDate,
         expectedReturnDate: expectedReturn || undefined,
         notes: notes.trim() || undefined,
