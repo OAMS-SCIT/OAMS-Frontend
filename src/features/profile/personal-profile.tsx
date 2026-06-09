@@ -58,8 +58,12 @@ export function PersonalProfile({
   }, [preview]);
 
   const designationName = user.designation?.name ?? '—';
+  // Full URLs (e.g. Cloudinary) are used as-is; relative paths (legacy
+  // /uploads/... disk storage) are resolved against imageBaseUrl.
   const storedPicture = user.profilePicture
-    ? `${imageBaseUrl}${user.profilePicture}`
+    ? user.profilePicture.startsWith('http')
+      ? user.profilePicture
+      : `${imageBaseUrl}${user.profilePicture}`
     : null;
   // Fall back to initials if the stored image fails to load (e.g. deleted file).
   const avatarSrc = imgError ? null : preview ?? storedPicture;
