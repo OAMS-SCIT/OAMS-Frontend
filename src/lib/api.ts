@@ -12,6 +12,7 @@ import type {
   CreateUpgradePayload,
   CreateUserPayload,
   CreateUserResponse,
+  DashboardSummary,
   DesignationListItem,
   LoginResponse,
   ManualAssetStatus,
@@ -121,6 +122,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     return undefined as T;
   }
   return response.json() as Promise<T>;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────
+
+export function getDashboardSummary(): Promise<DashboardSummary> {
+  return request<DashboardSummary>('/dashboard/summary');
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────
