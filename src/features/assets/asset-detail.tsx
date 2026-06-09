@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ChevronRight, Pencil, RefreshCw, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, Pencil, UserPlus, Plus, Trash2 } from 'lucide-react';
 import type { AssetDetail as AssetDetailType, AssetUpgrade } from '@/types';
 import { ApiError, getAsset, getUpgrades, deleteUpgrade } from '@/lib/api';
 import { StatusBadge, ConditionBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
 import { RegisterAssetDrawer } from '@/components/overlays/RegisterAssetDrawer';
-import { ChangeStatusDrawer } from '@/components/overlays/ChangeStatusDrawer';
+import { AssignAssetDrawer } from '@/components/overlays/AssignAssetDrawer';
 import { AddUpgradeDrawer } from '@/components/overlays/AddUpgradeDrawer';
 
 function InfoRow({ label, value, mono, style }: {
@@ -41,7 +41,7 @@ export function AssetDetail() {
 
   // Drawer / dialog state
   const [showEdit, setShowEdit] = useState(false);
-  const [showChangeStatus, setShowChangeStatus] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
   const [showAddUpgrade, setShowAddUpgrade] = useState(false);
   const [editingUpgrade, setEditingUpgrade] = useState<AssetUpgrade | undefined>(undefined);
   const [deletingUpgrade, setDeletingUpgrade] = useState<AssetUpgrade | null>(null);
@@ -176,11 +176,13 @@ export function AssetDetail() {
         </div>
 
         <div className="flex items-center gap-3 mt-5">
-          <button onClick={() => setShowChangeStatus(true)}
-            className="flex items-center gap-2 rounded-lg border px-4 py-2.5 font-medium hover:bg-gray-50 transition-colors"
-            style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>
-            <RefreshCw className="w-4 h-4" /> Change Status
-          </button>
+          {asset.status === 'Available' && (
+            <button onClick={() => setShowAssign(true)}
+              className="flex items-center gap-2 rounded-lg px-4 py-2.5 font-medium text-white hover:opacity-90 transition-colors"
+              style={{ fontSize: 14, background: '#1E3A8A' }}>
+              <UserPlus className="w-4 h-4" /> Assign Asset
+            </button>
+          )}
           <button onClick={() => setShowEdit(true)}
             className="flex items-center gap-2 rounded-lg border px-4 py-2.5 font-medium hover:bg-gray-50 transition-colors"
             style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>
@@ -365,11 +367,11 @@ export function AssetDetail() {
           onSaved={(updated) => { setAsset(updated); setShowEdit(false); }}
         />
       )}
-      {showChangeStatus && (
-        <ChangeStatusDrawer
+      {showAssign && (
+        <AssignAssetDrawer
           asset={asset}
-          onClose={() => setShowChangeStatus(false)}
-          onSaved={(updated) => { setAsset(updated); setShowChangeStatus(false); }}
+          onClose={() => setShowAssign(false)}
+          onAssigned={() => { setShowAssign(false); loadAsset(); }}
         />
       )}
       {showAddUpgrade && (
