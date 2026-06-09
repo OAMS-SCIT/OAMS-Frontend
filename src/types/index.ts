@@ -315,6 +315,29 @@ export interface CreateUpgradePayload {
 
 export interface UpdateUpgradePayload extends Partial<CreateUpgradePayload> {}
 
+// ── Assignments ─────────────────────────────────────────────────────────────
+
+/** Returned by POST /api/assignments. */
+export interface Assignment {
+  id: string;
+  asset: { id: string; name: string; displayId: string; serialNumber: string };
+  employee: { id: string; firstName: string; lastName: string };
+  assignedBy: { id: string; firstName: string; lastName: string } | null;
+  assignmentDate: string;
+  expectedReturnDate: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+/** POST /api/assignments request body. */
+export interface CreateAssignmentPayload {
+  assetId: string;
+  employeeId: string;
+  assignmentDate: string;
+  expectedReturnDate?: string;
+  notes?: string;
+}
+
 // ── Shared pagination ─────────────────────────────────────────────────────
 
 export interface PaginatedResult<T> {
