@@ -16,6 +16,7 @@ import type {
   CreateUserResponse,
   DashboardSummary,
   DesignationListItem,
+  DesignationManageItem,
   LoginResponse,
   ManualAssetStatus,
   PaginatedResult,
@@ -238,6 +239,55 @@ export function deleteUser(id: string): Promise<{ message: string }> {
 
 export function getDesignations(): Promise<DesignationListItem[]> {
   return request<DesignationListItem[]>('/designations');
+}
+
+export interface GetDesignationsManageParams {
+  search?: string;
+  status?: 'Active' | 'Inactive' | '';
+  page?: number;
+  limit?: number;
+}
+
+export function getDesignationsManage(
+  params: GetDesignationsManageParams = {},
+): Promise<PaginatedResult<DesignationManageItem>> {
+  const query: Record<string, string | number | undefined> = {
+    search: params.search,
+    status: params.status || undefined,
+    page: params.page,
+    limit: params.limit,
+  };
+  return request<PaginatedResult<DesignationManageItem>>('/designations/manage', { query });
+}
+
+export function createDesignation(name: string): Promise<DesignationManageItem> {
+  return request<DesignationManageItem>('/designations', {
+    method: 'POST',
+    body: { name },
+  });
+}
+
+export function updateDesignation(id: string, name: string): Promise<DesignationManageItem> {
+  return request<DesignationManageItem>(`/designations/${id}`, {
+    method: 'PATCH',
+    body: { name },
+  });
+}
+
+export function updateDesignationStatus(
+  id: string,
+  status: 'Active' | 'Inactive',
+): Promise<DesignationManageItem> {
+  return request<DesignationManageItem>(`/designations/${id}/status`, {
+    method: 'PATCH',
+    body: { status },
+  });
+}
+
+export function deleteDesignation(id: string): Promise<{ message: string }> {
+  return request<{ message: string }>(`/designations/${id}`, {
+    method: 'DELETE',
+  });
 }
 
 // ── Categories ────────────────────────────────────────────────────────────

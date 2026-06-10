@@ -365,6 +365,14 @@ export interface DesignationListItem {
   name: string;
 }
 
+/** Returned by GET /api/designations/manage (paginated management list). */
+export interface DesignationManageItem {
+  id: string;
+  name: string;
+  status: 'Active' | 'Inactive';
+  updatedAt: string;
+}
+
 // PATCH /api/users/:id request body (all fields optional)
 export interface UpdateUserPayload {
   firstName?: string;
