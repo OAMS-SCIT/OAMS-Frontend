@@ -333,6 +333,23 @@ export interface Assignment {
   createdAt: string;
 }
 
+/** A row in the active assignments list (GET /api/assignments). */
+export interface ActiveAssignmentListItem {
+  id: string;
+  asset: {
+    id: string;
+    name: string;
+    displayId: string;
+    serialNumber: string;
+    category: { id: string; name: string } | null;
+  };
+  assignee: { id: string; firstName: string; lastName: string; profilePicture: string | null };
+  assignmentDate: string;
+  expectedReturnDate: string | null;
+  /** True when the assignment is active and its expected return date has passed. */
+  isOverdue: boolean;
+}
+
 /** POST /api/assignments request body. */
 export interface CreateAssignmentPayload {
   assetId: string;
