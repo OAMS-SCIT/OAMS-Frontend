@@ -1,4 +1,5 @@
 import type {
+  ActiveAssignmentListItem,
   Assignment,
   AssetDetail,
   AssetListItem,
@@ -404,6 +405,38 @@ export function deleteUpgrade(id: string): Promise<{ message: string }> {
 }
 
 // ── Assignments ─────────────────────────────────────────────────────────────
+
+export interface GetAssignmentsParams {
+  search?: string;
+  categoryId?: string;
+  overdue?: boolean;
+  assignmentDateFrom?: string;
+  assignmentDateTo?: string;
+  sortBy?: 'assignmentDate' | 'expectedReturnDate' | 'createdAt';
+  sortOrder?: 'ASC' | 'DESC';
+  page?: number;
+  limit?: number;
+}
+
+/** Paginated list of currently active (not-yet-returned) assignments. */
+export function getAssignments(
+  params: GetAssignmentsParams = {},
+): Promise<PaginatedResult<ActiveAssignmentListItem>> {
+  const query: Record<string, string | number | boolean | undefined> = {
+    search: params.search,
+    categoryId: params.categoryId,
+    overdue: params.overdue,
+    assignmentDateFrom: params.assignmentDateFrom,
+    assignmentDateTo: params.assignmentDateTo,
+    sortBy: params.sortBy,
+    sortOrder: params.sortOrder,
+    page: params.page,
+    limit: params.limit,
+  };
+  return request<PaginatedResult<ActiveAssignmentListItem>>('/assignments', {
+    query,
+  });
+}
 
 export function createAssignment(
   payload: CreateAssignmentPayload,
