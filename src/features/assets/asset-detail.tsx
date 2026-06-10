@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ChevronRight, Pencil, UserPlus, Plus, Trash2 } from 'lucide-react';
-import type { AssetDetail as AssetDetailType, AssetUpgrade } from '@/types';
-import { ApiError, getAsset, getUpgrades, deleteUpgrade } from '@/lib/api';
+import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw } from 'lucide-react';
+import type { AssetDetail as AssetDetailType, AssetUpgrade, Assignment } from '@/types';
+import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment } from '@/lib/api';
 import { StatusBadge, ConditionBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
 import { RegisterAssetDrawer } from '@/components/overlays/RegisterAssetDrawer';
 import { AssignAssetDrawer } from '@/components/overlays/AssignAssetDrawer';
+import { ReturnAssetDrawer } from '@/components/overlays/ReturnAssetDrawer';
 import { AddUpgradeDrawer } from '@/components/overlays/AddUpgradeDrawer';
 
 function InfoRow({ label, value, mono, style }: {
@@ -42,6 +43,9 @@ export function AssetDetail() {
   // Drawer / dialog state
   const [showEdit, setShowEdit] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
+  const [showReturn, setShowReturn] = useState(false);
+  const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
+  const [returnSaving, setReturnSaving] = useState(false);
   const [showAddUpgrade, setShowAddUpgrade] = useState(false);
   const [editingUpgrade, setEditingUpgrade] = useState<AssetUpgrade | undefined>(undefined);
   const [deletingUpgrade, setDeletingUpgrade] = useState<AssetUpgrade | null>(null);
@@ -53,12 +57,46 @@ export function AssetDetail() {
     try {
       const data = await getAsset(params.id);
       setAsset(data);
+      // Resolve the active assignment so the return panel has the assignment
+      // id + assignee/since summary ready when the asset is Assigned.
+      if (data.status === 'Assigned') {
+        try {
+          setActiveAssignment(await getActiveAssignment(data.id));
+        } catch {
+          setActiveAssignment(null);
+        }
+      } else {
+        setActiveAssignment(null);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load asset.');
     } finally {
       setLoading(false);
     }
   }, [params.id]);
+
+  const handleConfirmReturn = async (
+    returnDate: string,
+    condition: AssetDetailType['condition'],
+    notes?: string,
+  ) => {
+    if (!activeAssignment) return;
+    setReturnSaving(true);
+    try {
+      await returnAssignment(activeAssignment.id, {
+        returnDate,
+        conditionAtReturn: condition,
+        returnNotes: notes,
+      });
+      toast.success(`"${asset?.name}" returned. Now Available.`);
+      setShowReturn(false);
+      loadAsset();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to process return.');
+    } finally {
+      setReturnSaving(false);
+    }
+  };
 
   const loadUpgrades = useCallback(async () => {
     if (!params.id) return;
@@ -181,6 +219,13 @@ export function AssetDetail() {
               className="flex items-center gap-2 rounded-lg px-4 py-2.5 font-medium text-white hover:opacity-90 transition-colors"
               style={{ fontSize: 14, background: '#1E3A8A' }}>
               <UserPlus className="w-4 h-4" /> Assign Asset
+            </button>
+          )}
+          {asset.status === 'Assigned' && (
+            <button onClick={() => activeAssignment ? setShowReturn(true) : toast.error('No active assignment found for this asset.')}
+              className="flex items-center gap-2 rounded-lg px-4 py-2.5 font-medium text-white hover:opacity-90 transition-colors"
+              style={{ fontSize: 14, background: '#F59E0B' }}>
+              <RotateCcw className="w-4 h-4" /> Process Return
             </button>
           )}
           <button onClick={() => setShowEdit(true)}
@@ -372,6 +417,16 @@ export function AssetDetail() {
           asset={asset}
           onClose={() => setShowAssign(false)}
           onAssigned={() => { setShowAssign(false); loadAsset(); }}
+        />
+      )}
+      {showReturn && activeAssignment && (
+        <ReturnAssetDrawer
+          assetName={asset.name}
+          assignedTo={`${activeAssignment.assignee.firstName} ${activeAssignment.assignee.lastName}`}
+          since={activeAssignment.assignmentDate}
+          onClose={() => setShowReturn(false)}
+          onConfirm={handleConfirmReturn}
+          saving={returnSaving}
         />
       )}
       {showAddUpgrade && (

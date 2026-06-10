@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Eye, RotateCcw, AlertTriangle } from 'lucide-react';
-import { Asset, AssetStatus, AssetCondition } from '@/types';
+import { Asset } from '@/types';
 import { mockAssignmentHistory } from '@/lib/mock-data';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ReturnModal } from '@/components/overlays/ReturnModal';
+import { ReturnAssetDrawer } from '@/components/overlays/ReturnAssetDrawer';
 
 interface Props {
   assets: Asset[];
@@ -158,8 +158,10 @@ export function ActiveAssignments({ assets, onReturnAsset }: Props) {
       </div>
 
       {returnAsset && (
-        <ReturnModal
-          asset={returnAsset}
+        <ReturnAssetDrawer
+          assetName={returnAsset.name}
+          assignedTo={returnAsset.assignedTo || ''}
+          since={returnAsset.assignedDate || ''}
           onClose={() => setReturnAsset(null)}
           onConfirm={() => { onReturnAsset(returnAsset.id); setReturnAsset(null); }}
         />
