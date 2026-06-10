@@ -333,6 +333,49 @@ export interface Assignment {
   createdAt: string;
 }
 
+/** A row in the active assignments list (GET /api/assignments). */
+export interface ActiveAssignmentListItem {
+  id: string;
+  asset: {
+    id: string;
+    name: string;
+    displayId: string;
+    serialNumber: string;
+    category: { id: string; name: string } | null;
+  };
+  assignee: { id: string; firstName: string; lastName: string; profilePicture: string | null };
+  assignmentDate: string;
+  expectedReturnDate: string | null;
+  /** True when the assignment is active and its expected return date has passed. */
+  isOverdue: boolean;
+}
+
+/**
+ * A row in an asset's assignment history (GET /api/assets/:id/assignments).
+ * Includes returned assignments and carries everything the history tab shows:
+ * the assignee's designation, who assigned it, and both condition snapshots.
+ */
+export interface AssignmentHistoryItem {
+  id: string;
+  assignee: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture: string | null;
+    designation: { id: string; name: string } | null;
+  };
+  assignedBy: { id: string; firstName: string; lastName: string } | null;
+  assignmentDate: string;
+  expectedReturnDate: string | null;
+  /** Actual return date; null while the asset is still assigned. */
+  returnDate: string | null;
+  conditionAtAssignment: AssetCondition | null;
+  conditionAtReturn: AssetCondition | null;
+  notes: string | null;
+  /** Closed flag: null = still the active assignment (drives the row accent). */
+  returnedAt: string | null;
+}
+
 /** POST /api/assignments request body. */
 export interface CreateAssignmentPayload {
   assetId: string;
