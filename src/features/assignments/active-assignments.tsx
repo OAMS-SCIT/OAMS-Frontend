@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Eye, ChevronDown, RefreshCw } from 'lucide-react';
-import type { ActiveAssignmentListItem, CategoryListItem } from '@/types';
+import { toast } from 'sonner';
+import { Search, Eye, ChevronDown, RefreshCw, AlertTriangle, RotateCcw } from 'lucide-react';
+import type { ActiveAssignmentListItem, AssetCondition, CategoryListItem } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ApiError, getAssignments, getCategories } from '@/lib/api';
+import { ReturnAssetDrawer } from '@/components/overlays/ReturnAssetDrawer';
+import { ApiError, getAssignments, getCategories, returnAssignment } from '@/lib/api';
 
 const PER_PAGE = 10;
 
@@ -22,6 +24,7 @@ export function ActiveAssignments() {
   const [filterCategory, setFilterCategory] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const [page, setPage] = useState(1);
 
   // ── Data state ───────────────────────────────────────────────────────────
@@ -30,6 +33,10 @@ export function ActiveAssignments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryListItem[]>([]);
+
+  // ── Process Return drawer state ──────────────────────────────────────────
+  const [returnRow, setReturnRow] = useState<ActiveAssignmentListItem | null>(null);
+  const [returnSaving, setReturnSaving] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
@@ -58,6 +65,7 @@ export function ActiveAssignments() {
         categoryId: filterCategory || undefined,
         assignmentDateFrom: dateFrom || undefined,
         assignmentDateTo: dateTo || undefined,
+        overdue: overdueOnly || undefined,
         page,
         limit: PER_PAGE,
       });
@@ -70,11 +78,34 @@ export function ActiveAssignments() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, filterCategory, dateFrom, dateTo, page]);
+  }, [debouncedSearch, filterCategory, dateFrom, dateTo, overdueOnly, page]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleConfirmReturn = async (
+    returnDate: string,
+    condition: AssetCondition,
+    notes?: string,
+  ) => {
+    if (!returnRow) return;
+    setReturnSaving(true);
+    try {
+      await returnAssignment(returnRow.id, {
+        returnDate,
+        conditionAtReturn: condition,
+        returnNotes: notes,
+      });
+      toast.success(`"${returnRow.asset.name}" returned. Now Available.`);
+      setReturnRow(null);
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to process return.');
+    } finally {
+      setReturnSaving(false);
+    }
+  };
 
   return (
     <div>
@@ -132,6 +163,19 @@ export function ActiveAssignments() {
             style={{ borderColor: '#CBD5E1', fontSize: 13, color: dateTo ? '#1E293B' : '#94A3B8' }}
           />
         </div>
+        <button
+          onClick={() => { setOverdueOnly((o) => !o); setPage(1); }}
+          className="flex items-center gap-2 rounded-lg border px-3 py-2 font-medium transition-all"
+          style={{
+            fontSize: 13,
+            borderColor: overdueOnly ? '#F59E0B' : '#E2E8F0',
+            background: overdueOnly ? '#FFFBEB' : '#fff',
+            color: overdueOnly ? '#D97706' : '#64748B',
+          }}
+        >
+          <AlertTriangle className="w-4 h-4" />
+          Overdue Only
+        </button>
       </div>
 
       {/* Table */}
@@ -157,10 +201,10 @@ export function ActiveAssignments() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full" style={{ minWidth: 900 }}>
+              <table className="w-full" style={{ minWidth: 980 }}>
                 <thead>
                   <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
-                    {['Asset Name', 'Asset ID', 'Serial Number', 'Assignee', 'Assignment Date', 'Expected Return', 'Actions'].map((h) => (
+                    {['Asset Name', 'Asset ID', 'Serial Number', 'Assignee', 'Assignment Date', 'Expected Return', 'Status', 'Actions'].map((h) => (
                       <th key={h} className="text-left px-5 py-3" style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
@@ -169,7 +213,11 @@ export function ActiveAssignments() {
                   {rows.map((row, i) => (
                     <tr
                       key={row.id}
-                      style={{ background: i % 2 === 0 ? '#fff' : '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}
+                      style={{
+                        background: i % 2 === 0 ? '#fff' : '#F8FAFC',
+                        borderBottom: '1px solid #F1F5F9',
+                        borderLeft: row.isOverdue ? '3px solid #EF4444' : '3px solid transparent',
+                      }}
                       className="hover:bg-blue-50/30 transition-colors"
                     >
                       <td className="px-5 py-3.5">
@@ -187,17 +235,37 @@ export function ActiveAssignments() {
                       <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B' }}>{row.assignmentDate}</td>
                       <td className="px-5 py-3.5">
                         {row.expectedReturnDate ? (
-                          <span style={{ fontSize: 13, color: '#64748B' }}>{row.expectedReturnDate}</span>
+                          <span style={{ fontSize: 13, color: row.isOverdue ? '#EF4444' : '#64748B', fontWeight: row.isOverdue ? 600 : 400 }}>
+                            {row.expectedReturnDate}
+                          </span>
                         ) : (
                           <span style={{ fontSize: 13, color: '#CBD5E1' }}>—</span>
                         )}
                       </td>
                       <td className="px-5 py-3.5">
-                        <button onClick={() => router.push(`/admin/inventory/${row.asset.id}`)}
-                          className="flex items-center gap-1 rounded-lg px-3 py-1.5 border hover:bg-gray-50 transition-colors"
-                          style={{ fontSize: 12, color: '#475569', borderColor: '#E2E8F0' }}>
-                          <Eye className="w-3.5 h-3.5" /> View Detail
-                        </button>
+                        {row.isOverdue ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium" style={{ fontSize: 11, background: '#FFFBEB', color: '#D97706' }}>
+                            <AlertTriangle className="w-3 h-3" /> Overdue
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium" style={{ fontSize: 11, background: '#ECFDF5', color: '#059669' }}>
+                            Active
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => router.push(`/admin/inventory/${row.asset.id}`)}
+                            className="flex items-center gap-1 rounded-lg px-3 py-1.5 border hover:bg-gray-50 transition-colors"
+                            style={{ fontSize: 12, color: '#475569', borderColor: '#E2E8F0' }}>
+                            <Eye className="w-3.5 h-3.5" /> View Detail
+                          </button>
+                          <button onClick={() => setReturnRow(row)}
+                            className="flex items-center gap-1 rounded-lg px-3 py-1.5 border hover:bg-amber-50 transition-colors"
+                            style={{ fontSize: 12, color: '#D97706', borderColor: '#FDE68A' }}>
+                            <RotateCcw className="w-3.5 h-3.5" /> Process Return
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -227,6 +295,18 @@ export function ActiveAssignments() {
           </>
         )}
       </div>
+
+      {/* Process Return — reuses the OAMS-28 return side panel */}
+      {returnRow && (
+        <ReturnAssetDrawer
+          assetName={returnRow.asset.name}
+          assignedTo={assigneeName(returnRow.assignee)}
+          since={returnRow.assignmentDate}
+          saving={returnSaving}
+          onClose={() => setReturnRow(null)}
+          onConfirm={handleConfirmReturn}
+        />
+      )}
     </div>
   );
 }
