@@ -228,7 +228,7 @@ export function ActiveAssignments() {
                       <td className="px-5 py-3.5" style={{ fontSize: 12, color: '#64748B', fontFamily: 'monospace' }}>{row.asset.serialNumber}</td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2">
-                          <Avatar name={assigneeName(row.assignee)} size={26} />
+                          <Avatar user={row.assignee} size={26} />
                           <div style={{ fontSize: 13, color: '#334155', fontWeight: 500 }}>{assigneeName(row.assignee)}</div>
                         </div>
                       </td>

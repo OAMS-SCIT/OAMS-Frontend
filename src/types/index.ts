@@ -343,7 +343,7 @@ export interface ActiveAssignmentListItem {
     serialNumber: string;
     category: { id: string; name: string } | null;
   };
-  assignee: { id: string; firstName: string; lastName: string };
+  assignee: { id: string; firstName: string; lastName: string; profilePicture: string | null };
   assignmentDate: string;
   expectedReturnDate: string | null;
   /** True when the assignment is active and its expected return date has passed. */
