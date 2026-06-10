@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw } from 'lucide-react';
-import type { AssetDetail as AssetDetailType, AssetUpgrade, Assignment } from '@/types';
-import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment } from '@/lib/api';
+import type { AssetDetail as AssetDetailType, AssetUpgrade, Assignment, AssignmentHistoryItem } from '@/types';
+import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment, getAssetAssignments } from '@/lib/api';
 import { StatusBadge, ConditionBadge } from '@/components/ui/StatusBadge';
+import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
 import { RegisterAssetDrawer } from '@/components/overlays/RegisterAssetDrawer';
@@ -34,6 +35,10 @@ export function AssetDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'history' | 'upgrades'>('history');
+
+  // Assignment history state
+  const [history, setHistory] = useState<AssignmentHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Upgrade log state
   const [upgrades, setUpgrades] = useState<AssetUpgrade[]>([]);
@@ -91,12 +96,25 @@ export function AssetDetail() {
       toast.success(`"${asset?.name}" returned. Now Available.`);
       setShowReturn(false);
       loadAsset();
+      loadHistory();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Failed to process return.');
     } finally {
       setReturnSaving(false);
     }
   };
+
+  const loadHistory = useCallback(async () => {
+    if (!params.id) return;
+    setHistoryLoading(true);
+    try {
+      setHistory(await getAssetAssignments(params.id));
+    } catch {
+      // non-fatal — leave the table empty if history can't be loaded
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [params.id]);
 
   const loadUpgrades = useCallback(async () => {
     if (!params.id) return;
@@ -113,6 +131,10 @@ export function AssetDetail() {
   }, [params.id]);
 
   useEffect(() => { loadAsset(); }, [loadAsset]);
+
+  useEffect(() => {
+    if (activeTab === 'history') loadHistory();
+  }, [activeTab, loadHistory]);
 
   useEffect(() => {
     if (activeTab === 'upgrades') loadUpgrades();
@@ -321,11 +343,88 @@ export function AssetDetail() {
 
         {/* Assignment History Tab */}
         {activeTab === 'history' && (
-          <EmptyState
-            icon="history"
-            title="Assignment history"
-            subtitle="Assignment tracking is coming in the next module. Connect the Assignment module to see records here."
-          />
+          historyLoading ? (
+            <div className="flex items-center justify-center py-12" style={{ fontSize: 13, color: '#64748B' }}>
+              Loading assignment history…
+            </div>
+          ) : history.length === 0 ? (
+            <EmptyState
+              icon="history"
+              title="No assignment history"
+              subtitle="This asset has not been assigned yet. Assignment records will appear here once it is assigned."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full" style={{ minWidth: 1120 }}>
+                <thead>
+                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                    {['Assignee', 'Assigned Date', 'Expected Return', 'Actual Return', 'Condition (Assign)', 'Condition (Return)', 'Notes', 'Assigned By'].map((h) => (
+                      <th key={h} className="text-left px-5 py-3"
+                        style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((row, i) => {
+                    const isActive = row.returnedAt === null;
+                    return (
+                      <tr key={row.id}
+                        style={{
+                          background: i % 2 === 0 ? '#fff' : '#F8FAFC',
+                          borderBottom: '1px solid #F1F5F9',
+                          // Active assignment gets a colored left-border accent.
+                          borderLeft: isActive ? '3px solid #1E3A8A' : '3px solid transparent',
+                        }}>
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-2.5">
+                            <Avatar user={row.assignee} size={30} />
+                            <div>
+                              <div style={{ fontSize: 13, color: '#1E293B', fontWeight: 600 }}>
+                                {row.assignee.firstName} {row.assignee.lastName}
+                              </div>
+                              <div style={{ fontSize: 12, color: '#94A3B8' }}>
+                                {row.assignee.designation?.name ?? '—'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B', whiteSpace: 'nowrap' }}>{row.assignmentDate}</td>
+                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B', whiteSpace: 'nowrap' }}>{row.expectedReturnDate ?? '—'}</td>
+                        <td className="px-5 py-3.5" style={{ whiteSpace: 'nowrap' }}>
+                          {row.returnDate ? (
+                            <span style={{ fontSize: 13, color: '#64748B' }}>{row.returnDate}</span>
+                          ) : (
+                            <span className="inline-flex items-center font-medium rounded-full"
+                              style={{ background: '#EFF6FF', color: '#2563EB', padding: '3px 10px', fontSize: 11 }}>
+                              Currently Assigned
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          {row.conditionAtAssignment
+                            ? <ConditionBadge condition={row.conditionAtAssignment} />
+                            : <span style={{ fontSize: 13, color: '#94A3B8' }}>—</span>}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          {row.conditionAtReturn
+                            ? <ConditionBadge condition={row.conditionAtReturn} />
+                            : <span style={{ fontSize: 13, color: '#94A3B8' }}>—</span>}
+                        </td>
+                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B', maxWidth: 220, whiteSpace: 'normal' }}>
+                          {row.notes ?? '—'}
+                        </td>
+                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B', whiteSpace: 'nowrap' }}>
+                          {row.assignedBy ? `${row.assignedBy.firstName} ${row.assignedBy.lastName}` : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
 
         {/* Upgrade Log Tab */}
@@ -416,7 +515,7 @@ export function AssetDetail() {
         <AssignAssetDrawer
           asset={asset}
           onClose={() => setShowAssign(false)}
-          onAssigned={() => { setShowAssign(false); loadAsset(); }}
+          onAssigned={() => { setShowAssign(false); loadAsset(); loadHistory(); }}
         />
       )}
       {showReturn && activeAssignment && (
