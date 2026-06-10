@@ -1,6 +1,7 @@
 import type {
   ActiveAssignmentListItem,
   Assignment,
+  AssignmentHistoryItem,
   AssetDetail,
   AssetListItem,
   AssetStatus,
@@ -514,4 +515,11 @@ export function returnAssignment(
     method: 'PATCH',
     body: payload,
   });
+}
+
+/** Full assignment history for an asset (active + returned), newest first. */
+export function getAssetAssignments(
+  assetId: string,
+): Promise<AssignmentHistoryItem[]> {
+  return request<AssignmentHistoryItem[]>(`/assets/${assetId}/assignments`);
 }

@@ -350,6 +350,32 @@ export interface ActiveAssignmentListItem {
   isOverdue: boolean;
 }
 
+/**
+ * A row in an asset's assignment history (GET /api/assets/:id/assignments).
+ * Includes returned assignments and carries everything the history tab shows:
+ * the assignee's designation, who assigned it, and both condition snapshots.
+ */
+export interface AssignmentHistoryItem {
+  id: string;
+  assignee: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture: string | null;
+    designation: { id: string; name: string } | null;
+  };
+  assignedBy: { id: string; firstName: string; lastName: string } | null;
+  assignmentDate: string;
+  expectedReturnDate: string | null;
+  /** Actual return date; null while the asset is still assigned. */
+  returnDate: string | null;
+  conditionAtAssignment: AssetCondition | null;
+  conditionAtReturn: AssetCondition | null;
+  notes: string | null;
+  /** Closed flag: null = still the active assignment (drives the row accent). */
+  returnedAt: string | null;
+}
+
 /** POST /api/assignments request body. */
 export interface CreateAssignmentPayload {
   assetId: string;
