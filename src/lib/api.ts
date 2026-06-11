@@ -416,6 +416,31 @@ export function deleteAsset(id: string): Promise<{ message: string }> {
   });
 }
 
+/** Upload 1–5 images for an asset (JPEG/PNG, ≤2 MB each). Returns the updated detail. */
+export function uploadAssetImages(
+  assetId: string,
+  files: File[],
+): Promise<AssetDetail> {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  return request<AssetDetail>(`/assets/${assetId}/images`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+/** Delete a single asset image. Returns the updated detail. */
+export function deleteAssetImage(
+  assetId: string,
+  imageId: string,
+): Promise<AssetDetail> {
+  return request<AssetDetail>(`/assets/${assetId}/images/${imageId}`, {
+    method: 'DELETE',
+  });
+}
+
 // ── Upgrade Log ───────────────────────────────────────────────────────────
 
 export function getUpgrades(
