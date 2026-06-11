@@ -226,6 +226,13 @@ export interface AssetCustomAttributeValue {
   value: string;
 }
 
+/** One image attached to an asset, ordered by sortOrder (lowest = primary). */
+export interface AssetImageItem {
+  id: string;
+  url: string;
+  sortOrder: number;
+}
+
 /** Returned by GET /api/assets/:id, POST /api/assets, PATCH /api/assets/:id. */
 export interface AssetDetail {
   id: string;
@@ -247,6 +254,7 @@ export interface AssetDetail {
   warrantyExpiryDate: string | null;
   warrantyProvider: string | null;
   customAttributes: AssetCustomAttributeValue[];
+  images: AssetImageItem[];
   assignmentHistoryCount: number;
   upgradeLogCount: number;
   createdBy: { id: string; firstName: string; lastName: string } | null;
