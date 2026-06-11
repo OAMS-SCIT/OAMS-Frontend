@@ -7,14 +7,17 @@ import { toast } from 'sonner';
 import {
   ApiError,
   createAsset,
+  deleteAssetImage,
   getAsset,
   getCategories,
   getCategory,
   updateAsset,
+  uploadAssetImages,
 } from '@/lib/api';
 import type {
   AssetCondition,
   AssetDetail,
+  AssetImageItem,
   AttributeDetail,
   AttributeValuePayload,
   CategoryListItem,
@@ -92,6 +95,9 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const [loadingAttrs, setLoadingAttrs] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
+  // Edit mode: images already saved on the server + an in-flight upload flag.
+  const [existingImages, setExistingImages] = useState<AssetImageItem[]>([]);
+  const [imageUploading, setImageUploading] = useState(false);
 
   // Load categories list + (edit) existing asset on mount
   useEffect(() => {
@@ -103,6 +109,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         if (assetId) {
           const asset = await getAsset(assetId);
           setForm(assetDetailToForm(asset));
+          setExistingImages(asset.images ?? []);
           // Pre-load attributes for the asset's category
           const detail = await getCategory(asset.category.id);
           setCategoryAttrs(detail.attributes);
@@ -225,6 +232,17 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           warrantyProvider: form.warrantyProvider.trim() || undefined,
           customAttributes,
         });
+        // Persist any images selected during registration (previously discarded).
+        if (uploadedImages.length > 0) {
+          try {
+            saved = await uploadAssetImages(
+              saved.id,
+              uploadedImages.map((i) => i.file),
+            );
+          } catch {
+            toast.error('Asset created, but image upload failed. Add images via Edit.');
+          }
+        }
         toast.success('Asset registered successfully.');
       }
       onSaved(saved);
@@ -233,6 +251,42 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
       toast.error(err instanceof ApiError ? err.message : 'Failed to save asset.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ── Edit-mode image management (immediate upload/delete) ───────────────────
+
+  // In edit mode the "Asset Images" zone never stages files — each selection is
+  // uploaded right away, the asset detail is refreshed, and the parent (detail
+  // page) is notified so the hero updates. New-file object URLs are revoked.
+  const handleEditImagesChange = async (next: UploadedImage[]) => {
+    if (!assetId || next.length === 0) return;
+    setImageUploading(true);
+    try {
+      const updated = await uploadAssetImages(assetId, next.map((i) => i.file));
+      setExistingImages(updated.images);
+      onSaved(updated);
+      toast.success(next.length > 1 ? 'Images uploaded.' : 'Image uploaded.');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to upload image.');
+    } finally {
+      next.forEach((i) => URL.revokeObjectURL(i.previewUrl));
+      setImageUploading(false);
+    }
+  };
+
+  const handleRemoveExistingImage = async (imageId: string) => {
+    if (!assetId) return;
+    setImageUploading(true);
+    try {
+      const updated = await deleteAssetImage(assetId, imageId);
+      setExistingImages(updated.images);
+      onSaved(updated);
+      toast.success('Image removed.');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to remove image.');
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -422,12 +476,21 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
               </FormField>
             </FormSection>
 
-            {/* Section 6 - Images (register mode only) */}
-            {!isEdit && (
-              <FormSection title="Asset Images">
+            {/* Section 6 - Images. Register: stage + upload after create.
+                Edit: existing images with immediate add (upload) / remove (delete). */}
+            <FormSection title="Asset Images">
+              {isEdit ? (
+                <ImageUploadZone
+                  images={[]}
+                  onChange={handleEditImagesChange}
+                  existing={existingImages.map((i) => ({ id: i.id, url: i.url }))}
+                  onRemoveExisting={handleRemoveExistingImage}
+                  uploading={imageUploading}
+                />
+              ) : (
                 <ImageUploadZone images={uploadedImages} onChange={setUploadedImages} />
-              </FormSection>
-            )}
+              )}
+            </FormSection>
           </div>
         )}
 
