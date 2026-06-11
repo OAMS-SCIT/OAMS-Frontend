@@ -185,7 +185,10 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    if (!validate()) return;
+    if (!validate()) {
+      toast.error('Please fix the highlighted fields before saving.');
+      return;
+    }
     setSaving(true);
 
     const customAttributes: AttributeValuePayload[] = Object.entries(attrValues)
