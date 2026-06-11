@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor } from 'lucide-react';
+import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor, ZoomIn } from 'lucide-react';
 import type { AssetDetail as AssetDetailType, AssetUpgrade, Assignment, AssignmentHistoryItem } from '@/types';
 import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment, getAssetAssignments } from '@/lib/api';
 import { StatusBadge, ConditionBadge } from '@/components/ui/StatusBadge';
@@ -14,6 +14,7 @@ import { RegisterAssetDrawer } from '@/components/overlays/RegisterAssetDrawer';
 import { AssignAssetDrawer } from '@/components/overlays/AssignAssetDrawer';
 import { ReturnAssetDrawer } from '@/components/overlays/ReturnAssetDrawer';
 import { AddUpgradeDrawer } from '@/components/overlays/AddUpgradeDrawer';
+import { ImageLightbox } from '@/components/overlays/ImageLightbox';
 
 function InfoRow({ label, value, mono, style }: {
   label: string; value: React.ReactNode; mono?: boolean; style?: React.CSSProperties;
@@ -38,6 +39,7 @@ export function AssetDetail() {
 
   // Which image is shown large in the hero (index into the sorted images).
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // Assignment history state
   const [history, setHistory] = useState<AssignmentHistoryItem[]>([]);
@@ -219,27 +221,52 @@ export function AssetDetail() {
       <div className="rounded-2xl p-6 mb-6" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         <div className="flex gap-6">
           {/* Image area (display-only; management lives in the Edit drawer) */}
-          <div className="shrink-0" style={{ width: 220 }}>
+          <div className="shrink-0" style={{ width: 240 }}>
             {heroImages.length > 0 ? (
               <>
-                <div className="rounded-xl overflow-hidden" style={{ width: 220, height: 180, border: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+                {/* Primary image — click to open the full-size lightbox */}
+                <button
+                  onClick={() => setLightboxOpen(true)}
+                  className="group relative block rounded-xl overflow-hidden w-full"
+                  style={{ height: 190, border: '1px solid #E2E8F0', background: '#F8FAFC', cursor: 'zoom-in', padding: 0 }}
+                  title="Click to enlarge"
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={heroImages[activeIdx].url}
                     alt={asset.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
-                </div>
+                  {/* Hover affordance */}
+                  <div
+                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ background: 'rgba(15,23,42,0.28)' }}
+                  >
+                    <span
+                      className="flex items-center justify-center rounded-full"
+                      style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.92)' }}
+                    >
+                      <ZoomIn className="w-5 h-5" style={{ color: '#1E293B' }} />
+                    </span>
+                  </div>
+                </button>
+
+                {/* Thumbnail strip — fills the column width so it stays balanced
+                    for any count (max 5): 3 wider thumbs or 5 narrower ones. */}
                 {heroImages.length > 1 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div
+                    className="grid gap-2 mt-2"
+                    style={{ gridTemplateColumns: `repeat(${heroImages.length}, 1fr)` }}
+                  >
                     {heroImages.map((img, i) => (
                       <button
                         key={img.id}
                         onClick={() => setActiveImageIndex(i)}
-                        className="rounded-lg overflow-hidden transition-all"
+                        className="rounded-lg overflow-hidden transition-all w-full"
                         style={{
-                          width: 44, height: 44, padding: 0,
+                          height: 46, padding: 0,
                           border: i === activeIdx ? '2px solid #1E3A8A' : '1px solid #E2E8F0',
+                          opacity: i === activeIdx ? 1 : 0.85,
                         }}
                         title={`Image ${i + 1}`}
                       >
@@ -252,8 +279,8 @@ export function AssetDetail() {
               </>
             ) : (
               <div
-                className="rounded-xl flex flex-col items-center justify-center"
-                style={{ width: 220, height: 180, border: '1px dashed #CBD5E1', background: '#F8FAFC' }}
+                className="rounded-xl flex flex-col items-center justify-center w-full"
+                style={{ height: 190, border: '1px dashed #CBD5E1', background: '#F8FAFC' }}
               >
                 <Monitor className="w-10 h-10" style={{ color: '#CBD5E1' }} />
                 <span style={{ fontSize: 12, color: '#94A3B8', marginTop: 8 }}>No images</span>
@@ -558,6 +585,17 @@ export function AssetDetail() {
           )
         )}
       </div>
+
+      {/* Image lightbox */}
+      {lightboxOpen && heroImages.length > 0 && (
+        <ImageLightbox
+          images={heroImages.map((img) => ({ id: img.id, url: img.url }))}
+          index={activeIdx}
+          onIndexChange={setActiveImageIndex}
+          onClose={() => setLightboxOpen(false)}
+          title={asset.name}
+        />
+      )}
 
       {/* Drawers & Dialogs */}
       {showEdit && (
