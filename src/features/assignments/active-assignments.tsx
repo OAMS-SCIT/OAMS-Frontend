@@ -112,37 +112,35 @@ export function ActiveAssignments() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-bold" style={{ fontSize: 24, color: '#1E293B' }}>Active Assignments</h1>
-          <p style={{ fontSize: 14, color: '#64748B', marginTop: 2 }}>
+          <h1 className="font-bold text-2xl tracking-[-0.02em] text-foreground">Active Assignments</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {total} {total === 1 ? 'asset' : 'assets'} currently assigned
           </p>
         </div>
       </div>
 
       {/* Filter bar */}
-      <div className="rounded-xl mb-4 p-4 flex items-center gap-3 flex-wrap" style={{ background: '#fff', border: '1px solid #E2E8F0' }}>
-        <div className="relative flex-1" style={{ minWidth: 240 }}>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
+      <div className="rounded-lg mb-4 p-4 flex items-center gap-3 flex-wrap bg-card border border-border shadow-card">
+        <div className="relative flex-1 min-w-60">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by assignee or asset name…"
-            className="w-full rounded-lg border pl-9 pr-3 py-2 focus:outline-none"
-            style={{ borderColor: '#CBD5E1', fontSize: 13 }}
+            className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
           />
         </div>
         <div className="relative">
           <select
             value={filterCategory}
             onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
-            className="appearance-none rounded-lg border px-3 pr-8 py-2 focus:outline-none cursor-pointer"
-            style={{ borderColor: '#CBD5E1', fontSize: 13, color: filterCategory ? '#1E293B' : '#94A3B8', background: '#fff' }}
+            className={`appearance-none rounded-control border border-input bg-input-background text-2sm px-3 pr-8 py-2 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${filterCategory ? 'text-foreground' : 'text-muted-foreground/70'}`}
           >
             <option value="">All Categories</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name}</option>)}
           </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#94A3B8' }} />
+          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-muted-foreground/70" />
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -150,28 +148,24 @@ export function ActiveAssignments() {
             value={dateFrom}
             onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
             aria-label="Assignment date from"
-            className="rounded-lg border px-3 py-2 focus:outline-none"
-            style={{ borderColor: '#CBD5E1', fontSize: 13, color: dateFrom ? '#1E293B' : '#94A3B8' }}
+            className={`rounded-control border border-input bg-input-background text-2sm px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${dateFrom ? 'text-foreground' : 'text-muted-foreground/70'}`}
           />
-          <span style={{ fontSize: 13, color: '#94A3B8' }}>–</span>
+          <span className="text-2sm text-muted-foreground/70">–</span>
           <input
             type="date"
             value={dateTo}
             onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
             aria-label="Assignment date to"
-            className="rounded-lg border px-3 py-2 focus:outline-none"
-            style={{ borderColor: '#CBD5E1', fontSize: 13, color: dateTo ? '#1E293B' : '#94A3B8' }}
+            className={`rounded-control border border-input bg-input-background text-2sm px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${dateTo ? 'text-foreground' : 'text-muted-foreground/70'}`}
           />
         </div>
         <button
           onClick={() => { setOverdueOnly((o) => !o); setPage(1); }}
-          className="flex items-center gap-2 rounded-lg border px-3 py-2 font-medium transition-all"
-          style={{
-            fontSize: 13,
-            borderColor: overdueOnly ? '#F59E0B' : '#E2E8F0',
-            background: overdueOnly ? '#FFFBEB' : '#fff',
-            color: overdueOnly ? '#D97706' : '#64748B',
-          }}
+          className={`flex items-center gap-2 rounded-control border px-3 py-2 text-2sm font-medium transition-all ${
+            overdueOnly
+              ? 'border-warning bg-warning-surface text-warning-foreground'
+              : 'border-border bg-card text-muted-foreground hover:bg-muted'
+          }`}
         >
           <AlertTriangle className="w-4 h-4" />
           Overdue Only
@@ -179,9 +173,9 @@ export function ActiveAssignments() {
       </div>
 
       {/* Table */}
-      <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">
         {loading ? (
-          <div className="flex items-center justify-center py-16" style={{ fontSize: 13, color: '#64748B' }}>
+          <div className="flex items-center justify-center py-16 text-2sm text-muted-foreground">
             Loading assignments…
           </div>
         ) : error ? (
@@ -190,8 +184,7 @@ export function ActiveAssignments() {
             title="Couldn't load assignments"
             subtitle={error}
             action={
-              <button onClick={load} className="flex items-center gap-2 rounded-lg px-4 py-2 text-white hover:opacity-90"
-                style={{ background: '#1E3A8A', fontSize: 13, fontWeight: 600 }}>
+              <button onClick={load} className="flex items-center gap-2 rounded-control px-4 py-2 text-2sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]">
                 <RefreshCw className="w-4 h-4" /> Retry
               </button>
             }
@@ -201,11 +194,11 @@ export function ActiveAssignments() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full" style={{ minWidth: 980 }}>
+              <table className="w-full min-w-[980px]">
                 <thead>
-                  <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
+                  <tr className="bg-muted/60 border-b-2 border-border">
                     {['Asset Name', 'Asset ID', 'Serial Number', 'Assignee', 'Assignment Date', 'Expected Return', 'Status', 'Actions'].map((h) => (
-                      <th key={h} className="text-left px-5 py-3" style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} className="text-left px-5 py-3 micro-label whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -213,42 +206,39 @@ export function ActiveAssignments() {
                   {rows.map((row, i) => (
                     <tr
                       key={row.id}
-                      style={{
-                        background: i % 2 === 0 ? '#fff' : '#F8FAFC',
-                        borderBottom: '1px solid #F1F5F9',
-                        borderLeft: row.isOverdue ? '3px solid #EF4444' : '3px solid transparent',
-                      }}
-                      className="hover:bg-blue-50/30 transition-colors"
+                      className={`border-b border-border/60 border-l-[3px] transition-colors hover:bg-primary/[0.04] ${
+                        row.isOverdue ? 'border-l-danger' : 'border-l-transparent'
+                      } ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}
                     >
                       <td className="px-5 py-3.5">
-                        <div className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{row.asset.name}</div>
-                        {row.asset.category && <div style={{ fontSize: 11, color: '#94A3B8' }}>{row.asset.category.name}</div>}
+                        <div className="font-medium text-2sm text-foreground">{row.asset.name}</div>
+                        {row.asset.category && <div className="text-2xs text-muted-foreground/80">{row.asset.category.name}</div>}
                       </td>
-                      <td className="px-5 py-3.5" style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'monospace' }}>{row.asset.displayId}</td>
-                      <td className="px-5 py-3.5" style={{ fontSize: 12, color: '#64748B', fontFamily: 'monospace' }}>{row.asset.serialNumber}</td>
+                      <td className="px-5 py-3.5 text-xs text-muted-foreground/80 font-mono">{row.asset.displayId}</td>
+                      <td className="px-5 py-3.5 text-xs text-muted-foreground font-mono">{row.asset.serialNumber}</td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2">
                           <Avatar user={row.assignee} size={26} />
-                          <div style={{ fontSize: 13, color: '#334155', fontWeight: 500 }}>{assigneeName(row.assignee)}</div>
+                          <div className="text-2sm text-foreground/80 font-medium">{assigneeName(row.assignee)}</div>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B' }}>{row.assignmentDate}</td>
+                      <td className="px-5 py-3.5 text-2sm text-muted-foreground nums">{row.assignmentDate}</td>
                       <td className="px-5 py-3.5">
                         {row.expectedReturnDate ? (
-                          <span style={{ fontSize: 13, color: row.isOverdue ? '#EF4444' : '#64748B', fontWeight: row.isOverdue ? 600 : 400 }}>
+                          <span className={`text-2sm nums ${row.isOverdue ? 'text-danger font-semibold' : 'text-muted-foreground'}`}>
                             {row.expectedReturnDate}
                           </span>
                         ) : (
-                          <span style={{ fontSize: 13, color: '#CBD5E1' }}>—</span>
+                          <span className="text-2sm text-muted-foreground/50">—</span>
                         )}
                       </td>
                       <td className="px-5 py-3.5">
                         {row.isOverdue ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium" style={{ fontSize: 11, background: '#FFFBEB', color: '#D97706' }}>
+                          <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium text-2xs bg-warning-surface text-warning-foreground">
                             <AlertTriangle className="w-3 h-3" /> Overdue
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium" style={{ fontSize: 11, background: '#ECFDF5', color: '#059669' }}>
+                          <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium text-2xs bg-success-surface text-success-foreground">
                             Active
                           </span>
                         )}
@@ -256,13 +246,11 @@ export function ActiveAssignments() {
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2">
                           <button onClick={() => router.push(`/admin/inventory/${row.asset.id}`)}
-                            className="flex items-center gap-1 rounded-lg px-3 py-1.5 border hover:bg-gray-50 transition-colors"
-                            style={{ fontSize: 12, color: '#475569', borderColor: '#E2E8F0' }}>
+                            className="flex items-center gap-1 rounded-control px-3 py-1.5 border border-border text-xs text-foreground/70 transition-colors hover:bg-muted">
                             <Eye className="w-3.5 h-3.5" /> View Detail
                           </button>
                           <button onClick={() => setReturnRow(row)}
-                            className="flex items-center gap-1 rounded-lg px-3 py-1.5 border hover:bg-amber-50 transition-colors"
-                            style={{ fontSize: 12, color: '#D97706', borderColor: '#FDE68A' }}>
+                            className="flex items-center gap-1 rounded-control px-3 py-1.5 border border-warning/40 text-xs text-warning-foreground transition-colors hover:bg-warning-surface">
                             <RotateCcw className="w-3.5 h-3.5" /> Process Return
                           </button>
                         </div>
@@ -274,20 +262,18 @@ export function ActiveAssignments() {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid #F1F5F9' }}>
-              <span style={{ fontSize: 13, color: '#64748B' }}>
+            <div className="flex items-center justify-between px-5 py-4 border-t border-border/60">
+              <span className="text-2sm text-muted-foreground nums">
                 Showing {Math.min((page - 1) * PER_PAGE + 1, total)}–{Math.min(page * PER_PAGE, total)} of {total}
               </span>
               <div className="flex items-center gap-2">
                 <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                  className="rounded-lg px-3 py-1.5 border transition-colors hover:bg-gray-50 disabled:opacity-40"
-                  style={{ fontSize: 13, color: '#475569', borderColor: '#E2E8F0' }}>
+                  className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40">
                   Previous
                 </button>
-                <span style={{ fontSize: 13, color: '#64748B' }}>Page {page} of {totalPages}</span>
+                <span className="text-2sm text-muted-foreground nums">Page {page} of {totalPages}</span>
                 <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                  className="rounded-lg px-3 py-1.5 border transition-colors hover:bg-gray-50 disabled:opacity-40"
-                  style={{ fontSize: 13, color: '#475569', borderColor: '#E2E8F0' }}>
+                  className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40">
                   Next
                 </button>
               </div>
