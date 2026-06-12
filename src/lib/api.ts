@@ -157,6 +157,23 @@ export async function logout(): Promise<void> {
   }
 }
 
+export function requestForgotPassword(email: string): Promise<{ message: string }> {
+  return request<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: { email },
+  });
+}
+
+export function resetPasswordWithToken(
+  token: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  return request<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
+    body: { token, newPassword },
+  });
+}
+
 // ── Profile ───────────────────────────────────────────────────────────────
 
 export function getMyProfile(): Promise<ProfileUser> {
