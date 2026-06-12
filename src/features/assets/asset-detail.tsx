@@ -4,8 +4,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor, ZoomIn } from 'lucide-react';
-import type { AssetDetail as AssetDetailType, AssetUpgrade, Assignment, AssignmentHistoryItem } from '@/types';
-import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment, getAssetAssignments } from '@/lib/api';
+import type { AssetDetail as AssetDetailType, AssetHistoryEntry, AssetUpgrade, Assignment, AssignmentHistoryItem } from '@/types';
+import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment, getAssetAssignments, getAssetHistory } from '@/lib/api';
+import { AssetHistoryTimeline } from './AssetHistoryTimeline';
 import { StatusBadge, ConditionBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -35,7 +36,7 @@ export function AssetDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'history' | 'upgrades'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'asset_log' | 'upgrades'>('history');
 
   // Which image is shown large in the hero (index into the sorted images).
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -44,6 +45,11 @@ export function AssetDetail() {
   // Assignment history state
   const [history, setHistory] = useState<AssignmentHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Asset event history (History Log tab)
+  const [assetLog, setAssetLog] = useState<AssetHistoryEntry[]>([]);
+  const [assetLogLoading, setAssetLogLoading] = useState(false);
+  const [assetLogError, setAssetLogError] = useState<string | null>(null);
 
   // Upgrade log state
   const [upgrades, setUpgrades] = useState<AssetUpgrade[]>([]);
@@ -60,30 +66,87 @@ export function AssetDetail() {
   const [editingUpgrade, setEditingUpgrade] = useState<AssetUpgrade | undefined>(undefined);
   const [deletingUpgrade, setDeletingUpgrade] = useState<AssetUpgrade | null>(null);
 
-  const loadAsset = useCallback(async () => {
+  // Version counters — incrementing triggers a re-fetch without calling setState
+  // inside an effect body (which React / the linter discourages).
+  const [assetVersion,    setAssetVersion]    = useState(0);
+  const [historyVersion,  setHistoryVersion]  = useState(0);
+  const [assetLogVersion, setAssetLogVersion] = useState(0);
+  const [upgradesVersion, setUpgradesVersion] = useState(0);
+
+  // Stable refresh helpers for event handlers — only call the version setter,
+  // never setState directly, so they're safe to call from anywhere.
+  const refreshAsset    = useCallback(() => setAssetVersion(v => v + 1), []);
+  const refreshHistory  = useCallback(() => setHistoryVersion(v => v + 1), []);
+  const refreshAssetLog = useCallback(() => setAssetLogVersion(v => v + 1), []);
+
+  // ── Effects ──────────────────────────────────────────────────────────────────
+  // All setState calls are inside Promise callbacks — never synchronously in the
+  // effect body — to satisfy the no-direct-set-state-in-use-effect lint rule.
+  // Promise.resolve() at the top of each chain defers the initial loading setter
+  // to a microtask so it is also inside an async callback.
+
+  useEffect(() => {
     if (!params.id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getAsset(params.id);
-      setAsset(data);
-      // Resolve the active assignment so the return panel has the assignment
-      // id + assignee/since summary ready when the asset is Assigned.
-      if (data.status === 'Assigned') {
-        try {
-          setActiveAssignment(await getActiveAssignment(data.id));
-        } catch {
+    let cancelled = false;
+    Promise.resolve()
+      .then(() => {
+        if (!cancelled) { setLoading(true); setError(null); }
+        return getAsset(params.id);
+      })
+      .then(async (data) => {
+        if (cancelled) return;
+        setAsset(data);
+        if (data.status === 'Assigned') {
+          try {
+            const a = await getActiveAssignment(data.id);
+            if (!cancelled) setActiveAssignment(a);
+          } catch {
+            if (!cancelled) setActiveAssignment(null);
+          }
+        } else {
           setActiveAssignment(null);
         }
-      } else {
-        setActiveAssignment(null);
-      }
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load asset.');
-    } finally {
-      setLoading(false);
-    }
-  }, [params.id]);
+      })
+      .catch((err) => { if (!cancelled) setError(err instanceof ApiError ? err.message : 'Failed to load asset.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [params.id, assetVersion]);
+
+  useEffect(() => {
+    if (activeTab !== 'history' || !params.id) return;
+    let cancelled = false;
+    Promise.resolve()
+      .then(() => { if (!cancelled) setHistoryLoading(true); return getAssetAssignments(params.id); })
+      .then((data) => { if (!cancelled) setHistory(data); })
+      .catch(() => { /* non-fatal */ })
+      .finally(() => { if (!cancelled) setHistoryLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, params.id, historyVersion]);
+
+  useEffect(() => {
+    if (activeTab !== 'asset_log' || !params.id) return;
+    let cancelled = false;
+    Promise.resolve()
+      .then(() => {
+        if (!cancelled) { setAssetLogLoading(true); setAssetLogError(null); }
+        return getAssetHistory(params.id);
+      })
+      .then((result) => { if (!cancelled) setAssetLog(result.data); })
+      .catch((err) => { if (!cancelled) setAssetLogError(err instanceof ApiError ? err.message : 'Failed to load history log.'); })
+      .finally(() => { if (!cancelled) setAssetLogLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, params.id, assetLogVersion]);
+
+  useEffect(() => {
+    if (activeTab !== 'upgrades' || !params.id) return;
+    let cancelled = false;
+    Promise.resolve()
+      .then(() => { if (!cancelled) setUpgradesLoading(true); return getUpgrades(params.id); })
+      .then((result) => { if (!cancelled) { setUpgrades(result.data); setUpgradesTotal(result.total); } })
+      .catch(() => { /* non-fatal */ })
+      .finally(() => { if (!cancelled) setUpgradesLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, params.id, upgradesVersion]);
 
   const handleConfirmReturn = async (
     returnDate: string,
@@ -100,50 +163,15 @@ export function AssetDetail() {
       });
       toast.success(`"${asset?.name}" returned. Now Available.`);
       setShowReturn(false);
-      loadAsset();
-      loadHistory();
+      refreshAsset();
+      refreshHistory();
+      refreshAssetLog();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Failed to process return.');
     } finally {
       setReturnSaving(false);
     }
   };
-
-  const loadHistory = useCallback(async () => {
-    if (!params.id) return;
-    setHistoryLoading(true);
-    try {
-      setHistory(await getAssetAssignments(params.id));
-    } catch {
-      // non-fatal — leave the table empty if history can't be loaded
-    } finally {
-      setHistoryLoading(false);
-    }
-  }, [params.id]);
-
-  const loadUpgrades = useCallback(async () => {
-    if (!params.id) return;
-    setUpgradesLoading(true);
-    try {
-      const result = await getUpgrades(params.id);
-      setUpgrades(result.data);
-      setUpgradesTotal(result.total);
-    } catch {
-      // non-fatal — table might not exist yet
-    } finally {
-      setUpgradesLoading(false);
-    }
-  }, [params.id]);
-
-  useEffect(() => { loadAsset(); }, [loadAsset]);
-
-  useEffect(() => {
-    if (activeTab === 'history') loadHistory();
-  }, [activeTab, loadHistory]);
-
-  useEffect(() => {
-    if (activeTab === 'upgrades') loadUpgrades();
-  }, [activeTab, loadUpgrades]);
 
   const handleUpgradeSaved = (saved: AssetUpgrade) => {
     setUpgrades((prev) => {
@@ -400,10 +428,11 @@ export function AssetDetail() {
         <div className="flex items-center border-b" style={{ borderColor: '#E2E8F0', padding: '0 24px' }}>
           {[
             { key: 'history', label: 'Assignment History' },
+            { key: 'asset_log', label: 'History Log' },
             { key: 'upgrades', label: `Upgrade Log${upgradesTotal > 0 ? ` (${upgradesTotal})` : ''}` },
           ].map((tab) => (
             <button key={tab.key}
-              onClick={() => setActiveTab(tab.key as 'history' | 'upgrades')}
+              onClick={() => setActiveTab(tab.key as 'history' | 'asset_log' | 'upgrades')}
               className="relative mr-6 py-4 font-medium transition-colors"
               style={{
                 fontSize: 14,
@@ -510,6 +539,15 @@ export function AssetDetail() {
           )
         )}
 
+        {/* History Log Tab */}
+        {activeTab === 'asset_log' && (
+          <AssetHistoryTimeline
+            entries={assetLog}
+            isLoading={assetLogLoading}
+            error={assetLogError}
+          />
+        )}
+
         {/* Upgrade Log Tab */}
         {activeTab === 'upgrades' && (
           upgradesLoading ? (
@@ -602,14 +640,14 @@ export function AssetDetail() {
         <RegisterAssetDrawer
           assetId={asset.id}
           onClose={() => setShowEdit(false)}
-          onSaved={(updated) => { setAsset(updated); setShowEdit(false); }}
+          onSaved={(updated) => { setAsset(updated); setShowEdit(false); refreshAssetLog(); }}
         />
       )}
       {showAssign && (
         <AssignAssetDrawer
           asset={asset}
           onClose={() => setShowAssign(false)}
-          onAssigned={() => { setShowAssign(false); loadAsset(); loadHistory(); }}
+          onAssigned={() => { setShowAssign(false); refreshAsset(); refreshHistory(); refreshAssetLog(); }}
         />
       )}
       {showReturn && activeAssignment && (

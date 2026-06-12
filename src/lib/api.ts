@@ -3,6 +3,7 @@ import type {
   Assignment,
   AssignmentHistoryItem,
   AssetDetail,
+  AssetHistoryEntry,
   AssetListItem,
   AssetStatus,
   AssetUpgrade,
@@ -547,4 +548,10 @@ export function getAssetAssignments(
   assetId: string,
 ): Promise<AssignmentHistoryItem[]> {
   return request<AssignmentHistoryItem[]>(`/assets/${assetId}/assignments`);
+}
+
+export function getAssetHistory(
+  assetId: string,
+): Promise<{ data: AssetHistoryEntry[] }> {
+  return request<{ data: AssetHistoryEntry[] }>(`/assets/${assetId}/history`);
 }
