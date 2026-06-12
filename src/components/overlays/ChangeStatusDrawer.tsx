@@ -49,58 +49,48 @@ export function ChangeStatusDrawer({ asset, onClose, onSaved }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(15,36,96,0.45)' }} onClick={onClose} />
-      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col" style={{ width: 520, background: '#fff', boxShadow: '-8px 0 32px rgba(0,0,0,0.14)' }}>
+      <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px]" onClick={onClose} />
+      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #E2E8F0' }}>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <div>
-            <h2 className="font-bold" style={{ fontSize: 18, color: '#1E293B' }}>Change Asset Status</h2>
-            <p style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>Update the current status of this asset</p>
+            <h2 className="font-bold text-lg tracking-[-0.02em] text-foreground">Change Asset Status</h2>
+            <p className="text-2sm text-muted-foreground mt-0.5">Update the current status of this asset</p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 transition-colors">
-            <X className="w-5 h-5" style={{ color: '#64748B' }} />
+          <button onClick={onClose} className="rounded-control p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
           {/* Asset identity */}
-          <div className="rounded-xl p-4" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
+          <div className="rounded-lg p-4 bg-muted/60 border border-border">
+            <div className="micro-label mb-1">
               Asset
             </div>
-            <div className="font-semibold" style={{ fontSize: 16, color: '#1E293B' }}>{asset.name}</div>
+            <div className="font-semibold text-base text-foreground">{asset.name}</div>
           </div>
 
           {/* Status selector */}
           <div>
-            <div className="font-semibold mb-3 pb-2" style={{ fontSize: 14, color: '#1E293B', borderBottom: '1px solid #F1F5F9' }}>
+            <div className="font-semibold mb-3 pb-2 text-sm text-foreground border-b border-border/60">
               Status
             </div>
             <div>
-              <label className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
-                Asset Status <span style={{ color: '#EF4444' }}>*</span>
+              <label className="block mb-1.5 text-xs font-medium text-foreground/80">
+                Asset Status <span className="text-danger">*</span>
               </label>
               <select
                 value={selected}
                 onChange={(e) => setSelected(e.target.value as ManualAssetStatus)}
-                style={{
-                  width: '100%',
-                  border: '1px solid #CBD5E1',
-                  borderRadius: 8,
-                  padding: '8px 12px',
-                  fontSize: 13,
-                  color: '#1E293B',
-                  background: '#fff',
-                  outline: 'none',
-                  appearance: 'none',
-                }}
+                className="w-full appearance-none rounded-control border border-input bg-input-background text-2sm text-foreground px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
               >
                 {MANUAL_STATUSES.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
-              <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 6 }}>
+              <p className="text-2xs text-muted-foreground/80 mt-1.5">
                 "Assigned" status is managed automatically by the Assignment module.
               </p>
             </div>
@@ -108,16 +98,14 @@ export function ChangeStatusDrawer({ asset, onClose, onSaved }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-6 py-4 justify-end" style={{ borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-          <button onClick={onClose} className="rounded-lg border px-5 py-2.5 font-medium transition-colors hover:bg-gray-50"
-            style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>
+        <div className="flex items-center gap-3 px-6 py-4 justify-end border-t border-border bg-muted/60 rounded-bl-[16px]">
+          <button onClick={onClose} className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
             Cancel
           </button>
           <button
             onClick={handleConfirm}
             disabled={saving}
-            className="rounded-lg px-5 py-2.5 font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60"
-            style={{ fontSize: 14, background: '#1E3A8A' }}
+            className="rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
           >
             {saving ? 'Saving…' : 'Confirm'}
           </button>
