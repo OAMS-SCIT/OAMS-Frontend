@@ -51,39 +51,37 @@ export function ResetPasswordPage({
 
   return (
     <AuthShell>
-      <h1 className="font-bold mb-1" style={{ fontSize: 26, color: '#1E293B' }}>
+      <h1 className="font-bold mb-1 text-[26px] tracking-[-0.02em] text-foreground">
         Reset Password
       </h1>
-      <p style={{ fontSize: 14, color: '#64748B', marginBottom: 28 }}>
+      <p className="text-sm text-muted-foreground mb-7">
         Choose a new password for your OAMS account.
       </p>
 
       {invalidToken ? (
         <div className="text-center py-4">
-          <p style={{ fontSize: 14, color: '#EF4444', lineHeight: 1.6, marginBottom: 24 }}>
+          <p className="text-sm text-danger leading-relaxed mb-6">
             This reset link is invalid or missing. Please request a new password reset.
           </p>
           <Link
             href="/forgot-password"
-            className="inline-flex items-center gap-1.5 hover:underline"
-            style={{ fontSize: 14, color: '#3B82F6' }}
+            className="inline-flex items-center gap-1.5 hover:underline text-sm text-primary"
           >
             Request new reset link
           </Link>
         </div>
       ) : success ? (
         <div className="text-center py-4">
-          <CheckCircle2 className="w-12 h-12 mx-auto mb-4" style={{ color: '#16A34A' }} />
-          <p style={{ fontSize: 15, color: '#1E293B', marginBottom: 8, fontWeight: 500 }}>
+          <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-success" />
+          <p className="text-[15px] text-foreground mb-2 font-medium">
             Password updated
           </p>
-          <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.6, marginBottom: 24 }}>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
             Your password has been reset successfully. You can now sign in with your new password.
           </p>
           <Link
             href="/login"
-            className="inline-flex items-center justify-center gap-2 rounded-lg py-3 px-6 font-bold text-white hover:opacity-90"
-            style={{ fontSize: 15, background: '#1E3A8A' }}
+            className="inline-flex items-center justify-center gap-2 rounded-control py-3 px-6 font-bold text-[15px] bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(29,78,216,0.3)] transition-all hover:opacity-90 active:scale-[0.99]"
           >
             Go to login
           </Link>
@@ -94,16 +92,12 @@ export function ResetPasswordPage({
             <div>
               <label
                 htmlFor="new-password"
-                className="block mb-1.5"
-                style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}
+                className="block mb-1.5 text-xs font-medium text-foreground/80"
               >
                 New Password
               </label>
               <div className="relative">
-                <Lock
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                  style={{ color: '#94A3B8' }}
-                />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
                 <input
                   id="new-password"
                   name="newPassword"
@@ -112,15 +106,13 @@ export function ResetPasswordPage({
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   disabled={loading}
-                  className="w-full rounded-lg border pl-9 pr-10 py-2.5 focus:outline-none focus:ring-2 disabled:opacity-60"
-                  style={{ borderColor: '#CBD5E1', fontSize: 14 }}
+                  className="w-full rounded-control border border-input bg-input-background text-sm pl-9 pr-10 py-2.5 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring disabled:opacity-60"
                   placeholder="At least 8 characters"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(s => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: '#94A3B8' }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-muted-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -130,16 +122,12 @@ export function ResetPasswordPage({
             <div>
               <label
                 htmlFor="confirm-password"
-                className="block mb-1.5"
-                style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}
+                className="block mb-1.5 text-xs font-medium text-foreground/80"
               >
                 Confirm Password
               </label>
               <div className="relative">
-                <Lock
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                  style={{ color: '#94A3B8' }}
-                />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
                 <input
                   id="confirm-password"
                   name="confirmPassword"
@@ -148,15 +136,13 @@ export function ResetPasswordPage({
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
                   disabled={loading}
-                  className="w-full rounded-lg border pl-9 pr-10 py-2.5 focus:outline-none focus:ring-2 disabled:opacity-60"
-                  style={{ borderColor: '#CBD5E1', fontSize: 14 }}
+                  className="w-full rounded-control border border-input bg-input-background text-sm pl-9 pr-10 py-2.5 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring disabled:opacity-60"
                   placeholder="Re-enter your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(s => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: '#94A3B8' }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-muted-foreground transition-colors"
                 >
                   {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -164,7 +150,7 @@ export function ResetPasswordPage({
             </div>
 
             {displayError && (
-              <p role="alert" style={{ fontSize: 13, color: '#EF4444' }}>
+              <p role="alert" className="text-2sm text-danger">
                 {displayError}
               </p>
             )}
@@ -172,8 +158,7 @@ export function ResetPasswordPage({
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-lg py-3 font-bold text-white hover:opacity-90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-              style={{ fontSize: 15, background: '#1E3A8A' }}
+              className="w-full flex items-center justify-center gap-2 rounded-control py-3 font-bold text-[15px] bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(29,78,216,0.3)] transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? 'Updating…' : 'Reset Password'}
@@ -183,8 +168,7 @@ export function ResetPasswordPage({
           <p className="text-center mt-6">
             <Link
               href="/login"
-              className="inline-flex items-center gap-1.5 hover:underline"
-              style={{ fontSize: 12, color: '#3B82F6' }}
+              className="inline-flex items-center gap-1.5 hover:underline text-xs text-primary"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back to login
