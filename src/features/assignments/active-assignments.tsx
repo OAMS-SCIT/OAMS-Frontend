@@ -140,7 +140,7 @@ export function ActiveAssignments() {
             style={{ borderColor: '#CBD5E1', fontSize: 13, color: filterCategory ? '#1E293B' : '#94A3B8', background: '#fff' }}
           >
             <option value="">All Categories</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name}</option>)}
           </select>
           <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#94A3B8' }} />
         </div>
