@@ -125,8 +125,8 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px]" onClick={created ? undefined : onClose} />
-      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[480px] bg-card text-card-foreground shadow-drawer rounded-l-[16px]">
+      <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in" onClick={created ? undefined : onClose} />
+      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[480px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] motion-safe:animate-drawer-in">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
@@ -225,7 +225,7 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
 
                   {/* Dropdown list */}
                   {designationOpen && !selectedDesignation && (
-                    <div className="absolute w-full z-10 rounded-xl mt-1 overflow-hidden overflow-y-auto max-h-[200px] bg-popover border border-border shadow-pop">
+                    <div className="absolute w-full z-10 rounded-xl mt-1 overflow-hidden overflow-y-auto max-h-[200px] bg-popover border border-border shadow-pop motion-safe:animate-pop-in">
                       {filteredDesignations.length === 0 ? (
                         <div className="px-4 py-3 text-2sm text-muted-foreground/80">No designations found</div>
                       ) : (

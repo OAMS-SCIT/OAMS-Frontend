@@ -60,8 +60,8 @@ function DesignationDialog({ title, initialValue = '', onConfirm, onClose }: Des
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim backdrop-blur-[2px]">
-      <div className="rounded-2xl flex flex-col w-[440px] bg-card text-card-foreground shadow-pop">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in">
+      <div className="rounded-2xl flex flex-col w-[440px] bg-card text-card-foreground shadow-pop motion-safe:animate-pop-in">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="font-bold text-base tracking-[-0.01em] text-foreground">{title}</h2>
           <button onClick={onClose} className="rounded-control p-1.5 text-muted-foreground/80 transition-colors hover:bg-muted hover:text-foreground">
@@ -281,7 +281,7 @@ export function UserManagement() {
   };
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-bold text-2xl tracking-[-0.02em] text-foreground">User Management</h1>
         {tab === 'users' && (

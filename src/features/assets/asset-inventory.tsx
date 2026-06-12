@@ -139,7 +139,7 @@ export function AssetInventory() {
   };
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-bold text-2xl tracking-[-0.02em] text-foreground">Asset Inventory</h1>

@@ -335,8 +335,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px]" onClick={onClose} />
-      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px]">
+      <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in" onClick={onClose} />
+      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] motion-safe:animate-drawer-in">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <div>

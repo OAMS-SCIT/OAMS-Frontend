@@ -75,7 +75,7 @@ export function EmployeeDashboard({ assets, employeeName, employeeId }: Props) {
   const myAssets = assets.filter(a => a.assignedToId === employeeId);
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       {/* Welcome banner */}
       <div className="rounded-2xl p-6 mb-6 flex items-center justify-between text-white bg-[linear-gradient(135deg,#0C1B4D_0%,#1D4ED8_100%)] shadow-card">
         <div>
