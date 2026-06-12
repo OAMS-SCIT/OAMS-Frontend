@@ -532,3 +532,50 @@ export interface LoginResponse {
   accessToken: string;
   user: AuthUser;
 }
+// ── Asset History ─────────────────────────────────────────────────────────
+
+export type AssetEventType =
+    | 'created'
+    | 'updated'
+    | 'status_changed'
+    | 'assigned'
+    | 'returned';
+
+export interface AssetHistoryChangeEntry {
+  field: string;
+  oldValue: unknown;
+  newValue: unknown;
+}
+
+export interface AssetHistoryStatusChange {
+  oldStatus: string;
+  newStatus: string;
+}
+
+export interface AssetHistoryAssignedChange {
+  assignedTo: string;
+  assignedToId: string;
+}
+
+export interface AssetHistoryReturnedChange {
+  returnedFrom: string;
+  returnedFromId: string;
+}
+
+export interface AssetHistoryEntry {
+  id: string;
+  eventType: AssetEventType;
+  performedBy: {
+    id: string;
+    name: string;
+  };
+  /** Shape varies by eventType — see individual change interfaces. */
+  changes:
+      | AssetHistoryChangeEntry[]
+      | AssetHistoryStatusChange
+      | AssetHistoryAssignedChange
+      | AssetHistoryReturnedChange
+      | Record<string, unknown>
+      | null;
+  createdAt: string;
+}
