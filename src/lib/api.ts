@@ -3,6 +3,7 @@ import type {
   Assignment,
   AssignmentHistoryItem,
   AssetDetail,
+  AssetHistoryEntry,
   AssetListItem,
   AssetStatus,
   AssetUpgrade,
@@ -155,6 +156,23 @@ export async function logout(): Promise<void> {
   } catch {
     // Ignore — the token is cleared by the caller regardless.
   }
+}
+
+export function requestForgotPassword(email: string): Promise<{ message: string }> {
+  return request<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: { email },
+  });
+}
+
+export function resetPasswordWithToken(
+  token: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  return request<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
+    body: { token, newPassword },
+  });
 }
 
 // ── Profile ───────────────────────────────────────────────────────────────
@@ -547,4 +565,10 @@ export function getAssetAssignments(
   assetId: string,
 ): Promise<AssignmentHistoryItem[]> {
   return request<AssignmentHistoryItem[]>(`/assets/${assetId}/assignments`);
+}
+
+export function getAssetHistory(
+  assetId: string,
+): Promise<{ data: AssetHistoryEntry[] }> {
+  return request<{ data: AssetHistoryEntry[] }>(`/assets/${assetId}/history`);
 }

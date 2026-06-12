@@ -396,7 +396,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 >
                   <option value="">Select a category…</option>
                   {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>{c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name}</option>
                   ))}
                 </select>
               </FormField>

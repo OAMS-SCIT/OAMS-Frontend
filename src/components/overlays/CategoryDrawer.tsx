@@ -268,6 +268,7 @@ export function CategoryDrawer({ categoryId, onClose, onSaved }: Props) {
                   <input
                     type="text"
                     value={name}
+                    maxLength={60}
                     onChange={(e) => {
                       setName(e.target.value);
                       setErrors((er) => ({ ...er, name: '' }));
