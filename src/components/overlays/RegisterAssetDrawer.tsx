@@ -335,26 +335,26 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(15,36,96,0.45)' }} onClick={onClose} />
-      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col" style={{ width: 520, background: '#fff', boxShadow: '-8px 0 32px rgba(0,0,0,0.14)' }}>
+      <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px]" onClick={onClose} />
+      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #E2E8F0' }}>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <div>
-            <h2 className="font-bold" style={{ fontSize: 18, color: '#1E293B' }}>
+            <h2 className="font-bold text-lg tracking-[-0.02em] text-foreground">
               {isEdit ? 'Edit Asset' : 'Register New Asset'}
             </h2>
-            <p style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>
+            <p className="text-2sm text-muted-foreground mt-0.5">
               {isEdit ? 'Update the details for this asset' : 'Fill in the details to register a new asset'}
             </p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 transition-colors">
-            <X className="w-5 h-5" style={{ color: '#64748B' }} />
+          <button onClick={onClose} className="rounded-control p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
         {loadingInit ? (
-          <div className="flex-1 flex items-center justify-center" style={{ fontSize: 13, color: '#64748B' }}>
+          <div className="flex-1 flex items-center justify-center text-2sm text-muted-foreground">
             Loading…
           </div>
         ) : (
@@ -401,10 +401,10 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 </select>
               </FormField>
               {!form.categoryId && (
-                <p style={{ fontSize: 12, color: '#94A3B8', fontStyle: 'italic' }}>Select a category to see additional fields</p>
+                <p className="text-xs text-muted-foreground/80 italic">Select a category to see additional fields</p>
               )}
               {loadingAttrs && (
-                <p style={{ fontSize: 12, color: '#94A3B8' }}>Loading attributes…</p>
+                <p className="text-xs text-muted-foreground/80">Loading attributes…</p>
               )}
               {categoryAttrs.map(renderAttrInput)}
             </FormSection>
@@ -417,9 +417,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 </FormField>
                 <FormField label="Purchase Price" required error={errors.purchasePrice}>
                   <div className="relative">
-                    <span
-                      className="absolute top-1/2 -translate-y-1/2 pointer-events-none select-none text-sm"
-                      style={{ left: 12, color: '#94A3B8', zIndex: 1 }}>
+                    <span className="absolute top-1/2 -translate-y-1/2 pointer-events-none select-none text-sm left-3 z-[1] text-muted-foreground/70">
                       $
                     </span>
                     <input type="number" value={form.purchasePrice}
@@ -461,13 +459,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 <div className="flex gap-2">
                   {CONDITIONS.map((c) => (
                     <button key={c} onClick={() => set('condition', c)}
-                      className="flex-1 rounded-lg py-2 border transition-all"
-                      style={{
-                        fontSize: 13, fontWeight: 500,
-                        borderColor: form.condition === c ? '#3B82F6' : '#E2E8F0',
-                        background: form.condition === c ? '#EFF6FF' : '#fff',
-                        color: form.condition === c ? '#2563EB' : '#64748B',
-                      }}>
+                      className={`flex-1 rounded-control py-2 border text-2sm font-medium transition-all ${
+                        form.condition === c
+                          ? 'border-primary bg-secondary text-secondary-foreground'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                      }`}>
                       {c}
                     </button>
                   ))}
@@ -498,14 +494,12 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         )}
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-6 py-4 justify-end" style={{ borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-          <button onClick={onClose} className="rounded-lg border px-5 py-2.5 font-medium transition-colors hover:bg-gray-50"
-            style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>
+        <div className="flex items-center gap-3 px-6 py-4 justify-end border-t border-border bg-muted/60 rounded-bl-[16px]">
+          <button onClick={onClose} className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving || loadingInit}
-            className="rounded-lg px-5 py-2.5 font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60"
-            style={{ fontSize: 14, background: '#1E3A8A' }}>
+            className="rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60">
             {saving ? 'Saving…' : isEdit ? 'Edit Asset' : 'Register Asset'}
           </button>
         </div>
@@ -514,20 +508,23 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
       <style>{`
         .form-input {
           width: 100%;
-          border: 1px solid #CBD5E1;
-          border-radius: 8px;
+          border: 1px solid var(--input);
+          border-radius: 0.625rem;
           padding: 8px 12px;
           font-size: 13px;
-          color: #1E293B;
-          background: #fff;
+          color: var(--foreground);
+          background: var(--input-background);
           outline: none;
           transition: border-color 0.15s, box-shadow 0.15s;
         }
         .form-input:focus {
-          border-color: #3B82F6;
-          box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+          border-color: var(--ring);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 15%, transparent);
         }
-        .form-input:disabled { background: #F8FAFC; cursor: not-allowed; }
+        .form-input::placeholder {
+          color: color-mix(in srgb, var(--muted-foreground) 60%, transparent);
+        }
+        .form-input:disabled { background: var(--muted); cursor: not-allowed; }
         .form-input.font-mono { font-family: monospace; }
       `}</style>
     </>
@@ -537,7 +534,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="font-semibold mb-3 pb-2" style={{ fontSize: 14, color: '#1E293B', borderBottom: '1px solid #F1F5F9' }}>{title}</div>
+      <div className="font-semibold mb-3 pb-2 text-sm text-foreground border-b border-border/60">{title}</div>
       <div className="space-y-3">{children}</div>
     </div>
   );
@@ -546,11 +543,11 @@ function FormSection({ title, children }: { title: string; children: React.React
 function FormField({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
-        {label} {required && <span style={{ color: '#EF4444' }}>*</span>}
+      <label className="block mb-1.5 text-xs font-medium text-foreground/80">
+        {label} {required && <span className="text-danger">*</span>}
       </label>
       {children}
-      {error && <p style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>{error}</p>}
+      {error && <p className="text-xs text-danger mt-1">{error}</p>}
     </div>
   );
 }

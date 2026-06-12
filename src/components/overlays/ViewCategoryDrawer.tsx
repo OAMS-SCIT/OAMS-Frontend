@@ -28,37 +28,34 @@ export function ViewCategoryDrawer({ categoryId, onClose }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(15,36,96,0.45)' }} onClick={onClose} />
-      <div
-        className="fixed top-0 right-0 bottom-0 z-50 flex flex-col"
-        style={{ width: 520, background: '#fff', boxShadow: '-8px 0 32px rgba(0,0,0,0.14)' }}
-      >
+      <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px]" onClick={onClose} />
+      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #E2E8F0' }}>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <div>
-            <h2 style={{ fontSize: 17, fontWeight: 700, color: '#1E293B', letterSpacing: '-0.2px' }}>Category Details</h2>
-            <p style={{ fontSize: 12, color: '#94A3B8', marginTop: 3 }}>Read-only view of this category and its attributes</p>
+            <h2 className="text-[17px] font-bold tracking-[-0.01em] text-foreground">Category Details</h2>
+            <p className="text-xs text-muted-foreground/80 mt-1">Read-only view of this category and its attributes</p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 transition-colors">
-            <X className="w-5 h-5" style={{ color: '#94A3B8' }} />
+          <button onClick={onClose} className="rounded-control p-2 text-muted-foreground/80 transition-colors hover:bg-muted hover:text-foreground">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center" style={{ fontSize: 13, color: '#94A3B8' }}>
+          <div className="flex-1 flex items-center justify-center text-2sm text-muted-foreground/80">
             Loading…
           </div>
         ) : category ? (
-          <div className="flex-1 overflow-y-auto px-6 py-6" style={{ gap: 24, display: 'flex', flexDirection: 'column' }}>
+          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-6">
 
             {/* General Information */}
             <section>
               <SectionHeader title="General Information" />
-              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E2E8F0' }}>
+              <div className="rounded-lg overflow-hidden border border-border">
                 <ReadRow label="Category Name" value={category.name} />
                 <ReadRow label="Description" value={category.description || '—'} />
-                <div className="px-4 py-3" style={{ borderBottom: '1px solid #F1F5F9' }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>
+                <div className="px-4 py-3 border-b border-border/60">
+                  <span className="block mb-1.5 micro-label font-semibold tracking-[0.04em]">
                     Status
                   </span>
                   <StatusBadge status={category.status} />
@@ -72,52 +69,41 @@ export function ViewCategoryDrawer({ categoryId, onClose }: Props) {
             <section>
               <div className="flex items-center justify-between mb-3">
                 <SectionHeader title="Custom Attributes" inline />
-                <span
-                  className="rounded-full px-2.5 py-0.5 font-semibold"
-                  style={{ fontSize: 12, background: '#EFF6FF', color: '#1E3A8A' }}
-                >
+                <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground nums">
                   {category.attributes.length}
                 </span>
               </div>
 
               {category.attributes.length === 0 ? (
-                <p style={{ fontSize: 13, color: '#94A3B8', fontStyle: 'italic' }}>
+                <p className="text-2sm text-muted-foreground/80 italic">
                   No custom attributes defined for this category.
                 </p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="flex flex-col gap-2">
                   {category.attributes.map((attr) => (
                     <div
                       key={attr.id}
-                      className="rounded-xl px-4 py-3"
-                      style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}
+                      className="rounded-lg px-4 py-3 bg-muted/60 border border-border"
                     >
                       <div className="flex items-center justify-between">
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#1E293B' }}>{attr.label}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span
-                            className="rounded-full px-2.5 py-0.5"
-                            style={{ fontSize: 11, background: '#EFF6FF', color: '#2563EB', fontWeight: 500 }}
-                          >
+                        <span className="text-2sm font-semibold text-foreground">{attr.label}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="rounded-full px-2.5 py-0.5 text-2xs font-medium bg-info-surface text-info-foreground">
                             {attr.type}
                           </span>
                           {attr.isRequired && (
-                            <span
-                              className="rounded-full px-2.5 py-0.5"
-                              style={{ fontSize: 11, background: '#FEF2F2', color: '#DC2626', fontWeight: 500 }}
-                            >
+                            <span className="rounded-full px-2.5 py-0.5 text-2xs font-medium bg-danger-surface text-danger-foreground">
                               Required
                             </span>
                           )}
                         </div>
                       </div>
                       {attr.type === 'Dropdown' && attr.options.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
                           {attr.options.map((opt) => (
                             <span
                               key={opt.id}
-                              className="rounded-md px-2 py-0.5"
-                              style={{ fontSize: 11, background: '#fff', border: '1px solid #E2E8F0', color: '#475569' }}
+                              className="rounded-md px-2 py-0.5 text-2xs bg-card border border-border text-foreground/70"
                             >
                               {opt.label}
                             </span>
@@ -133,14 +119,10 @@ export function ViewCategoryDrawer({ categoryId, onClose }: Props) {
         ) : null}
 
         {/* Footer */}
-        <div
-          className="flex items-center justify-end px-6 py-4"
-          style={{ borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}
-        >
+        <div className="flex items-center justify-end px-6 py-4 border-t border-border bg-muted/60 rounded-bl-[16px]">
           <button
             onClick={onClose}
-            className="rounded-lg border px-5 py-2.5 font-medium transition-colors hover:bg-gray-50"
-            style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}
+            className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted"
           >
             Close
           </button>
@@ -153,11 +135,11 @@ export function ViewCategoryDrawer({ categoryId, onClose }: Props) {
 function SectionHeader({ title, inline }: { title: string; inline?: boolean }) {
   if (inline) {
     return (
-      <span style={{ fontSize: 13, fontWeight: 700, color: '#1E293B', letterSpacing: '-0.1px' }}>{title}</span>
+      <span className="text-2sm font-bold tracking-[-0.01em] text-foreground">{title}</span>
     );
   }
   return (
-    <h3 style={{ fontSize: 13, fontWeight: 700, color: '#1E293B', letterSpacing: '-0.1px', marginBottom: 10 }}>
+    <h3 className="text-2sm font-bold tracking-[-0.01em] text-foreground mb-2.5">
       {title}
     </h3>
   );
@@ -165,14 +147,11 @@ function SectionHeader({ title, inline }: { title: string; inline?: boolean }) {
 
 function ReadRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
   return (
-    <div
-      className="px-4 py-3"
-      style={{ borderBottom: last ? 'none' : '1px solid #F1F5F9' }}
-    >
-      <span style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: 4 }}>
+    <div className={`px-4 py-3 ${last ? '' : 'border-b border-border/60'}`}>
+      <span className="block mb-1 micro-label font-semibold tracking-[0.04em]">
         {label}
       </span>
-      <span style={{ fontSize: 13.5, color: '#1E293B', fontWeight: 500 }}>{value}</span>
+      <span className="text-[13.5px] font-medium text-foreground">{value}</span>
     </div>
   );
 }
