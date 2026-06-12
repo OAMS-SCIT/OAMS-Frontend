@@ -77,11 +77,11 @@ export default function AdminProfilePage() {
   };
 
   if (loading) {
-    return <div style={{ padding: 24, color: '#64748B' }}>Loading profile…</div>;
+    return <div className="p-6 text-muted-foreground">Loading profile…</div>;
   }
 
   if (!profile) {
-    return <div style={{ padding: 24, color: '#64748B' }}>Profile unavailable.</div>;
+    return <div className="p-6 text-muted-foreground">Profile unavailable.</div>;
   }
 
   return (
