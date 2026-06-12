@@ -137,17 +137,17 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(15,36,96,0.45)' }} onClick={created ? undefined : onClose} />
-      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col" style={{ width: 480, background: '#fff', boxShadow: '-8px 0 32px rgba(0,0,0,0.14)' }}>
+      <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px]" onClick={created ? undefined : onClose} />
+      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[480px] bg-card text-card-foreground shadow-drawer rounded-l-[16px]">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #E2E8F0' }}>
-          <h2 className="font-bold" style={{ fontSize: 18, color: '#1E293B' }}>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+          <h2 className="font-bold text-lg tracking-[-0.02em] text-foreground">
             {created ? 'User Created' : 'Create New User'}
           </h2>
           {!created && (
-            <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 transition-colors">
-              <X className="w-5 h-5" style={{ color: '#64748B' }} />
+            <button onClick={onClose} className="rounded-control p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <X className="w-5 h-5" />
             </button>
           )}
         </div>
@@ -155,20 +155,20 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
         {created ? (
           /* ── Success screen ── */
           <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5 w-full min-w-0 overflow-hidden">
-            <div className="flex items-center justify-center rounded-full" style={{ width: 56, height: 56, background: '#ECFDF5' }}>
-              <CheckCircle className="w-8 h-8" style={{ color: '#22C55E' }} />
+            <div className="flex items-center justify-center rounded-full w-14 h-14 bg-success-surface">
+              <CheckCircle className="w-8 h-8 text-success" />
             </div>
             <div className="w-full min-w-0">
-              <p className="font-semibold mb-1" style={{ fontSize: 16, color: '#1E293B', overflowWrap: 'anywhere' }}>
+              <p className="font-semibold mb-1 text-base text-foreground" style={{ overflowWrap: 'anywhere' }}>
                 <span className="break-all">{form.firstName} {form.lastName}</span> has been created
               </p>
-              <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.6 }}>
+              <p className="text-2sm text-muted-foreground leading-relaxed">
                 The account has been set up successfully.
               </p>
             </div>
-            <div className="w-full min-w-0 flex items-start gap-3 rounded-xl p-4" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-              <Mail className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#2563EB' }} />
-              <p style={{ fontSize: 13, color: '#1D4ED8', lineHeight: 1.6, textAlign: 'left', overflowWrap: 'anywhere' }}>
+            <div className="w-full min-w-0 flex items-start gap-3 rounded-lg p-4 bg-info-surface border border-info/30">
+              <Mail className="w-4 h-4 mt-0.5 shrink-0 text-info" />
+              <p className="text-2sm text-info-foreground leading-relaxed text-left" style={{ overflowWrap: 'anywhere' }}>
                 The username and a temporary password have been sent to <strong className="break-all">{form.email}</strong>.
               </p>
             </div>
@@ -177,7 +177,7 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
           /* ── Form ── */
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
             {errors._form && (
-              <div className="rounded-lg p-3" style={{ background: '#FEF2F2', border: '1px solid #FECACA', fontSize: 13, color: '#DC2626' }}>
+              <div className="rounded-control p-3 text-2sm bg-danger-surface border border-danger/30 text-danger-foreground">
                 {errors._form}
               </div>
             )}
@@ -210,48 +210,48 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
             {/* Searchable Designation Dropdown */}
             <FormField label="Designation" required error={errors.designationId}>
               {designationsLoading ? (
-                <div className="fi" style={{ color: '#94A3B8' }}>Loading designations…</div>
+                <div className="fi text-muted-foreground/80">Loading designations…</div>
               ) : designationsError ? (
-                <div className="fi" style={{ color: '#EF4444', fontSize: 12 }}>{designationsError}</div>
+                <div className="fi text-xs text-danger">{designationsError}</div>
               ) : (
                 <div ref={designationRef} className="relative">
                   {selectedDesignation ? (
                     /* Selected state */
-                    <div className="flex items-center justify-between rounded-lg border px-3 py-2.5"
-                      style={{ borderColor: errors.designationId ? '#EF4444' : '#3B82F6', background: '#EFF6FF' }}>
-                      <span className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{selectedDesignation.name}</span>
-                      <button onClick={clearDesignation} className="text-blue-400 hover:text-blue-600 transition-colors">
+                    <div className={`flex items-center justify-between rounded-control border bg-secondary px-3 py-2.5 ${
+                      errors.designationId ? 'border-danger' : 'border-primary'
+                    }`}>
+                      <span className="font-medium text-2sm text-foreground">{selectedDesignation.name}</span>
+                      <button onClick={clearDesignation} className="text-primary/60 hover:text-primary transition-colors">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
                     /* Search input */
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#94A3B8' }} />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-muted-foreground/70" />
                       <input
                         type="text"
                         value={designationSearch}
                         onChange={e => { setDesignationSearch(e.target.value); setDesignationOpen(true); }}
                         onFocus={() => setDesignationOpen(true)}
                         placeholder="Search designation..."
-                        className="w-full rounded-lg border pl-9 pr-8 py-2.5 focus:outline-none"
-                        style={{ borderColor: errors.designationId ? '#EF4444' : '#CBD5E1', fontSize: 13, color: '#1E293B' }}
+                        className={`w-full rounded-control border bg-input-background text-2sm text-foreground pl-9 pr-8 py-2.5 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${
+                          errors.designationId ? 'border-danger' : 'border-input focus:border-ring'
+                        }`}
                       />
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#94A3B8' }} />
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-muted-foreground/70" />
                     </div>
                   )}
 
                   {/* Dropdown list */}
                   {designationOpen && !selectedDesignation && (
-                    <div className="absolute w-full z-10 rounded-xl shadow-lg mt-1 overflow-hidden"
-                      style={{ background: '#fff', border: '1px solid #E2E8F0', maxHeight: 200, overflowY: 'auto' }}>
+                    <div className="absolute w-full z-10 rounded-xl mt-1 overflow-hidden overflow-y-auto max-h-[200px] bg-popover border border-border shadow-pop">
                       {filteredDesignations.length === 0 ? (
-                        <div className="px-4 py-3" style={{ fontSize: 13, color: '#94A3B8' }}>No designations found</div>
+                        <div className="px-4 py-3 text-2sm text-muted-foreground/80">No designations found</div>
                       ) : (
                         filteredDesignations.map(d => (
                           <button key={d.id}
-                            className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors"
-                            style={{ fontSize: 13, color: '#1E293B' }}
+                            className="w-full text-left px-4 py-2.5 text-2sm text-foreground transition-colors hover:bg-muted"
                             onMouseDown={e => { e.preventDefault(); selectDesignation(d); }}>
                             {d.name}
                           </button>
@@ -265,59 +265,57 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
 
             {/* Role */}
             <div>
-              <label className="block mb-2" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
-                Role <span style={{ color: '#EF4444' }}>*</span>
+              <label className="block mb-2 text-xs font-medium text-foreground/80">
+                Role <span className="text-danger">*</span>
               </label>
               <div className="flex gap-2">
                 {(['Admin', 'Employee'] as UserRole[]).map(r => (
                   <button key={r} onClick={() => setForm(f => ({ ...f, role: r }))}
-                    className="flex-1 rounded-lg py-2.5 border font-medium transition-all"
-                    style={{
-                      fontSize: 13,
-                      borderColor: form.role === r ? '#1E3A8A' : '#E2E8F0',
-                      background: form.role === r ? '#EFF6FF' : '#fff',
-                      color: form.role === r ? '#1E3A8A' : '#64748B',
-                    }}>
+                    className={`flex-1 rounded-control py-2.5 border text-2sm font-medium transition-all ${
+                      form.role === r
+                        ? 'border-primary bg-secondary text-secondary-foreground'
+                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                    }`}>
                     {r}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-start gap-3 rounded-xl p-3" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-              <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#2563EB' }} />
-              <p style={{ fontSize: 12, color: '#1D4ED8' }}>Only Admin role users will have login access. Employee accounts are for asset tracking only.</p>
+            <div className="flex items-start gap-3 rounded-lg p-3 bg-info-surface border border-info/30">
+              <Info className="w-4 h-4 mt-0.5 shrink-0 text-info" />
+              <p className="text-xs text-info-foreground">Only Admin role users will have login access. Employee accounts are for asset tracking only.</p>
             </div>
 
             {/* Status */}
             <div>
-              <label className="block mb-2" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>Status</label>
+              <label className="block mb-2 text-xs font-medium text-foreground/80">Status</label>
               <button
                 onClick={() => setForm(f => ({ ...f, status: f.status === 'Active' ? 'Inactive' : 'Active' }))}
-                className="flex items-center gap-2 rounded-full px-4 py-2"
-                style={{ background: form.status === 'Active' ? '#ECFDF5' : '#F8FAFC', border: '1px solid', borderColor: form.status === 'Active' ? '#A7F3D0' : '#E2E8F0' }}>
-                <div className="rounded-full" style={{ width: 10, height: 10, background: form.status === 'Active' ? '#22C55E' : '#94A3B8' }} />
-                <span style={{ fontSize: 13, fontWeight: 500, color: form.status === 'Active' ? '#059669' : '#64748B' }}>{form.status}</span>
+                className={`flex items-center gap-2 rounded-full px-4 py-2 border transition-colors ${
+                  form.status === 'Active'
+                    ? 'bg-success-surface border-success/30'
+                    : 'bg-neutral-surface border-border'
+                }`}>
+                <div className={`rounded-full w-2.5 h-2.5 ${form.status === 'Active' ? 'bg-success' : 'bg-neutral'}`} />
+                <span className={`text-2sm font-medium ${form.status === 'Active' ? 'text-success-foreground' : 'text-muted-foreground'}`}>{form.status}</span>
               </button>
             </div>
           </div>
         )}
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-6 py-4 justify-end" style={{ borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+        <div className="flex items-center gap-3 px-6 py-4 justify-end border-t border-border bg-muted/60 rounded-bl-[16px]">
           {created ? (
             <button onClick={() => { onSave(); onClose(); }}
-              className="rounded-lg px-5 py-2.5 font-semibold text-white hover:opacity-90 transition-colors"
-              style={{ fontSize: 14, background: '#1E3A8A' }}>
+              className="rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]">
               Done
             </button>
           ) : (
             <>
-              <button onClick={onClose} className="rounded-lg border px-5 py-2.5 font-medium hover:bg-gray-50 transition-colors"
-                style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>Cancel</button>
+              <button onClick={onClose} className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">Cancel</button>
               <button onClick={handleSave} disabled={submitting}
-                className="rounded-lg px-5 py-2.5 font-semibold text-white hover:opacity-90 transition-colors disabled:opacity-60"
-                style={{ fontSize: 14, background: '#1E3A8A' }}>
+                className="rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60">
                 {submitting ? 'Creating…' : 'Create User'}
               </button>
             </>
@@ -325,7 +323,11 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
         </div>
       </div>
 
-      <style>{`.fi { width: 100%; border: 1px solid #CBD5E1; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #1E293B; background: #fff; outline: none; } .fi:focus { border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }`}</style>
+      <style>{`
+        .fi { width: 100%; border: 1px solid var(--input); border-radius: 0.625rem; padding: 8px 12px; font-size: 13px; color: var(--foreground); background: var(--input-background); outline: none; transition: border-color .15s, box-shadow .15s; }
+        .fi:focus { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 15%, transparent); }
+        .fi::placeholder { color: color-mix(in srgb, var(--muted-foreground) 60%, transparent); }
+      `}</style>
     </>
   );
 }
@@ -333,11 +335,11 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
 function FormField({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
-        {label} {required && <span style={{ color: '#EF4444' }}>*</span>}
+      <label className="block mb-1.5 text-xs font-medium text-foreground/80">
+        {label} {required && <span className="text-danger">*</span>}
       </label>
       {children}
-      {error && <p style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>{error}</p>}
+      {error && <p className="text-xs text-danger mt-1">{error}</p>}
     </div>
   );
 }
