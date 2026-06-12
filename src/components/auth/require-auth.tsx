@@ -22,8 +22,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   if (status !== 'authenticated') {
     return (
-      <div className="flex h-screen items-center justify-center" style={{ background: '#F8FAFC' }}>
-        <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1E3A8A' }} />
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
   }
