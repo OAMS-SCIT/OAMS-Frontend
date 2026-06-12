@@ -79,7 +79,7 @@ export function AuthShell({ children }: Props) {
         <div className="absolute top-6 right-6">
           <ThemeToggle />
         </div>
-        <div className="w-full max-w-[380px]">{children}</div>
+        <div className="w-full max-w-[380px] motion-safe:animate-fade-rise">{children}</div>
       </div>
     </div>
   );

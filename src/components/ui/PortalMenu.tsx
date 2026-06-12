@@ -46,7 +46,7 @@ export function PortalMenu({ anchor, onClose, children }: Props) {
       {/* The actual menu */}
       <div
         ref={menuRef}
-        className="rounded-xl overflow-hidden py-1 min-w-40 bg-popover text-popover-foreground border border-border shadow-pop"
+        className="rounded-xl overflow-hidden py-1 min-w-40 bg-popover text-popover-foreground border border-border shadow-pop motion-safe:animate-pop-in"
         style={{
           position: 'fixed',
           top: anchor.top,

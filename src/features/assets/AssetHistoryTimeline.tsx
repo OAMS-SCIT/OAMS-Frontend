@@ -171,12 +171,12 @@ function HistorySkeleton() {
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="flex gap-4 mb-6">
           <div className="flex flex-col items-center w-8">
-            <div className="rounded-full animate-pulse w-8 h-8 bg-muted" />
+            <div className="rounded-full skeleton w-8 h-8" />
             {i < 3 && <div className="w-0.5 h-10 bg-muted mt-1" />}
           </div>
           <div className="flex-1 pt-1">
-            <div className="animate-pulse rounded-sm h-[13px] w-2/5 bg-muted mb-2" />
-            <div className="animate-pulse rounded-sm h-[11px] w-1/4 bg-muted" />
+            <div className="skeleton rounded-sm h-[13px] w-2/5 mb-2" />
+            <div className="skeleton rounded-sm h-[11px] w-1/4" />
           </div>
         </div>
       ))}

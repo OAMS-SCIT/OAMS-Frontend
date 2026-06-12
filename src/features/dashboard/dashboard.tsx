@@ -116,7 +116,7 @@ export function Dashboard() {
   const welcomeName = user?.firstName ?? 'Admin';
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-bold text-2xl tracking-[-0.02em] text-foreground">Dashboard</h1>

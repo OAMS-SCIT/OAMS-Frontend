@@ -108,7 +108,7 @@ export function ActiveAssignments() {
   };
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

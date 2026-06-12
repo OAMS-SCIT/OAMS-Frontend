@@ -12,8 +12,8 @@ interface Props {
 
 export function ConfirmDialog({ title, description, confirmLabel = 'Yes', onConfirm, onCancel }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim backdrop-blur-[2px]">
-      <div className="rounded-2xl flex flex-col w-[420px] bg-card text-card-foreground shadow-pop">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in">
+      <div className="rounded-2xl flex flex-col w-[420px] bg-card text-card-foreground shadow-pop motion-safe:animate-pop-in">
         {/* Body */}
         <div className="px-6 pt-6 pb-5 flex gap-4">
           <div className="shrink-0 flex items-center justify-center rounded-full w-10 h-10 bg-danger-surface">

@@ -234,7 +234,7 @@ export function AssetDetail() {
   const activeIdx = Math.min(activeImageIndex, Math.max(0, heroImages.length - 1));
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-5 text-2sm">
         <button onClick={() => router.push('/admin/inventory')}

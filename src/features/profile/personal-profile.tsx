@@ -134,7 +134,7 @@ export function PersonalProfile({
   };
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       <h1 className="font-bold mb-6 text-2xl tracking-[-0.02em] text-foreground">Personal Profile</h1>
 
       <div className="mx-auto max-w-[680px]">

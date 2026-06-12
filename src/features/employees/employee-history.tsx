@@ -19,7 +19,7 @@ export function EmployeeHistory({ assets, employeeId }: Props) {
   });
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       <div className="mb-6">
         <h1 className="font-bold text-2xl tracking-[-0.02em] text-foreground">My Asset History</h1>
         <p className="text-sm text-muted-foreground mt-1">A complete record of all assets previously assigned to you.</p>
