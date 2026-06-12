@@ -214,7 +214,9 @@ export function CategoryManagement() {
                     className="hover:bg-blue-50/30 transition-colors"
                   >
                     <td className="px-5 py-4">
-                      <div className="font-semibold" style={{ fontSize: 13, color: '#1E293B' }}>{cat.name}</div>
+                      <div className="font-semibold" title={cat.name.length > 45 ? cat.name : undefined} style={{ fontSize: 13, color: '#1E293B' }}>
+                        {cat.name.length > 45 ? cat.name.slice(0, 45) + '…' : cat.name}
+                      </div>
                     </td>
                     <td className="px-5 py-4" style={{ maxWidth: 200 }}>
                       <div style={{ fontSize: 13, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
