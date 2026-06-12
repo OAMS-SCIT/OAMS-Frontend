@@ -2,42 +2,141 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ──────────────────────────────────────────────────────────────
+   Sapphire Calm — light palette
+   Navy/blue enterprise identity on soft "cloud" neutrals.
+   ────────────────────────────────────────────────────────────── */
 :root {
   --font-size: 16px;
-  --background: #f8fafc;
-  --foreground: #1e293b;
+  --background: #f6f7f9;
+  --foreground: #101828;
   --card: #ffffff;
-  --card-foreground: #1e293b;
+  --card-foreground: #101828;
   --popover: #ffffff;
-  --popover-foreground: #1e293b;
-  --primary: #1e3a8a;
+  --popover-foreground: #101828;
+  --primary: #1d4ed8;
   --primary-foreground: #ffffff;
-  --secondary: #eff6ff;
-  --secondary-foreground: #1e3a8a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #e2e8f0;
-  --accent-foreground: #1e293b;
-  --destructive: #ef4444;
+  --secondary: #eff4ff;
+  --secondary-foreground: #1d4ed8;
+  --muted: #f1f3f7;
+  --muted-foreground: #5d6b82;
+  --accent: #e9eef6;
+  --accent-foreground: #101828;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #cbd5e1;
+  --border: #e6e8ec;
+  --input: #d8dce3;
   --input-background: #ffffff;
-  --ring: #3b82f6;
+  --ring: #1d4ed8;
+
+  /* status tones: solid / readable-fg / tinted-surface */
+  --success: #10b981;
+  --success-foreground: #047857;
+  --success-surface: #ecfdf5;
+  --info: #3b82f6;
+  --info-foreground: #1d4ed8;
+  --info-surface: #eff4ff;
+  --warning: #f59e0b;
+  --warning-foreground: #b45309;
+  --warning-surface: #fffbeb;
+  --purple: #8b5cf6;
+  --purple-foreground: #6d28d9;
+  --purple-surface: #f5f3ff;
+  --danger: #ef4444;
+  --danger-foreground: #b91c1c;
+  --danger-surface: #fef2f2;
+  --neutral: #94a3b8;
+  --neutral-foreground: #5d6b82;
+  --neutral-surface: #f1f3f7;
+
   --chart-1: #3b82f6;
   --chart-2: #10b981;
   --chart-3: #8b5cf6;
   --chart-4: #f59e0b;
   --chart-5: #94a3b8;
-  --radius: 0.625rem;
-  --sidebar: #0f2460;
+
+  --radius: 0.875rem; /* 14px cards */
+
+  --sidebar: #0c1b4d;
+  --sidebar-from: #0c1b4d;
+  --sidebar-to: #10245f;
   --sidebar-foreground: #ffffff;
-  --sidebar-primary: #3b82f6;
+  --sidebar-primary: #6494ff;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(59, 130, 246, 0.18);
+  --sidebar-accent: rgba(255, 255, 255, 0.1);
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #3b82f6;
+  --sidebar-ring: #6494ff;
+
+  --scrim: rgba(12, 27, 77, 0.45);
+
+  --shadow-card-src: 0 1px 2px rgb(16 24 40 / 0.04), 0 4px 12px rgb(16 24 40 / 0.06);
+  --shadow-hover-src: 0 2px 4px rgb(16 24 40 / 0.05), 0 12px 28px rgb(16 24 40 / 0.1);
+  --shadow-drawer-src: -12px 0 40px rgb(8 12 24 / 0.18);
+  --shadow-pop-src: 0 4px 16px rgb(8 12 24 / 0.1), 0 1px 3px rgb(8 12 24 / 0.06);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Sapphire Calm — dark palette (deep navy-slate)
+   ────────────────────────────────────────────────────────────── */
+.dark {
+  --background: #0b101c;
+  --foreground: #e7ecf4;
+  --card: #121826;
+  --card-foreground: #e7ecf4;
+  --popover: #182032;
+  --popover-foreground: #e7ecf4;
+  --primary: #6494ff;
+  --primary-foreground: #0b101c;
+  --secondary: rgba(100, 148, 255, 0.14);
+  --secondary-foreground: #9db8ff;
+  --muted: #182032;
+  --muted-foreground: #93a0b8;
+  --accent: #1c2638;
+  --accent-foreground: #e7ecf4;
+  --destructive: #f87171;
+  --destructive-foreground: #0b101c;
+  --border: rgba(148, 163, 184, 0.12);
+  --input: rgba(148, 163, 184, 0.18);
+  --input-background: #121826;
+  --ring: #6494ff;
+
+  --success: #34d399;
+  --success-foreground: #6ee7b7;
+  --success-surface: rgba(16, 185, 129, 0.12);
+  --info: #60a5fa;
+  --info-foreground: #93c5fd;
+  --info-surface: rgba(96, 165, 250, 0.12);
+  --warning: #fbbf24;
+  --warning-foreground: #fcd34d;
+  --warning-surface: rgba(245, 158, 11, 0.12);
+  --purple: #a78bfa;
+  --purple-foreground: #c4b5fd;
+  --purple-surface: rgba(139, 92, 246, 0.14);
+  --danger: #f87171;
+  --danger-foreground: #fca5a5;
+  --danger-surface: rgba(239, 68, 68, 0.12);
+  --neutral: #7c8aa0;
+  --neutral-foreground: #a8b3c7;
+  --neutral-surface: rgba(148, 163, 184, 0.1);
+
+  --chart-1: #60a5fa;
+  --chart-2: #34d399;
+  --chart-3: #a78bfa;
+  --chart-4: #fbbf24;
+  --chart-5: #7c8aa0;
+
+  --sidebar: #0a142e;
+  --sidebar-from: #0a142e;
+  --sidebar-to: #0e1b45;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+
+  --scrim: rgba(2, 6, 18, 0.62);
+
+  --shadow-card-src: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.35);
+  --shadow-hover-src: 0 2px 4px rgb(0 0 0 / 0.35), 0 12px 28px rgb(0 0 0 / 0.45);
+  --shadow-drawer-src: -12px 0 40px rgb(0 0 0 / 0.55);
+  --shadow-pop-src: 0 4px 16px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.3);
 }
 
 @theme inline {
@@ -61,6 +160,24 @@
   --color-input: var(--input);
   --color-input-background: var(--input-background);
   --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-surface: var(--success-surface);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-surface: var(--info-surface);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-surface: var(--warning-surface);
+  --color-purple: var(--purple);
+  --color-purple-foreground: var(--purple-foreground);
+  --color-purple-surface: var(--purple-surface);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-surface: var(--danger-surface);
+  --color-neutral: var(--neutral);
+  --color-neutral-foreground: var(--neutral-foreground);
+  --color-neutral-surface: var(--neutral-surface);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -70,7 +187,10 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-control: 0.625rem; /* 10px — inputs, buttons, nav pills */
   --color-sidebar: var(--sidebar);
+  --color-sidebar-from: var(--sidebar-from);
+  --color-sidebar-to: var(--sidebar-to);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
@@ -78,12 +198,29 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-scrim: var(--scrim);
+  --shadow-card: var(--shadow-card-src);
+  --shadow-hover: var(--shadow-hover-src);
+  --shadow-drawer: var(--shadow-drawer-src);
+  --shadow-pop: var(--shadow-pop-src);
+  --text-2xs: 0.6875rem; /* 11px micro-labels */
+  --text-2xs--line-height: 1rem;
+  --text-2sm: 0.8125rem; /* 13px — dominant body size */
+  --text-2sm--line-height: 1.25rem;
   --font-sans: var(--font-inter);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+
+  :root {
+    color-scheme: light;
+  }
+
+  .dark {
+    color-scheme: dark;
   }
 
   html {
@@ -93,5 +230,17 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-inter), system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  /* 11px uppercase letterspaced micro-label (table headers, section eyebrows) */
+  .micro-label {
+    @apply text-2xs font-bold uppercase tracking-[0.06em] text-muted-foreground;
+  }
+
+  /* tabular numerals for table/metric alignment */
+  .nums {
+    font-variant-numeric: tabular-nums;
   }
 }
