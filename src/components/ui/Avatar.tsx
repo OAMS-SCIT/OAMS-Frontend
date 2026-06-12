@@ -17,7 +17,17 @@ interface AvatarProps {
   size?: number;
 }
 
-const AVATAR_COLORS = ['#1E3A8A', '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#0F2460'];
+// Theme-reactive vars so fallback avatars adapt to light/dark (API-provided
+// avatarColor values still render as-is — they are data, not styling).
+const AVATAR_COLORS = [
+  'var(--primary)',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--danger)',
+  'var(--sidebar)',
+];
 
 /** Deterministic fallback colour from a display name — shared so every avatar
  *  (sidebar, topbar, users list, profile page) renders the same colour. */
