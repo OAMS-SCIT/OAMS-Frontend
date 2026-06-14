@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { X, Search, ChevronDown } from 'lucide-react';
+import { OverlayPortal } from './OverlayPortal';
 import type { DesignationListItem, UserListItem, UserRole } from '@/types';
 import { ApiError, getDesignations, updateUser } from '@/lib/api';
 import { toast } from 'sonner';
@@ -119,7 +120,7 @@ export function EditUserDrawer({ user, onClose, onSave }: Props) {
   };
 
   return (
-    <>
+    <OverlayPortal>
       <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in" onClick={onClose} />
       <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[480px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] motion-safe:animate-drawer-in">
 
@@ -251,7 +252,7 @@ export function EditUserDrawer({ user, onClose, onSave }: Props) {
         .fi::placeholder { color: color-mix(in srgb, var(--muted-foreground) 60%, transparent); }
         .fi-readonly { background: var(--muted); color: var(--muted-foreground); cursor: not-allowed; }
       `}</style>
-    </>
+    </OverlayPortal>
   );
 }
 

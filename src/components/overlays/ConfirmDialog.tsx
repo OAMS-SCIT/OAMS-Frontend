@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle } from 'lucide-react';
+import { OverlayPortal } from './OverlayPortal';
 
 interface Props {
   title: string;
@@ -12,6 +13,7 @@ interface Props {
 
 export function ConfirmDialog({ title, description, confirmLabel = 'Yes', onConfirm, onCancel }: Props) {
   return (
+    <OverlayPortal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in">
       <div className="rounded-2xl flex flex-col w-[420px] bg-card text-card-foreground shadow-pop motion-safe:animate-pop-in">
         {/* Body */}
@@ -38,5 +40,6 @@ export function ConfirmDialog({ title, description, confirmLabel = 'Yes', onConf
         </div>
       </div>
     </div>
+    </OverlayPortal>
   );
 }

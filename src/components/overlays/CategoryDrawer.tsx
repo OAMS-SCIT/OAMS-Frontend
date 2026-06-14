@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
+import { OverlayPortal } from './OverlayPortal';
 import { toast } from 'sonner';
 import {
   ApiError,
@@ -198,7 +199,7 @@ export function CategoryDrawer({ categoryId, onClose, onSaved }: Props) {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <>
+    <OverlayPortal>
       <div
         className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in"
         onClick={onClose}
@@ -458,6 +459,6 @@ export function CategoryDrawer({ categoryId, onClose, onSaved }: Props) {
           padding: 6px 10px;
         }
       `}</style>
-    </>
+    </OverlayPortal>
   );
 }
