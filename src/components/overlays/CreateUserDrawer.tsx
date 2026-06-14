@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Info, Search, ChevronDown, CheckCircle, Mail } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
+import { useDrawerAnimation } from './useDrawerAnimation';
 import { UserRole } from '@/types';
 import { ApiError, createUser, getDesignations } from '@/lib/api';
 import type { DesignationListItem } from '@/types';
@@ -136,10 +137,11 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
     }
   };
 
+  const { closing, requestClose } = useDrawerAnimation(onClose);
   return (
     <OverlayPortal>
-      <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in" onClick={created ? undefined : onClose} />
-      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[480px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] motion-safe:animate-drawer-in">
+      <div className={`fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] ${closing ? 'motion-safe:animate-overlay-out' : 'motion-safe:animate-overlay-in'}`} onClick={created ? undefined : requestClose} />
+      <div className={`fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[480px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] ${closing ? 'motion-safe:animate-drawer-out' : 'motion-safe:animate-drawer-in'}`}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
@@ -147,7 +149,7 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
             {created ? 'User Created' : 'Create New User'}
           </h2>
           {!created && (
-            <button onClick={onClose} className="rounded-control p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <button onClick={requestClose} className="rounded-control p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               <X className="w-5 h-5" />
             </button>
           )}
@@ -314,7 +316,7 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
             </button>
           ) : (
             <>
-              <button onClick={onClose} className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">Cancel</button>
+              <button onClick={requestClose} className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">Cancel</button>
               <button onClick={handleSave} disabled={submitting}
                 className="rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60">
                 {submitting ? 'Creating…' : 'Create User'}
