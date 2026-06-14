@@ -21,9 +21,9 @@ function InfoRow({ label, value, mono, style }: {
   label: string; value: React.ReactNode; mono?: boolean; style?: React.CSSProperties;
 }) {
   return (
-    <div className="flex flex-col gap-0.5 py-2.5" style={{ borderBottom: '1px solid #F1F5F9' }}>
-      <span style={{ fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600 }}>{label}</span>
-      <span style={{ fontSize: 13, color: '#1E293B', fontFamily: mono ? 'monospace' : undefined, ...style }}>{value ?? '—'}</span>
+    <div className="flex flex-col gap-0.5 py-2.5 border-b border-border/60">
+      <span className="micro-label font-semibold tracking-[0.04em]">{label}</span>
+      <span className={`text-2sm text-foreground ${mono ? 'font-mono' : ''}`} style={style}>{value ?? '—'}</span>
     </div>
   );
 }
@@ -205,14 +205,14 @@ export function AssetDetail() {
   const warrantyDays = asset?.warrantyExpiryDate
     ? Math.floor((new Date(asset.warrantyExpiryDate).getTime() - Date.now()) / 86400000)
     : null;
-  const warrantyStyle = warrantyDays !== null
-    ? { color: warrantyDays < 0 ? '#EF4444' : warrantyDays <= 30 ? '#EF4444' : warrantyDays <= 90 ? '#F59E0B' : '#1E293B' }
-    : {};
+  const warrantyClass = warrantyDays !== null
+    ? (warrantyDays <= 30 ? 'text-danger' : warrantyDays <= 90 ? 'text-warning-foreground' : 'text-foreground')
+    : '';
 
   // ── Loading / Error ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24" style={{ fontSize: 13, color: '#64748B' }}>
+      <div className="flex items-center justify-center py-24 text-2sm text-muted-foreground">
         Loading asset…
       </div>
     );
@@ -220,8 +220,8 @@ export function AssetDetail() {
   if (error || !asset) {
     return (
       <div className="text-center py-20">
-        <p style={{ fontSize: 16, color: '#64748B' }}>{error ?? 'Asset not found.'}</p>
-        <button onClick={() => router.push('/admin/inventory')} className="mt-4 text-blue-600 hover:underline">
+        <p className="text-base text-muted-foreground">{error ?? 'Asset not found.'}</p>
+        <button onClick={() => router.push('/admin/inventory')} className="mt-4 text-primary hover:underline">
           Back to Inventory
         </button>
       </div>
@@ -234,47 +234,40 @@ export function AssetDetail() {
   const activeIdx = Math.min(activeImageIndex, Math.max(0, heroImages.length - 1));
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-5" style={{ fontSize: 13 }}>
+      <div className="flex items-center gap-2 mb-5 text-2sm">
         <button onClick={() => router.push('/admin/inventory')}
-          className="hover:text-blue-600 transition-colors" style={{ color: '#64748B' }}>
+          className="text-muted-foreground hover:text-primary transition-colors">
           Asset Inventory
         </button>
-        <ChevronRight className="w-4 h-4" style={{ color: '#CBD5E1' }} />
-        <span className="font-semibold" style={{ color: '#1E293B' }}>{asset.name}</span>
+        <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+        <span className="font-semibold text-foreground">{asset.name}</span>
       </div>
 
       {/* Hero Card */}
-      <div className="rounded-2xl p-6 mb-6" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div className="rounded-2xl p-6 mb-6 bg-card border border-border shadow-card">
         <div className="flex gap-6">
           {/* Image area (display-only; management lives in the Edit drawer) */}
-          <div className="shrink-0" style={{ width: 240 }}>
+          <div className="shrink-0 w-60">
             {heroImages.length > 0 ? (
               <>
                 {/* Primary image — click to open the full-size lightbox */}
                 <button
                   onClick={() => setLightboxOpen(true)}
-                  className="group relative block rounded-xl overflow-hidden w-full"
-                  style={{ height: 190, border: '1px solid #E2E8F0', background: '#F8FAFC', cursor: 'zoom-in', padding: 0 }}
+                  className="group relative block rounded-xl overflow-hidden w-full h-[190px] p-0 border border-border bg-muted cursor-zoom-in"
                   title="Click to enlarge"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={heroImages[activeIdx].url}
                     alt={asset.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    className="w-full h-full object-cover"
                   />
                   {/* Hover affordance */}
-                  <div
-                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ background: 'rgba(15,23,42,0.28)' }}
-                  >
-                    <span
-                      className="flex items-center justify-center rounded-full"
-                      style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.92)' }}
-                    >
-                      <ZoomIn className="w-5 h-5" style={{ color: '#1E293B' }} />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-[rgba(15,23,42,0.28)]">
+                    <span className="flex items-center justify-center rounded-full w-10 h-10 bg-white/90">
+                      <ZoomIn className="w-5 h-5 text-[#1E293B]" />
                     </span>
                   </div>
                 </button>
@@ -290,28 +283,22 @@ export function AssetDetail() {
                       <button
                         key={img.id}
                         onClick={() => setActiveImageIndex(i)}
-                        className="rounded-lg overflow-hidden transition-all w-full"
-                        style={{
-                          height: 46, padding: 0,
-                          border: i === activeIdx ? '2px solid #1E3A8A' : '1px solid #E2E8F0',
-                          opacity: i === activeIdx ? 1 : 0.85,
-                        }}
+                        className={`rounded-control overflow-hidden transition-all w-full h-[46px] p-0 ${
+                          i === activeIdx ? 'border-2 border-primary opacity-100' : 'border border-border opacity-85 hover:opacity-100'
+                        }`}
                         title={`Image ${i + 1}`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={img.url} alt="" className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
                 )}
               </>
             ) : (
-              <div
-                className="rounded-xl flex flex-col items-center justify-center w-full"
-                style={{ height: 190, border: '1px dashed #CBD5E1', background: '#F8FAFC' }}
-              >
-                <Monitor className="w-10 h-10" style={{ color: '#CBD5E1' }} />
-                <span style={{ fontSize: 12, color: '#94A3B8', marginTop: 8 }}>No images</span>
+              <div className="rounded-xl flex flex-col items-center justify-center w-full h-[190px] border border-dashed border-input bg-muted/50">
+                <Monitor className="w-10 h-10 text-muted-foreground/40" />
+                <span className="text-xs text-muted-foreground/80 mt-2">No images</span>
               </div>
             )}
           </div>
@@ -320,10 +307,10 @@ export function AssetDetail() {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="font-bold mb-1" style={{ fontSize: 22, color: '#1E293B' }}>{asset.name}</h1>
-                <div style={{ fontSize: 13, color: '#94A3B8', fontFamily: 'monospace' }}>{asset.displayId}</div>
+                <h1 className="font-bold mb-1 text-[22px] tracking-[-0.02em] text-foreground">{asset.name}</h1>
+                <div className="text-2sm text-muted-foreground/80 font-mono">{asset.displayId}</div>
                 {asset.description && (
-                  <div style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>{asset.description}</div>
+                  <div className="text-2sm text-muted-foreground mt-1">{asset.description}</div>
                 )}
               </div>
               <StatusBadge status={asset.status} size="lg" />
@@ -331,15 +318,15 @@ export function AssetDetail() {
 
             <div className="flex gap-6 mt-4">
               <div>
-                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 2 }}>CATEGORY</div>
-                <div style={{ fontSize: 13, color: '#475569' }}>{asset.category.name}</div>
+                <div className="text-2xs text-muted-foreground/80 mb-0.5">CATEGORY</div>
+                <div className="text-2sm text-foreground/80">{asset.category.name}</div>
               </div>
               <div>
-                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 2 }}>LOCATION</div>
-                <div style={{ fontSize: 13, color: '#475569' }}>{asset.location ?? '—'}</div>
+                <div className="text-2xs text-muted-foreground/80 mb-0.5">LOCATION</div>
+                <div className="text-2sm text-foreground/80">{asset.location ?? '—'}</div>
               </div>
               <div>
-                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 2 }}>CONDITION</div>
+                <div className="text-2xs text-muted-foreground/80 mb-0.5">CONDITION</div>
                 <ConditionBadge condition={asset.condition} />
               </div>
             </div>
@@ -347,21 +334,18 @@ export function AssetDetail() {
             <div className="flex items-center gap-3 mt-5">
               {asset.status === 'Available' && (
                 <button onClick={() => setShowAssign(true)}
-                  className="flex items-center gap-2 rounded-lg px-4 py-2.5 font-medium text-white hover:opacity-90 transition-colors"
-                  style={{ fontSize: 14, background: '#1E3A8A' }}>
+                  className="flex items-center gap-2 rounded-control px-4 py-2.5 text-sm font-medium bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(29,78,216,0.25)] transition-all hover:opacity-90 active:scale-[0.98]">
                   <UserPlus className="w-4 h-4" /> Assign Asset
                 </button>
               )}
               {asset.status === 'Assigned' && (
                 <button onClick={() => activeAssignment ? setShowReturn(true) : toast.error('No active assignment found for this asset.')}
-                  className="flex items-center gap-2 rounded-lg px-4 py-2.5 font-medium text-white hover:opacity-90 transition-colors"
-                  style={{ fontSize: 14, background: '#F59E0B' }}>
+                  className="flex items-center gap-2 rounded-control px-4 py-2.5 text-sm font-medium bg-warning text-white shadow-[0_2px_12px_rgba(245,158,11,0.3)] transition-all hover:opacity-90 active:scale-[0.98]">
                   <RotateCcw className="w-4 h-4" /> Process Return
                 </button>
               )}
               <button onClick={() => setShowEdit(true)}
-                className="flex items-center gap-2 rounded-lg border px-4 py-2.5 font-medium hover:bg-gray-50 transition-colors"
-                style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>
+                className="flex items-center gap-2 rounded-control border border-border px-4 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
                 <Pencil className="w-4 h-4" /> Edit Asset
               </button>
             </div>
@@ -370,17 +354,17 @@ export function AssetDetail() {
       </div>
 
       {/* Info Grid */}
-      <div className="grid gap-5 mb-6" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+      <div className="grid grid-cols-3 gap-5 mb-6">
         {/* Core Specs */}
-        <div className="rounded-2xl p-5" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <h3 className="font-semibold mb-3" style={{ fontSize: 14, color: '#1E293B' }}>Core Specifications</h3>
+        <div className="rounded-2xl p-5 bg-card border border-border shadow-card">
+          <h3 className="font-semibold mb-3 text-sm tracking-[-0.01em] text-foreground">Core Specifications</h3>
           <InfoRow label="Brand" value={asset.brand} />
           <InfoRow label="Model" value={asset.model} />
           <InfoRow label="Serial Number" value={asset.serialNumber} mono />
           <InfoRow label="Category" value={asset.category.name} />
           {asset.customAttributes.length > 0 && (
             <>
-              <div className="mt-3 mb-2" style={{ fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600 }}>
+              <div className="mt-3 mb-2 micro-label font-semibold tracking-[0.04em]">
                 Category Attributes
               </div>
               {asset.customAttributes.map((attr) => (
@@ -391,8 +375,8 @@ export function AssetDetail() {
         </div>
 
         {/* Financial & Warranty */}
-        <div className="rounded-2xl p-5" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <h3 className="font-semibold mb-3" style={{ fontSize: 14, color: '#1E293B' }}>Financial & Warranty</h3>
+        <div className="rounded-2xl p-5 bg-card border border-border shadow-card">
+          <h3 className="font-semibold mb-3 text-sm tracking-[-0.01em] text-foreground">Financial & Warranty</h3>
           <InfoRow label="Purchase Date" value={asset.purchaseDate} />
           <InfoRow label="Purchase Price" value={asset.purchasePrice ? `$${Number(asset.purchasePrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : undefined} />
           <InfoRow label="Vendor / Supplier" value={asset.vendorName} />
@@ -400,7 +384,7 @@ export function AssetDetail() {
           <InfoRow label="Warranty Start" value={asset.warrantyStartDate} />
           <InfoRow label="Warranty Expiry" value={
             asset.warrantyExpiryDate ? (
-              <span style={warrantyStyle}>
+              <span className={warrantyClass}>
                 {asset.warrantyExpiryDate}
                 {warrantyDays !== null && warrantyDays < 0 && <span className="ml-2 text-xs">(Expired)</span>}
                 {warrantyDays !== null && warrantyDays >= 0 && warrantyDays <= 90 && <span className="ml-2 text-xs">({warrantyDays} days left)</span>}
@@ -411,8 +395,8 @@ export function AssetDetail() {
         </div>
 
         {/* Physical Details */}
-        <div className="rounded-2xl p-5" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <h3 className="font-semibold mb-3" style={{ fontSize: 14, color: '#1E293B' }}>Physical & Audit</h3>
+        <div className="rounded-2xl p-5 bg-card border border-border shadow-card">
+          <h3 className="font-semibold mb-3 text-sm tracking-[-0.01em] text-foreground">Physical & Audit</h3>
           <InfoRow label="Condition" value={<ConditionBadge condition={asset.condition} />} />
           <InfoRow label="Location" value={asset.location} />
           <InfoRow label="Registered By" value={asset.createdBy ? `${asset.createdBy.firstName} ${asset.createdBy.lastName}` : undefined} />
@@ -423,9 +407,9 @@ export function AssetDetail() {
       </div>
 
       {/* Tabbed Panel */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div className="rounded-2xl overflow-hidden bg-card border border-border shadow-card">
         {/* Tab Bar */}
-        <div className="flex items-center border-b" style={{ borderColor: '#E2E8F0', padding: '0 24px' }}>
+        <div className="flex items-center border-b border-border px-6">
           {[
             { key: 'history', label: 'Assignment History' },
             { key: 'asset_log', label: 'History Log' },
@@ -433,12 +417,11 @@ export function AssetDetail() {
           ].map((tab) => (
             <button key={tab.key}
               onClick={() => setActiveTab(tab.key as 'history' | 'asset_log' | 'upgrades')}
-              className="relative mr-6 py-4 font-medium transition-colors"
-              style={{
-                fontSize: 14,
-                color: activeTab === tab.key ? '#1E3A8A' : '#64748B',
-                borderBottom: activeTab === tab.key ? '2px solid #1E3A8A' : '2px solid transparent',
-              }}>
+              className={`relative mr-6 py-4 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                activeTab === tab.key
+                  ? 'text-primary border-primary'
+                  : 'text-muted-foreground border-transparent hover:text-foreground'
+              }`}>
               {tab.label}
             </button>
           ))}
@@ -446,8 +429,7 @@ export function AssetDetail() {
           {activeTab === 'upgrades' && (
             <button
               onClick={() => { setEditingUpgrade(undefined); setShowAddUpgrade(true); }}
-              className="flex items-center gap-1.5 rounded-lg border px-3 py-2 my-3 font-medium hover:bg-gray-50 transition-colors"
-              style={{ fontSize: 13, borderColor: '#E2E8F0', color: '#475569' }}>
+              className="flex items-center gap-1.5 rounded-control border border-border px-3 py-2 my-3 text-2sm font-medium text-foreground/70 transition-colors hover:bg-muted">
               <Plus className="w-3.5 h-3.5" /> Add Upgrade Entry
             </button>
           )}
@@ -456,7 +438,7 @@ export function AssetDetail() {
         {/* Assignment History Tab */}
         {activeTab === 'history' && (
           historyLoading ? (
-            <div className="flex items-center justify-center py-12" style={{ fontSize: 13, color: '#64748B' }}>
+            <div className="flex items-center justify-center py-12 text-2sm text-muted-foreground">
               Loading assignment history…
             </div>
           ) : history.length === 0 ? (
@@ -467,12 +449,11 @@ export function AssetDetail() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full" style={{ minWidth: 1120 }}>
+              <table className="w-full min-w-[1120px]">
                 <thead>
-                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                  <tr className="bg-muted/60 border-b border-border">
                     {['Assignee', 'Assigned Date', 'Expected Return', 'Actual Return', 'Condition (Assign)', 'Condition (Return)', 'Notes', 'Assigned By'].map((h) => (
-                      <th key={h} className="text-left px-5 py-3"
-                        style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+                      <th key={h} className="text-left px-5 py-3 micro-label whitespace-nowrap">
                         {h}
                       </th>
                     ))}
@@ -483,33 +464,29 @@ export function AssetDetail() {
                     const isActive = row.returnedAt === null;
                     return (
                       <tr key={row.id}
-                        style={{
-                          background: i % 2 === 0 ? '#fff' : '#F8FAFC',
-                          borderBottom: '1px solid #F1F5F9',
-                          // Active assignment gets a colored left-border accent.
-                          borderLeft: isActive ? '3px solid #1E3A8A' : '3px solid transparent',
-                        }}>
+                        className={`border-b border-border/60 border-l-[3px] ${
+                          isActive ? 'border-l-primary' : 'border-l-transparent'
+                        } ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}>
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2.5">
                             <Avatar user={row.assignee} size={30} />
                             <div>
-                              <div style={{ fontSize: 13, color: '#1E293B', fontWeight: 600 }}>
+                              <div className="text-2sm text-foreground font-semibold">
                                 {row.assignee.firstName} {row.assignee.lastName}
                               </div>
-                              <div style={{ fontSize: 12, color: '#94A3B8' }}>
+                              <div className="text-xs text-muted-foreground/80">
                                 {row.assignee.designation?.name ?? '—'}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B', whiteSpace: 'nowrap' }}>{row.assignmentDate}</td>
-                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B', whiteSpace: 'nowrap' }}>{row.expectedReturnDate ?? '—'}</td>
-                        <td className="px-5 py-3.5" style={{ whiteSpace: 'nowrap' }}>
+                        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap nums">{row.assignmentDate}</td>
+                        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap nums">{row.expectedReturnDate ?? '—'}</td>
+                        <td className="px-5 py-3.5 whitespace-nowrap">
                           {row.returnDate ? (
-                            <span style={{ fontSize: 13, color: '#64748B' }}>{row.returnDate}</span>
+                            <span className="text-2sm text-muted-foreground nums">{row.returnDate}</span>
                           ) : (
-                            <span className="inline-flex items-center font-medium rounded-full"
-                              style={{ background: '#EFF6FF', color: '#2563EB', padding: '3px 10px', fontSize: 11 }}>
+                            <span className="inline-flex items-center font-medium rounded-full text-2xs px-2.5 py-[3px] bg-info-surface text-info-foreground">
                               Currently Assigned
                             </span>
                           )}
@@ -517,17 +494,17 @@ export function AssetDetail() {
                         <td className="px-5 py-3.5">
                           {row.conditionAtAssignment
                             ? <ConditionBadge condition={row.conditionAtAssignment} />
-                            : <span style={{ fontSize: 13, color: '#94A3B8' }}>—</span>}
+                            : <span className="text-2sm text-muted-foreground/80">—</span>}
                         </td>
                         <td className="px-5 py-3.5">
                           {row.conditionAtReturn
                             ? <ConditionBadge condition={row.conditionAtReturn} />
-                            : <span style={{ fontSize: 13, color: '#94A3B8' }}>—</span>}
+                            : <span className="text-2sm text-muted-foreground/80">—</span>}
                         </td>
-                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B', maxWidth: 220, whiteSpace: 'normal' }}>
+                        <td className="px-5 py-3.5 text-2sm text-muted-foreground max-w-[220px] whitespace-normal">
                           {row.notes ?? '—'}
                         </td>
-                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B', whiteSpace: 'nowrap' }}>
+                        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap">
                           {row.assignedBy ? `${row.assignedBy.firstName} ${row.assignedBy.lastName}` : '—'}
                         </td>
                       </tr>
@@ -551,7 +528,7 @@ export function AssetDetail() {
         {/* Upgrade Log Tab */}
         {activeTab === 'upgrades' && (
           upgradesLoading ? (
-            <div className="flex items-center justify-center py-12" style={{ fontSize: 13, color: '#64748B' }}>
+            <div className="flex items-center justify-center py-12 text-2sm text-muted-foreground">
               Loading upgrade log…
             </div>
           ) : upgrades.length === 0 ? (
@@ -562,20 +539,18 @@ export function AssetDetail() {
               action={
                 <button
                   onClick={() => { setEditingUpgrade(undefined); setShowAddUpgrade(true); }}
-                  className="flex items-center gap-2 rounded-lg px-4 py-2 text-white hover:opacity-90"
-                  style={{ background: '#1E3A8A', fontSize: 13, fontWeight: 600 }}>
+                  className="flex items-center gap-2 rounded-control px-4 py-2 text-2sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]">
                   <Plus className="w-4 h-4" /> Add Upgrade Entry
                 </button>
               }
             />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full" style={{ minWidth: 800 }}>
+              <table className="w-full min-w-[800px]">
                 <thead>
-                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                  <tr className="bg-muted/60 border-b border-border">
                     {['Date', 'Type', 'Before', 'After', 'Cost', 'Vendor', 'Logged By', 'Actions'].map((h) => (
-                      <th key={h} className="text-left px-5 py-3"
-                        style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+                      <th key={h} className="text-left px-5 py-3 micro-label whitespace-nowrap">
                         {h}
                       </th>
                     ))}
@@ -584,33 +559,34 @@ export function AssetDetail() {
                 <tbody>
                   {upgrades.map((u, i) => (
                     <tr key={u.id}
-                      style={{ background: i % 2 === 0 ? '#fff' : '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
-                      <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B' }}>{u.upgradeDate}</td>
+                      className={`border-b border-border/60 ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}>
+                      <td className="px-5 py-3.5 text-2sm text-muted-foreground nums">{u.upgradeDate}</td>
                       <td className="px-5 py-3.5">
-                        <span className="rounded-full px-2.5 py-0.5 font-medium"
-                          style={{ fontSize: 11, background: u.upgradeType === 'Part Replaced' ? '#FEF3C7' : '#ECFDF5', color: u.upgradeType === 'Part Replaced' ? '#D97706' : '#059669' }}>
+                        <span className={`rounded-full px-2.5 py-0.5 font-medium text-2xs ${
+                          u.upgradeType === 'Part Replaced'
+                            ? 'bg-warning-surface text-warning-foreground'
+                            : 'bg-success-surface text-success-foreground'
+                        }`}>
                           {u.upgradeType}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B' }}>{u.specBefore ?? '—'}</td>
-                      <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#10B981', fontWeight: 500 }}>{u.specAfter}</td>
-                      <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#1E293B' }}>${Number(u.cost).toFixed(2)}</td>
-                      <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B' }}>{u.vendorName}</td>
-                      <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B' }}>
+                      <td className="px-5 py-3.5 text-2sm text-muted-foreground">{u.specBefore ?? '—'}</td>
+                      <td className="px-5 py-3.5 text-2sm text-success-foreground font-medium">{u.specAfter}</td>
+                      <td className="px-5 py-3.5 text-2sm text-foreground nums">${Number(u.cost).toFixed(2)}</td>
+                      <td className="px-5 py-3.5 text-2sm text-muted-foreground">{u.vendorName}</td>
+                      <td className="px-5 py-3.5 text-2sm text-muted-foreground">
                         {u.loggedBy ? `${u.loggedBy.firstName} ${u.loggedBy.lastName}` : '—'}
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => { setEditingUpgrade(u); setShowAddUpgrade(true); }}
-                            className="flex items-center gap-1 rounded px-2 py-1 hover:bg-blue-50 transition-colors"
-                            style={{ fontSize: 12, color: '#2563EB' }}>
+                            className="flex items-center gap-1 rounded-sm px-2 py-1 text-xs text-primary transition-colors hover:bg-secondary">
                             <Pencil className="w-3 h-3" /> Edit
                           </button>
                           <button
                             onClick={() => setDeletingUpgrade(u)}
-                            className="flex items-center gap-1 rounded px-2 py-1 hover:bg-red-50 transition-colors"
-                            style={{ fontSize: 12, color: '#EF4444' }}>
+                            className="flex items-center gap-1 rounded-sm px-2 py-1 text-xs text-danger transition-colors hover:bg-danger-surface">
                             <Trash2 className="w-3 h-3" /> Delete
                           </button>
                         </div>

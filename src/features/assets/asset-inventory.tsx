@@ -29,12 +29,12 @@ const SORT_OPTIONS = [
 type SortBy = 'createdAt' | 'name' | 'purchaseDate' | 'warrantyExpiryDate';
 
 function warrantyStyle(expiry?: string | null) {
-  if (!expiry) return { color: '#94A3B8' };
+  if (!expiry) return 'text-muted-foreground/80';
   const days = Math.floor((new Date(expiry).getTime() - Date.now()) / 86400000);
-  if (days < 0) return { color: '#EF4444', fontWeight: 600 };
-  if (days <= 30) return { color: '#EF4444' };
-  if (days <= 90) return { color: '#F59E0B' };
-  return { color: '#64748B' };
+  if (days < 0) return 'text-danger font-semibold';
+  if (days <= 30) return 'text-danger';
+  if (days <= 90) return 'text-warning-foreground';
+  return 'text-muted-foreground';
 }
 
 export function AssetInventory() {
@@ -139,14 +139,13 @@ export function AssetInventory() {
   };
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-bold" style={{ fontSize: 24, color: '#1E293B' }}>Asset Inventory</h1>
+        <h1 className="font-bold text-2xl tracking-[-0.02em] text-foreground">Asset Inventory</h1>
         <button
           onClick={() => { setEditAssetId(undefined); setShowRegister(true); }}
-          className="flex items-center gap-2 rounded-lg px-4 py-2.5 transition-colors hover:opacity-90"
-          style={{ background: '#1E3A8A', color: '#fff', fontSize: 14, fontWeight: 600 }}
+          className="flex items-center gap-2 rounded-control px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(29,78,216,0.25)] transition-all hover:opacity-90 active:scale-[0.98]"
         >
           <Plus className="w-4 h-4" />
           Register New Asset
@@ -154,16 +153,15 @@ export function AssetInventory() {
       </div>
 
       {/* Filter Bar */}
-      <div className="rounded-xl mb-4 p-4 flex items-center gap-3 flex-wrap" style={{ background: '#fff', border: '1px solid #E2E8F0' }}>
-        <div className="relative flex-1" style={{ minWidth: 260 }}>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
+      <div className="rounded-lg mb-4 p-4 flex items-center gap-3 flex-wrap bg-card border border-border shadow-card">
+        <div className="relative flex-1 min-w-[260px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, brand, model, serial number…"
-            className="w-full rounded-lg border pl-9 pr-3 py-2 focus:outline-none focus:ring-2"
-            style={{ borderColor: '#CBD5E1', fontSize: 13 }}
+            className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -172,19 +170,17 @@ export function AssetInventory() {
             <select
               value={sortBy}
               onChange={(e) => { setSortBy(e.target.value as SortBy); setPage(1); }}
-              className="appearance-none rounded-lg border px-3 pr-8 py-2 focus:outline-none cursor-pointer"
-              style={{ borderColor: '#CBD5E1', fontSize: 13, color: '#1E293B', background: '#fff' }}
+              className="appearance-none rounded-control border border-input bg-input-background text-2sm text-foreground px-3 pr-8 py-2 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40"
             >
               {SORT_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>Sort: {o.label}</option>
               ))}
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#94A3B8' }} />
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-muted-foreground/70" />
           </div>
           <button
             onClick={() => setSortOrder((o) => (o === 'ASC' ? 'DESC' : 'ASC'))}
-            className="rounded-lg border px-3 py-2 hover:bg-gray-50 transition-colors"
-            style={{ borderColor: '#CBD5E1', fontSize: 12, color: '#64748B' }}
+            className="rounded-control border border-input px-3 py-2 text-xs text-muted-foreground hover:bg-muted transition-colors"
             title={`Sort: ${sortOrder}`}
           >
             {sortOrder === 'ASC' ? '↑ Asc' : '↓ Desc'}
@@ -197,8 +193,7 @@ export function AssetInventory() {
         <div className="flex items-center gap-2 mb-3">
           {activeFilters.map((f) => (
             <button key={f.label} onClick={f.clear}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1 transition-colors hover:bg-blue-100"
-              style={{ background: '#EFF6FF', color: '#2563EB', fontSize: 12, border: '1px solid #BFDBFE' }}>
+              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs bg-secondary text-secondary-foreground border border-primary/20 transition-colors hover:bg-primary/15">
               {f.label}
               <X className="w-3 h-3" />
             </button>
@@ -207,9 +202,9 @@ export function AssetInventory() {
       )}
 
       {/* Table */}
-      <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">
         {loading ? (
-          <div className="flex items-center justify-center py-16" style={{ fontSize: 13, color: '#64748B' }}>
+          <div className="flex items-center justify-center py-16 text-2sm text-muted-foreground">
             Loading assets…
           </div>
         ) : error ? (
@@ -218,8 +213,7 @@ export function AssetInventory() {
             title="Couldn't load assets"
             subtitle={error}
             action={
-              <button onClick={load} className="flex items-center gap-2 rounded-lg px-4 py-2 text-white hover:opacity-90"
-                style={{ background: '#1E3A8A', fontSize: 13, fontWeight: 600 }}>
+              <button onClick={load} className="flex items-center gap-2 rounded-control px-4 py-2 text-2sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]">
                 <RefreshCw className="w-4 h-4" /> Retry
               </button>
             }
@@ -231,8 +225,7 @@ export function AssetInventory() {
             subtitle="Try adjusting your search or filters, or register a new asset."
             action={
               <button onClick={() => { setEditAssetId(undefined); setShowRegister(true); }}
-                className="flex items-center gap-2 rounded-lg px-4 py-2 text-white hover:opacity-90"
-                style={{ background: '#1E3A8A', fontSize: 13, fontWeight: 600 }}>
+                className="flex items-center gap-2 rounded-control px-4 py-2 text-2sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]">
                 <Plus className="w-4 h-4" /> Register New Asset
               </button>
             }
@@ -240,9 +233,9 @@ export function AssetInventory() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full" style={{ minWidth: 900 }}>
+              <table className="w-full min-w-[900px]">
                 <thead>
-                  <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
+                  <tr className="bg-muted/60 border-b-2 border-border">
                     {[
                       { label: 'Asset ID', sortCol: null },
                       { label: 'Asset Name', sortCol: 'name' as SortBy },
@@ -255,8 +248,7 @@ export function AssetInventory() {
                     ].map((h) => (
                       <th
                         key={h.label}
-                        className="text-left px-5 py-3"
-                        style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', cursor: h.sortCol ? 'pointer' : 'default' }}
+                        className={`text-left px-5 py-3 micro-label whitespace-nowrap ${h.sortCol ? 'cursor-pointer hover:text-foreground transition-colors' : 'cursor-default'}`}
                         onClick={() => h.sortCol && handleSort(h.sortCol)}
                       >
                         {h.label}
@@ -269,27 +261,25 @@ export function AssetInventory() {
                   {assets.map((asset, i) => (
                     <tr
                       key={asset.id}
-                      style={{ background: i % 2 === 0 ? '#fff' : '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}
-                      className="hover:bg-blue-50/30 transition-colors"
+                      className={`border-b border-border/60 transition-colors hover:bg-primary/[0.04] ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}
                     >
-                      <td className="px-5 py-3.5" style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'monospace' }}>{asset.displayId || asset.id.slice(0, 8) + '…'}</td>
+                      <td className="px-5 py-3.5 text-xs text-muted-foreground/80 font-mono">{asset.displayId || asset.id.slice(0, 8) + '…'}</td>
                       <td className="px-5 py-3.5">
                         <div
-                          className="font-medium cursor-pointer hover:text-blue-600"
-                          style={{ fontSize: 13, color: '#1E293B' }}
+                          className="font-medium cursor-pointer text-2sm text-foreground transition-colors hover:text-primary"
                           onClick={() => router.push(`/admin/inventory/${asset.id}`)}
                         >
                           {asset.name}
                         </div>
                       </td>
                       <td className="px-5 py-3.5">
-                        <div style={{ fontSize: 13, color: '#334155' }}>{asset.brand}</div>
-                        <div style={{ fontSize: 11, color: '#94A3B8' }}>{asset.model}</div>
+                        <div className="text-2sm text-foreground/80">{asset.brand}</div>
+                        <div className="text-2xs text-muted-foreground/80">{asset.model}</div>
                       </td>
-                      <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B' }}>{asset.category.name}</td>
-                      <td className="px-5 py-3.5" style={{ fontSize: 12, color: '#64748B', fontFamily: 'monospace' }}>{asset.serialNumber}</td>
+                      <td className="px-5 py-3.5 text-2sm text-muted-foreground">{asset.category.name}</td>
+                      <td className="px-5 py-3.5 text-xs text-muted-foreground font-mono">{asset.serialNumber}</td>
                       <td className="px-5 py-3.5"><StatusBadge status={asset.status} /></td>
-                      <td className="px-5 py-3.5" style={{ fontSize: 12, ...warrantyStyle(asset.warrantyExpiryDate) }}>
+                      <td className={`px-5 py-3.5 text-xs nums ${warrantyStyle(asset.warrantyExpiryDate)}`}>
                         {asset.warrantyExpiryDate ?? '—'}
                       </td>
                       <td className="px-5 py-3.5">
@@ -300,8 +290,7 @@ export function AssetInventory() {
                             const rect = e.currentTarget.getBoundingClientRect();
                             setOpenMenu({ id: asset.id, top: rect.bottom + 4, right: window.innerWidth - rect.right });
                           }}
-                          className="rounded-lg p-1.5 transition-colors hover:bg-gray-100"
-                          style={{ color: '#64748B' }}
+                          className="rounded-control p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
@@ -329,20 +318,18 @@ export function AssetInventory() {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid #F1F5F9' }}>
-              <span style={{ fontSize: 13, color: '#64748B' }}>
+            <div className="flex items-center justify-between px-5 py-4 border-t border-border/60">
+              <span className="text-2sm text-muted-foreground nums">
                 Showing {Math.min((page - 1) * PER_PAGE + 1, total)}–{Math.min(page * PER_PAGE, total)} of {total} assets
               </span>
               <div className="flex items-center gap-2">
                 <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                  className="rounded-lg px-3 py-1.5 border transition-colors hover:bg-gray-50 disabled:opacity-40"
-                  style={{ fontSize: 13, color: '#475569', borderColor: '#E2E8F0' }}>
+                  className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40">
                   Previous
                 </button>
-                <span style={{ fontSize: 13, color: '#64748B' }}>Page {page} of {totalPages}</span>
+                <span className="text-2sm text-muted-foreground nums">Page {page} of {totalPages}</span>
                 <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                  className="rounded-lg px-3 py-1.5 border transition-colors hover:bg-gray-50 disabled:opacity-40"
-                  style={{ fontSize: 13, color: '#475569', borderColor: '#E2E8F0' }}>
+                  className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40">
                   Next
                 </button>
               </div>
@@ -387,13 +374,12 @@ function SelectFilter({ value, onChange, options, placeholder }: {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none rounded-lg border px-3 pr-8 py-2 focus:outline-none focus:ring-2 cursor-pointer"
-        style={{ borderColor: '#CBD5E1', fontSize: 13, color: value ? '#1E293B' : '#94A3B8', background: '#fff' }}
+        className={`appearance-none rounded-control border border-input bg-input-background text-2sm px-3 pr-8 py-2 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${value ? 'text-foreground' : 'text-muted-foreground/70'}`}
       >
         <option value="">{placeholder}</option>
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
-      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#94A3B8' }} />
+      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-muted-foreground/70" />
     </div>
   );
 }

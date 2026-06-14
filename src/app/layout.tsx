@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/providers/auth-provider';
 import { AppProvider } from '@/providers/app-provider';
+import { ThemeProvider } from '@/providers/theme-provider';
 import './globals.css';
 
 const inter = Inter({
@@ -21,14 +22,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full`}>
+    <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full">
-        <AuthProvider>
-          <AppProvider>
-            {children}
-            <Toaster />
-          </AppProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppProvider>
+              {children}
+              <Toaster />
+            </AppProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -74,18 +74,17 @@ export function ImageLightbox({ images, index, onIndexChange, onClose, title }: 
         className="flex items-center justify-between px-5 py-4 shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
+        <span className="text-sm font-semibold text-white/85">
           {title ?? 'Image'}
           {count > 1 && (
-            <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 400, marginLeft: 10 }}>
+            <span className="font-normal text-white/55 ml-2.5">
               {safeIndex + 1} / {count}
             </span>
           )}
         </span>
         <button
           onClick={onClose}
-          className="rounded-full flex items-center justify-center transition-colors"
-          style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.12)' }}
+          className="rounded-full flex items-center justify-center w-9 h-9 bg-white/[0.12] transition-colors hover:bg-white/20"
           title="Close (Esc)"
           aria-label="Close"
         >
@@ -98,8 +97,7 @@ export function ImageLightbox({ images, index, onIndexChange, onClose, title }: 
         {count > 1 && (
           <button
             onClick={(e) => { e.stopPropagation(); goPrev(); }}
-            className="absolute left-4 rounded-full flex items-center justify-center transition-colors hover:opacity-90"
-            style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.12)' }}
+            className="absolute left-4 rounded-full flex items-center justify-center w-11 h-11 bg-white/[0.12] transition-colors hover:bg-white/20"
             title="Previous (←)"
             aria-label="Previous image"
           >
@@ -121,8 +119,7 @@ export function ImageLightbox({ images, index, onIndexChange, onClose, title }: 
         {count > 1 && (
           <button
             onClick={(e) => { e.stopPropagation(); goNext(); }}
-            className="absolute right-4 rounded-full flex items-center justify-center transition-colors hover:opacity-90"
-            style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.12)' }}
+            className="absolute right-4 rounded-full flex items-center justify-center w-11 h-11 bg-white/[0.12] transition-colors hover:bg-white/20"
             title="Next (→)"
             aria-label="Next image"
           >
@@ -141,16 +138,13 @@ export function ImageLightbox({ images, index, onIndexChange, onClose, title }: 
             <button
               key={img.id}
               onClick={() => onIndexChange(i)}
-              className="rounded-lg overflow-hidden transition-all"
-              style={{
-                width: 56, height: 56, padding: 0,
-                border: i === safeIndex ? '2px solid #fff' : '2px solid transparent',
-                opacity: i === safeIndex ? 1 : 0.55,
-              }}
+              className={`rounded-control overflow-hidden transition-all w-14 h-14 p-0 border-2 ${
+                i === safeIndex ? 'border-white opacity-100' : 'border-transparent opacity-55 hover:opacity-80'
+              }`}
               title={`Image ${i + 1}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={img.url} alt="" className="w-full h-full object-cover" />
             </button>
           ))}
         </div>

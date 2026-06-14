@@ -27,20 +27,20 @@ const EVENT_META: Record<
   created: {
     label: () => 'Asset Created',
     Icon: PlusCircle,
-    iconBg: '#ECFDF5',
-    iconColor: '#059669',
+    iconBg: 'bg-success-surface',
+    iconColor: 'text-success-foreground',
   },
   updated: {
     label: () => 'Asset Updated',
     Icon: Pencil,
-    iconBg: '#EFF6FF',
-    iconColor: '#2563EB',
+    iconBg: 'bg-info-surface',
+    iconColor: 'text-info-foreground',
   },
   status_changed: {
     label: () => 'Status Changed',
     Icon: ArrowLeftRight,
-    iconBg: '#FFFBEB',
-    iconColor: '#D97706',
+    iconBg: 'bg-warning-surface',
+    iconColor: 'text-warning-foreground',
   },
   assigned: {
     label: (changes) => {
@@ -48,8 +48,8 @@ const EVENT_META: Record<
       return c?.assignedTo ? `Assigned to ${c.assignedTo}` : 'Asset Assigned';
     },
     Icon: UserPlus,
-    iconBg: '#F5F3FF',
-    iconColor: '#7C3AED',
+    iconBg: 'bg-purple-surface',
+    iconColor: 'text-purple-foreground',
   },
   returned: {
     label: (changes) => {
@@ -57,8 +57,8 @@ const EVENT_META: Record<
       return c?.returnedFrom ? `Returned from ${c.returnedFrom}` : 'Asset Returned';
     },
     Icon: UserMinus,
-    iconBg: '#FEF2F2',
-    iconColor: '#DC2626',
+    iconBg: 'bg-danger-surface',
+    iconColor: 'text-danger-foreground',
   },
 };
 
@@ -67,25 +67,22 @@ const EVENT_META: Record<
 function FieldChangesDetail({ changes }: { changes: AssetHistoryChangeEntry[] }) {
   if (changes.length === 0) return null;
   return (
-    <div className="mt-2 rounded-lg overflow-hidden" style={{ border: '1px solid #F1F5F9' }}>
+    <div className="mt-2 rounded-control overflow-hidden border border-border/60">
       {changes.map((c, i) => (
         <div
           key={c.field}
-          className="flex items-center gap-2 px-3 py-1.5"
-          style={{
-            fontSize: 12,
-            background: i % 2 === 0 ? '#F8FAFC' : '#fff',
-            borderBottom: i < changes.length - 1 ? '1px solid #F1F5F9' : undefined,
-          }}
+          className={`flex items-center gap-2 px-3 py-1.5 text-xs ${i % 2 === 0 ? 'bg-muted/40' : 'bg-card'} ${
+            i < changes.length - 1 ? 'border-b border-border/60' : ''
+          }`}
         >
-          <span style={{ color: '#94A3B8', minWidth: 120, fontWeight: 600, textTransform: 'capitalize' }}>
+          <span className="text-muted-foreground/80 min-w-[120px] font-semibold capitalize">
             {c.field.replace(/([A-Z])/g, ' $1').trim()}
           </span>
-          <span style={{ color: '#EF4444', textDecoration: 'line-through', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span className="text-danger line-through max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap">
             {c.oldValue !== null && c.oldValue !== undefined ? String(c.oldValue) : '—'}
           </span>
-          <span style={{ color: '#94A3B8', fontSize: 10 }}>→</span>
-          <span style={{ color: '#10B981', fontWeight: 500, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span className="text-muted-foreground/80 text-[10px]">→</span>
+          <span className="text-success-foreground font-medium max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap">
             {c.newValue !== null && c.newValue !== undefined ? String(c.newValue) : '—'}
           </span>
         </div>
@@ -98,7 +95,7 @@ function StatusChangeDetail({ changes }: { changes: AssetHistoryStatusChange }) 
   return (
     <div className="flex items-center gap-2 mt-2">
       <StatusBadge status={changes.oldStatus} size="sm" />
-      <span style={{ fontSize: 12, color: '#94A3B8' }}>→</span>
+      <span className="text-xs text-muted-foreground/80">→</span>
       <StatusBadge status={changes.newStatus} size="sm" />
     </div>
   );
@@ -114,7 +111,7 @@ function Timestamp({ date }: { date: string }) {
   return (
     <span
       title={absolute}
-      style={{ fontSize: 11, color: '#94A3B8', cursor: 'default', whiteSpace: 'nowrap' }}
+      className="text-2xs text-muted-foreground/80 cursor-default whitespace-nowrap"
     >
       {relative}
     </span>
@@ -134,27 +131,24 @@ function HistoryEventRow({ entry, isLast }: { entry: AssetHistoryEntry; isLast: 
   return (
     <div className="flex gap-4">
       {/* Timeline spine + icon */}
-      <div className="flex flex-col items-center" style={{ width: 32, flexShrink: 0 }}>
-        <div
-          className="flex items-center justify-center rounded-full shrink-0"
-          style={{ width: 32, height: 32, background: iconBg }}
-        >
-          <Icon style={{ width: 15, height: 15, color: iconColor }} />
+      <div className="flex flex-col items-center w-8 shrink-0">
+        <div className={`flex items-center justify-center rounded-full shrink-0 w-8 h-8 ${iconBg}`}>
+          <Icon className={`w-[15px] h-[15px] ${iconColor}`} />
         </div>
         {/* Vertical connector — omitted for last item */}
         {!isLast && (
-          <div style={{ width: 2, flex: 1, background: '#F1F5F9', marginTop: 4, minHeight: 24 }} />
+          <div className="w-0.5 flex-1 bg-border/80 mt-1 min-h-6" />
         )}
       </div>
 
       {/* Content */}
       <div className="pb-6 flex-1 min-w-0">
         <div className="flex items-center justify-between gap-4">
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#1E293B' }}>{label}</span>
+          <span className="text-2sm font-semibold text-foreground">{label}</span>
           <Timestamp date={entry.createdAt} />
         </div>
-        <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
-          by <span style={{ fontWeight: 500, color: '#475569' }}>{entry.performedBy.name}</span>
+        <div className="text-xs text-muted-foreground mt-0.5">
+          by <span className="font-medium text-foreground/70">{entry.performedBy.name}</span>
         </div>
 
         {/* Inline change details */}
@@ -176,16 +170,13 @@ function HistorySkeleton() {
     <div className="px-6 py-5">
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="flex gap-4 mb-6">
-          <div className="flex flex-col items-center" style={{ width: 32 }}>
-            <div
-              className="rounded-full animate-pulse"
-              style={{ width: 32, height: 32, background: '#F1F5F9' }}
-            />
-            {i < 3 && <div style={{ width: 2, height: 40, background: '#F1F5F9', marginTop: 4 }} />}
+          <div className="flex flex-col items-center w-8">
+            <div className="rounded-full skeleton w-8 h-8" />
+            {i < 3 && <div className="w-0.5 h-10 bg-muted mt-1" />}
           </div>
           <div className="flex-1 pt-1">
-            <div className="animate-pulse rounded" style={{ height: 13, width: '40%', background: '#F1F5F9', marginBottom: 8 }} />
-            <div className="animate-pulse rounded" style={{ height: 11, width: '25%', background: '#F1F5F9' }} />
+            <div className="skeleton rounded-sm h-[13px] w-2/5 mb-2" />
+            <div className="skeleton rounded-sm h-[11px] w-1/4" />
           </div>
         </div>
       ))}
@@ -197,17 +188,14 @@ function HistorySkeleton() {
 
 function HistoryEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6" style={{ textAlign: 'center' }}>
-      <div
-        className="flex items-center justify-center rounded-full mb-4"
-        style={{ width: 48, height: 48, background: '#F8FAFC', border: '1px solid #E2E8F0' }}
-      >
-        <ArrowLeftRight style={{ width: 20, height: 20, color: '#CBD5E1' }} />
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div className="flex items-center justify-center rounded-full mb-4 w-12 h-12 bg-muted border border-border">
+        <ArrowLeftRight className="w-5 h-5 text-muted-foreground/50" />
       </div>
-      <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', marginBottom: 4 }}>
+      <p className="text-sm font-semibold text-foreground mb-1">
         No history recorded yet
       </p>
-      <p style={{ fontSize: 13, color: '#94A3B8', maxWidth: 320 }}>
+      <p className="text-2sm text-muted-foreground/80 max-w-80">
         Actions on this asset will appear here.
       </p>
     </div>
@@ -219,7 +207,7 @@ function HistoryEmpty() {
 function HistoryError({ message }: { message: string }) {
   return (
     <div className="flex items-center justify-center py-12 px-6">
-      <p style={{ fontSize: 13, color: '#EF4444' }}>{message}</p>
+      <p className="text-2sm text-danger">{message}</p>
     </div>
   );
 }
