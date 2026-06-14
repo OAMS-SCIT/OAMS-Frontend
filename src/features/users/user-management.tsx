@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PortalMenu } from '@/components/ui/PortalMenu';
+import { OverlayPortal } from '@/components/overlays/OverlayPortal';
 import { CreateUserDrawer } from '@/components/overlays/CreateUserDrawer';
 import { EditUserDrawer } from '@/components/overlays/EditUserDrawer';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
@@ -60,6 +61,7 @@ function DesignationDialog({ title, initialValue = '', onConfirm, onClose }: Des
   };
 
   return (
+    <OverlayPortal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in">
       <div className="rounded-2xl flex flex-col w-[440px] bg-card text-card-foreground shadow-pop motion-safe:animate-pop-in">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -95,6 +97,7 @@ function DesignationDialog({ title, initialValue = '', onConfirm, onClose }: Des
         </form>
       </div>
     </div>
+    </OverlayPortal>
   );
 }
 

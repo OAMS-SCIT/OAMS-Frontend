@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { OverlayPortal } from './OverlayPortal';
 import type { AssetCondition } from '@/types';
 
 interface Props {
@@ -55,7 +56,7 @@ export function ReturnAssetDrawer({
   };
 
   return (
-    <>
+    <OverlayPortal>
       <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in" onClick={onClose} />
       <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] motion-safe:animate-drawer-in">
         {/* Header */}
@@ -141,6 +142,6 @@ export function ReturnAssetDrawer({
           </button>
         </div>
       </div>
-    </>
+    </OverlayPortal>
   );
 }

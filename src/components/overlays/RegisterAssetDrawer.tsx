@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { OverlayPortal } from './OverlayPortal';
 import { ImageUploadZone, type UploadedImage } from '@/components/ui/ImageUploadZone';
 import { toast } from 'sonner';
 import {
@@ -357,7 +358,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   // ── JSX ───────────────────────────────────────────────────────────────────
 
   return (
-    <>
+    <OverlayPortal>
       <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in" onClick={onClose} />
       <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] motion-safe:animate-drawer-in">
         {/* Header */}
@@ -555,7 +556,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         .form-input:disabled { background: var(--muted); cursor: not-allowed; }
         .form-input.font-mono { font-family: monospace; }
       `}</style>
-    </>
+    </OverlayPortal>
   );
 }
 
