@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
+import { useDrawerAnimation } from './useDrawerAnimation';
 import { toast } from 'sonner';
 import { ApiError, updateAssetStatus } from '@/lib/api';
 import type { AssetDetail, AssetListItem, ManualAssetStatus } from '@/types';
@@ -48,17 +49,18 @@ export function ChangeStatusDrawer({ asset, onClose, onSaved }: Props) {
     }
   };
 
+  const { closing, requestClose } = useDrawerAnimation(onClose);
   return (
     <OverlayPortal>
-      <div className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in" onClick={onClose} />
-      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] motion-safe:animate-drawer-in">
+      <div className={`fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] ${closing ? 'motion-safe:animate-overlay-out' : 'motion-safe:animate-overlay-in'}`} onClick={requestClose} />
+      <div className={`fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] ${closing ? 'motion-safe:animate-drawer-out' : 'motion-safe:animate-drawer-in'}`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <div>
             <h2 className="font-bold text-lg tracking-[-0.02em] text-foreground">Change Asset Status</h2>
             <p className="text-2sm text-muted-foreground mt-0.5">Update the current status of this asset</p>
           </div>
-          <button onClick={onClose} className="rounded-control p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+          <button onClick={requestClose} className="rounded-control p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -100,7 +102,7 @@ export function ChangeStatusDrawer({ asset, onClose, onSaved }: Props) {
 
         {/* Footer */}
         <div className="flex items-center gap-3 px-6 py-4 justify-end border-t border-border bg-muted/60 rounded-bl-[16px]">
-          <button onClick={onClose} className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
+          <button onClick={requestClose} className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
             Cancel
           </button>
           <button
