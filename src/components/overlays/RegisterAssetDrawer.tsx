@@ -93,6 +93,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
 
   const [loadingInit, setLoadingInit] = useState(true);
   const [loadingAttrs, setLoadingAttrs] = useState(false);
+  const [attrLoadError, setAttrLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   // Edit mode: images already saved on the server + an in-flight upload flag.
@@ -130,17 +131,28 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
     init();
   }, [assetId, onClose]);
 
-  // Reload dynamic attributes when category selection changes
+  // Reload dynamic attributes when category selection changes.
+  // `loadingInit` is intentionally excluded from deps — the category dropdown
+  // is hidden while init is in-flight (create mode) and edit mode pre-loads
+  // attrs in the init effect itself, so this effect only needs to run when
+  // the user explicitly changes the selected category.
   useEffect(() => {
-    if (!form.categoryId || loadingInit) return;
+    if (!form.categoryId) return;
+    let cancelled = false;
     setLoadingAttrs(true);
+    setAttrLoadError(false);
     setCategoryAttrs([]);
     setAttrValues({});
     getCategory(form.categoryId)
-      .then((detail) => setCategoryAttrs(detail.attributes))
-      .catch(() => toast.error('Failed to load category attributes.'))
-      .finally(() => setLoadingAttrs(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      .then((detail) => { if (!cancelled) setCategoryAttrs(detail.attributes); })
+      .catch(() => {
+        if (!cancelled) {
+          setAttrLoadError(true);
+          toast.error('Failed to load category attributes.');
+        }
+      })
+      .finally(() => { if (!cancelled) setLoadingAttrs(false); });
+    return () => { cancelled = true; };
   }, [form.categoryId]);
 
   const set = (k: keyof FormState, v: string) => {
@@ -171,6 +183,14 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
       form.warrantyExpiryDate <= form.warrantyStartDate
     )
       e.warrantyExpiryDate = 'Expiry must be after start date';
+
+    // Block submission while category attributes are still loading —
+    // categoryAttrs is [] during the fetch, so required-attr checks would
+    // silently pass and allow incomplete records to be created (TC-ASSET-034).
+    if (loadingAttrs) {
+      toast.error('Category attributes are still loading, please wait.');
+      return false;
+    }
 
     // Required category attributes
     for (const attr of categoryAttrs) {
@@ -296,13 +316,15 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   // ── Render helpers ────────────────────────────────────────────────────────
 
   const renderAttrInput = (attr: AttributeDetail) => {
+    const fieldId = `attr-${attr.id}`;
     const val = attrValues[attr.id] ?? '';
     const err = errors[`attr_${attr.id}`];
 
     if (attr.type === 'Dropdown') {
       return (
-        <FormField key={attr.id} label={attr.label} required={attr.isRequired} error={err}>
+        <FormField key={attr.id} fieldId={fieldId} label={attr.label} required={attr.isRequired} error={err}>
           <select
+            id={fieldId}
             value={val}
             onChange={(e) => setAttr(attr.id, e.target.value)}
             className="form-input"
@@ -319,8 +341,9 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
     }
 
     return (
-      <FormField key={attr.id} label={attr.label} required={attr.isRequired} error={err}>
+      <FormField key={attr.id} fieldId={fieldId} label={attr.label} required={attr.isRequired} error={err}>
         <input
+          id={fieldId}
           type={attr.type === 'Number' ? 'number' : attr.type === 'Date' ? 'date' : 'text'}
           value={val}
           onChange={(e) => setAttr(attr.id, e.target.value)}
@@ -405,6 +428,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
               )}
               {loadingAttrs && (
                 <p style={{ fontSize: 12, color: '#94A3B8' }}>Loading attributes…</p>
+              )}
+              {attrLoadError && !loadingAttrs && (
+                <p style={{ fontSize: 12, color: '#EF4444' }}>
+                  Failed to load category attributes. Please try selecting the category again.
+                </p>
               )}
               {categoryAttrs.map(renderAttrInput)}
             </FormSection>
@@ -503,7 +531,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>
             Cancel
           </button>
-          <button onClick={handleSave} disabled={saving || loadingInit}
+          <button onClick={handleSave} disabled={saving || loadingInit || loadingAttrs}
             className="rounded-lg px-5 py-2.5 font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60"
             style={{ fontSize: 14, background: '#1E3A8A' }}>
             {saving ? 'Saving…' : isEdit ? 'Edit Asset' : 'Register Asset'}
@@ -543,10 +571,10 @@ function FormSection({ title, children }: { title: string; children: React.React
   );
 }
 
-function FormField({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+function FormField({ label, fieldId, required, error, children }: { label: string; fieldId?: string; required?: boolean; error?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
+      <label htmlFor={fieldId} className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
         {label} {required && <span style={{ color: '#EF4444' }}>*</span>}
       </label>
       {children}

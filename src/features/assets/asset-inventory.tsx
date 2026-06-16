@@ -123,6 +123,13 @@ export function AssetInventory() {
     load();
   };
 
+  // Stable reference so RegisterAssetDrawer's init useEffect (which lists
+  // onClose as a dep) doesn't re-run when the inventory re-renders.
+  const handleCloseRegister = useCallback(() => {
+    setShowRegister(false);
+    setEditAssetId(undefined);
+  }, []);
+
   const handleStatusSaved = (_updated: AssetDetail) => {
     load();
   };
@@ -355,7 +362,7 @@ export function AssetInventory() {
       {showRegister && (
         <RegisterAssetDrawer
           assetId={editAssetId}
-          onClose={() => { setShowRegister(false); setEditAssetId(undefined); }}
+          onClose={handleCloseRegister}
           onSaved={handleAssetSaved}
         />
       )}
