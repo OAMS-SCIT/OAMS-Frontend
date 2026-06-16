@@ -21,6 +21,15 @@ interface FormState {
   status: 'Active' | 'Inactive';
 }
 
+function isValidSriLankanContactNumber(value: string) {
+  const compact = value.replace(/\s+/g, '');
+  return /^(\+94|0)\d{9}$/.test(compact);
+}
+
+function sanitizeContactNumberInput(value: string) {
+  return value.replace(/[^\d+\s]/g, '');
+}
+
 export function CreateUserDrawer({ onClose, onSave }: Props) {
   const [form, setForm] = useState<FormState>({
     firstName: '', lastName: '', email: '', contactNumber: '',
@@ -86,6 +95,9 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
     if (!form.firstName.trim()) e.firstName = 'First name is required';
     if (!form.lastName.trim()) e.lastName = 'Last name is required';
     if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Valid email is required';
+    if (form.contactNumber.trim() && !isValidSriLankanContactNumber(form.contactNumber.trim())) {
+      e.contactNumber = 'Contact number must be a valid Sri Lankan number (e.g. +94 77 000 0000)';
+    }
     if (!form.designationId) e.designationId = 'Designation is required';
     return e;
   };
@@ -183,8 +195,16 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
               <input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="fi" placeholder="email@company.com" />
             </FormField>
 
-            <FormField label="Contact Number">
-              <input type="text" value={form.contactNumber} onChange={e => set('contactNumber', e.target.value)} className="fi" placeholder="+94 77 000 0000" />
+            <FormField label="Contact Number" error={errors.contactNumber}>
+              <input
+                type="text"
+                inputMode="tel"
+                maxLength={12}
+                value={form.contactNumber}
+                onChange={e => set('contactNumber', sanitizeContactNumberInput(e.target.value))}
+                className="fi"
+                placeholder="+94 77 000 0000"
+              />
             </FormField>
 
             {/* Searchable Designation Dropdown */}
