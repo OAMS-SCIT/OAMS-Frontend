@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, Search, ChevronDown } from 'lucide-react';
+import { X, Search, ChevronDown, Lock } from 'lucide-react';
 import type { DesignationListItem, UserListItem, UserRole } from '@/types';
 import { ApiError, getDesignations, updateUser } from '@/lib/api';
 import { toast } from 'sonner';
@@ -18,6 +18,15 @@ interface FormState {
   contactNumber: string;
   designationId: string;
   role: UserRole;
+}
+
+function isValidSriLankanContactNumber(value: string) {
+  const compact = value.replace(/\s+/g, '');
+  return /^(\+94|0)\d{9}$/.test(compact);
+}
+
+function sanitizeContactNumberInput(value: string) {
+  return value.replace(/[^\d+\s]/g, '');
 }
 
 export function EditUserDrawer({ user, onClose, onSave }: Props) {
@@ -56,8 +65,11 @@ export function EditUserDrawer({ user, onClose, onSave }: Props) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedDesignation = designations.find(d => d.id === form.designationId) ??
-    (user.designation && !designationsLoading ? { id: user.designation.id, name: user.designation.name } : null);
+  const selectedDesignation =
+    designations.find(d => d.id === form.designationId) ??
+    (form.designationId && user.designation?.id === form.designationId
+      ? { id: user.designation.id, name: user.designation.name }
+      : null);
 
   const filteredDesignations = designations.filter(d =>
     !designationSearch || d.name.toLowerCase().includes(designationSearch.toLowerCase())
@@ -84,6 +96,9 @@ export function EditUserDrawer({ user, onClose, onSave }: Props) {
     const e: Record<string, string> = {};
     if (!form.firstName.trim()) e.firstName = 'First name is required';
     if (!form.lastName.trim()) e.lastName = 'Last name is required';
+    if (form.contactNumber.trim() && !isValidSriLankanContactNumber(form.contactNumber.trim())) {
+      e.contactNumber = 'Contact number must be a valid Sri Lankan number (e.g. +94 77 000 0000)';
+    }
     return e;
   };
 
@@ -96,7 +111,7 @@ export function EditUserDrawer({ user, onClose, onSave }: Props) {
       await updateUser(user.id, {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
-        contactNumber: form.contactNumber.trim() || undefined,
+        contactNumber: form.contactNumber.trim(),
         designationId: form.designationId || undefined,
         role: form.role,
       });
@@ -153,18 +168,27 @@ export function EditUserDrawer({ user, onClose, onSave }: Props) {
 
           {/* Email — read-only */}
           <FormField label="Email Address">
-            <div className="fi" style={{ background: '#F8FAFC', color: '#94A3B8', cursor: 'not-allowed' }}>
-              {user.email}
+            <div className="fi flex items-center justify-between" style={{ background: '#F8FAFC', color: '#94A3B8', cursor: 'not-allowed' }}>
+              <span>{user.email}</span>
+              <Lock className="w-4 h-4" style={{ color: '#CBD5E1' }} />
             </div>
             <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>Email cannot be changed here.</p>
           </FormField>
 
-          <FormField label="Contact Number">
-            <input type="text" value={form.contactNumber} onChange={e => set('contactNumber', e.target.value)} className="fi" placeholder="+94 77 000 0000" />
+          <FormField label="Contact Number" error={errors.contactNumber}>
+            <input
+              type="text"
+              inputMode="tel"
+              maxLength={12}
+              value={form.contactNumber}
+              onChange={e => set('contactNumber', sanitizeContactNumberInput(e.target.value))}
+              className="fi"
+              placeholder="+94 77 000 0000"
+            />
           </FormField>
 
           {/* Searchable Designation Dropdown */}
-          <FormField label="Designation" error={errors.designationId}>
+          <FormField label="Designation" required error={errors.designationId}>
             {designationsLoading ? (
               <div className="fi" style={{ color: '#94A3B8' }}>Loading designations…</div>
             ) : designationsError ? (
@@ -217,7 +241,9 @@ export function EditUserDrawer({ user, onClose, onSave }: Props) {
 
           {/* Role */}
           <div>
-            <label className="block mb-2" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>Role</label>
+            <label className="block mb-2" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
+              Role <span style={{ color: '#EF4444' }}>*</span>
+            </label>
             <div className="flex gap-2">
               {(['Admin', 'Employee'] as UserRole[]).map(r => (
                 <button key={r} onClick={() => setForm(f => ({ ...f, role: r }))}
