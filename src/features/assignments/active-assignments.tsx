@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Search, Eye, RefreshCw, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Select } from '@/components/ui/Select';
+import { DatePicker } from '@/components/ui/DatePicker';
 import type { ActiveAssignmentListItem, AssetCondition, CategoryListItem } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -140,20 +141,18 @@ export function ActiveAssignments() {
           options={[{ value: '', label: 'All Categories' }, ...categories.map((c) => ({ value: c.id, label: c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name }))]}
         />
         <div className="flex items-center gap-2">
-          <input
-            type="date"
+          <DatePicker
             value={dateFrom}
-            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-            aria-label="Assignment date from"
-            className={`rounded-control border border-input bg-input-background text-2sm px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${dateFrom ? 'text-foreground' : 'text-muted-foreground/70'}`}
+            onChange={(v) => { setDateFrom(v); setPage(1); }}
+            ariaLabel="Assignment date from"
+            placeholder="From"
           />
           <span className="text-2sm text-muted-foreground/70">–</span>
-          <input
-            type="date"
+          <DatePicker
             value={dateTo}
-            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-            aria-label="Assignment date to"
-            className={`rounded-control border border-input bg-input-background text-2sm px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${dateTo ? 'text-foreground' : 'text-muted-foreground/70'}`}
+            onChange={(v) => { setDateTo(v); setPage(1); }}
+            ariaLabel="Assignment date to"
+            placeholder="To"
           />
         </div>
         <button

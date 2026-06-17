@@ -6,6 +6,7 @@ import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { ImageUploadZone, type UploadedImage } from '@/components/ui/ImageUploadZone';
 import { Select } from '@/components/ui/Select';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { toast } from 'sonner';
 import {
   ApiError,
@@ -438,7 +439,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             <FormSection title="Purchase Details">
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Purchase Date" required error={errors.purchaseDate}>
-                  <input type="date" value={form.purchaseDate} onChange={(e) => set('purchaseDate', e.target.value)} className="form-input" />
+                  <DatePicker value={form.purchaseDate} onChange={(v) => set('purchaseDate', v)} ariaLabel="Purchase Date" className="w-full" />
                 </FormField>
                 <FormField label="Purchase Price" required error={errors.purchasePrice}>
                   <div className="relative">
@@ -466,10 +467,10 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             <FormSection title="Warranty">
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Warranty Start Date">
-                  <input type="date" value={form.warrantyStartDate} onChange={(e) => set('warrantyStartDate', e.target.value)} className="form-input" />
+                  <DatePicker value={form.warrantyStartDate} onChange={(v) => set('warrantyStartDate', v)} ariaLabel="Warranty Start Date" className="w-full" />
                 </FormField>
                 <FormField label="Warranty Expiry Date" error={errors.warrantyExpiryDate}>
-                  <input type="date" value={form.warrantyExpiryDate} onChange={(e) => set('warrantyExpiryDate', e.target.value)} className="form-input" />
+                  <DatePicker value={form.warrantyExpiryDate} onChange={(v) => set('warrantyExpiryDate', v)} ariaLabel="Warranty Expiry Date" className="w-full" />
                 </FormField>
               </div>
               <FormField label="Warranty Provider / Contact (Optional)">

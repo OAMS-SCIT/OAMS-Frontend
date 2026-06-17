@@ -7,6 +7,7 @@ import { useDrawerAnimation } from './useDrawerAnimation';
 import { toast } from 'sonner';
 import { ApiError, createAssignment, getUsers } from '@/lib/api';
 import type { AssetDetail, UserListItem } from '@/types';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 // Only the asset fields this panel needs to display.
 type AssetLike = Pick<AssetDetail, 'id' | 'name' | 'displayId' | 'serialNumber'>;
@@ -198,19 +199,17 @@ export function AssignAssetDrawer({ asset, onClose, onAssigned }: Props) {
               <label className="block mb-1.5 text-xs font-medium text-foreground/80">
                 Assignment Date <span className="text-danger">*</span>
               </label>
-              <input type="date" value={assignmentDate} onChange={(e) => setAssignmentDate(e.target.value)}
-                className={`w-full rounded-control border bg-input-background text-2sm text-foreground px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${
-                  errors.assignmentDate ? 'border-danger' : 'border-input focus:border-ring'
-                }`} />
+              <DatePicker value={assignmentDate} onChange={(v) => setAssignmentDate(v)}
+                ariaLabel="Assignment Date"
+                className={`w-full ${errors.assignmentDate ? 'border-danger' : ''}`} />
             </div>
             <div>
               <label className="block mb-1.5 text-xs font-medium text-foreground/80">
                 Expected Return <span className="text-muted-foreground/70">(Optional)</span>
               </label>
-              <input type="date" value={expectedReturn} onChange={(e) => setExpectedReturn(e.target.value)}
-                className={`w-full rounded-control border bg-input-background text-2sm text-foreground px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${
-                  errors.expectedReturn ? 'border-danger' : 'border-input focus:border-ring'
-                }`} />
+              <DatePicker value={expectedReturn} onChange={(v) => setExpectedReturn(v)}
+                ariaLabel="Expected Return"
+                className={`w-full ${errors.expectedReturn ? 'border-danger' : ''}`} />
               {errors.expectedReturn && <p className="text-xs text-danger mt-1">{errors.expectedReturn}</p>}
             </div>
           </div>

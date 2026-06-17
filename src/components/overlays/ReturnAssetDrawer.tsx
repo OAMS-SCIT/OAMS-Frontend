@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import type { AssetCondition } from '@/types';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 interface Props {
   /** RETURN INFORMATION summary. */
@@ -95,11 +96,10 @@ export function ReturnAssetDrawer({
             <label className="block mb-1.5 text-xs font-medium text-foreground/80">
               Return Date <span className="text-danger">*</span>
             </label>
-            <input type="date" value={returnDate}
-              onChange={(e) => { setReturnDate(e.target.value); setErrors((p) => ({ ...p, date: '' })); }}
-              className={`w-full rounded-control border bg-input-background text-2sm text-foreground px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${
-                errors.date ? 'border-danger' : 'border-input focus:border-ring'
-              }`} />
+            <DatePicker value={returnDate}
+              onChange={(v) => { setReturnDate(v); setErrors((p) => ({ ...p, date: '' })); }}
+              ariaLabel="Return Date"
+              className={`w-full ${errors.date ? 'border-danger' : ''}`} />
             {errors.date && <p className="text-xs text-danger mt-1">{errors.date}</p>}
           </div>
 

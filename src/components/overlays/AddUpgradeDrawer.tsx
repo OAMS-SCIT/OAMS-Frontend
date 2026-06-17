@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { ApiError, createUpgrade, updateUpgrade } from '@/lib/api';
 import type { AssetUpgrade, CreateUpgradePayload, UpgradeType } from '@/types';
 import { Select } from '@/components/ui/Select';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 interface Props {
   assetId: string;
@@ -142,8 +143,8 @@ export function AddUpgradeDrawer({
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Upgrade Date" required error={errors.upgradeDate}>
-                  <input type="date" value={form.upgradeDate}
-                    onChange={(e) => set('upgradeDate', e.target.value)} className="upg-input" />
+                  <DatePicker value={form.upgradeDate}
+                    onChange={(v) => set('upgradeDate', v)} ariaLabel="Upgrade Date" className="w-full" />
                 </Field>
                 <Field label="Upgrade Type" required error={errors.upgradeType}>
                   <Select value={form.upgradeType}
