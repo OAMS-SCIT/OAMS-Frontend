@@ -374,8 +374,17 @@ export function UserManagement() {
                 <table className="w-full table-fixed">
                   <thead>
                     <tr className="bg-muted/60 border-b-2 border-border">
-                      {['Name', 'Email Address', 'Contact', 'Designation', 'Role', 'Status', 'Actions'].map(h => (
-                        <th key={h} className="text-left px-5 py-3 micro-label" style={{ width: h === 'Name' ? '22%' : undefined }}>{h}</th>
+                      {(
+                        [
+                          { label: 'Name',           width: '22%' },
+                          { label: 'Email & Contact', width: '22%' },
+                          { label: 'Designation',    width: '18%' },
+                          { label: 'Role',           width: '12%' },
+                          { label: 'Status',         width: '12%' },
+                          { label: 'Actions',        width: '8%'  },
+                        ] as const
+                      ).map(({ label, width }) => (
+                        <th key={label} className="text-left px-5 py-3 micro-label" style={{ width }}>{label}</th>
                       ))}
                     </tr>
                   </thead>
@@ -396,8 +405,12 @@ export function UserManagement() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-2sm text-foreground/70">{user.email}</td>
-                        <td className="px-5 py-3.5 text-2sm text-muted-foreground nums">{user.contactNumber}</td>
+                        <td className="px-5 py-3.5">
+                          <div className="text-2sm text-foreground/70 truncate" title={user.email}>{user.email}</div>
+                          {user.contactNumber && (
+                            <div className="text-xs text-muted-foreground nums mt-0.5">{user.contactNumber}</div>
+                          )}
+                        </td>
                         <td className="px-5 py-3.5 text-2sm text-muted-foreground">{user.designation?.name ?? '—'}</td>
                         <td className="px-5 py-3.5"><StatusBadge status={user.role} /></td>
                         <td className="px-5 py-3.5">
