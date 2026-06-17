@@ -154,22 +154,22 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
 
         {created ? (
           /* ── Success screen ── */
-          <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
+          <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5 w-full min-w-0 overflow-hidden">
             <div className="flex items-center justify-center rounded-full" style={{ width: 56, height: 56, background: '#ECFDF5' }}>
               <CheckCircle className="w-8 h-8" style={{ color: '#22C55E' }} />
             </div>
-            <div>
-              <p className="font-semibold mb-1" style={{ fontSize: 16, color: '#1E293B' }}>
-                {form.firstName} {form.lastName} has been created
+            <div className="w-full min-w-0">
+              <p className="font-semibold mb-1" style={{ fontSize: 16, color: '#1E293B', overflowWrap: 'anywhere' }}>
+                <span className="break-all">{form.firstName} {form.lastName}</span> has been created
               </p>
               <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.6 }}>
                 The account has been set up successfully.
               </p>
             </div>
-            <div className="w-full flex items-start gap-3 rounded-xl p-4" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+            <div className="w-full min-w-0 flex items-start gap-3 rounded-xl p-4" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
               <Mail className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#2563EB' }} />
-              <p style={{ fontSize: 13, color: '#1D4ED8', lineHeight: 1.6, textAlign: 'left' }}>
-                The username and a temporary password have been sent to <strong>{form.email}</strong>.
+              <p style={{ fontSize: 13, color: '#1D4ED8', lineHeight: 1.6, textAlign: 'left', overflowWrap: 'anywhere' }}>
+                The username and a temporary password have been sent to <strong className="break-all">{form.email}</strong>.
               </p>
             </div>
           </div>

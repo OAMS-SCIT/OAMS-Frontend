@@ -371,11 +371,11 @@ export function UserManagement() {
               <EmptyState icon="users" title="No users found" subtitle="Try adjusting your search or filters." />
             ) : (
               <>
-                <table className="w-full">
+                <table className="w-full table-fixed">
                   <thead>
                     <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
                       {['Name', 'Email Address', 'Contact', 'Designation', 'Role', 'Status', 'Actions'].map(h => (
-                        <th key={h} className="text-left px-5 py-3" style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                        <th key={h} className="text-left px-5 py-3" style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', width: h === 'Name' ? '22%' : undefined }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -384,10 +384,16 @@ export function UserManagement() {
                       <tr key={user.id} style={{ background: i % 2 === 0 ? '#fff' : '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}
                         className="hover:bg-blue-50/30 transition-colors">
                         <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
                             <Avatar user={user} size={34} />
-                            <div>
-                              <div className="font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{user.firstName} {user.lastName}</div>
+                            <div className="min-w-0 flex-1">
+                              <div
+                                className="font-medium truncate"
+                                style={{ fontSize: 13, color: '#1E293B' }}
+                                title={`${user.firstName} ${user.lastName}`}
+                              >
+                                {user.firstName} {user.lastName}
+                              </div>
                             </div>
                           </div>
                         </td>
