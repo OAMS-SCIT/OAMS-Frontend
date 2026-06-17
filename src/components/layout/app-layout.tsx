@@ -1,14 +1,15 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, Tag, Users, ClipboardList, UserCog, LogOut,
-  Bell, Search, ChevronDown, Monitor, History,
+  Bell, Search, ChevronDown, Monitor, History, User,
 } from 'lucide-react';
 import { AppRole } from '@/types';
 import { useAuth } from '@/providers/auth-provider';
 import { Avatar } from '@/components/ui/Avatar';
+import { PortalMenu, PortalMenuItem } from '@/components/ui/PortalMenu';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 interface LayoutProps {
@@ -34,7 +35,8 @@ const employeeNavItems = [
 export function AppLayout({ children, role, onLogout }: LayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const [profileMenu, setProfileMenu] = useState<{ top: number; right: number } | null>(null);
 
   const navItems = role === 'admin' ? adminNavItems : employeeNavItems;
   const profilePath = role === 'admin' ? '/admin/profile' : '/employee/profile';
@@ -128,11 +130,43 @@ export function AppLayout({ children, role, onLogout }: LayoutProps) {
             <span className="absolute top-1 right-1 rounded-full w-2 h-2 bg-danger" />
           </button>
 
-          <button className="flex items-center gap-2 rounded-control px-2 py-1 hover:bg-muted transition-colors">
+          <button
+            aria-haspopup="menu"
+            aria-expanded={!!profileMenu}
+            onClick={(e) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              setProfileMenu(profileMenu ? null : { top: r.bottom + 8, right: window.innerWidth - r.right });
+            }}
+            className="flex items-center gap-2 rounded-control px-2 py-1 hover:bg-muted transition-colors"
+          >
             <Avatar user={user} size={32} />
             <span className="font-medium text-2sm text-foreground">{user?.firstName ?? '…'}</span>
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${profileMenu ? 'rotate-180' : ''}`} />
           </button>
+
+          {profileMenu && (
+            <PortalMenu anchor={profileMenu} onClose={() => setProfileMenu(null)}>
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+                <Avatar user={user} size={36} />
+                <div className="min-w-0">
+                  <div className="font-semibold text-2sm text-foreground truncate">{fullName}</div>
+                  {user?.email && <div className="text-2xs text-muted-foreground truncate">{user.email}</div>}
+                  <div className="text-2xs text-muted-foreground/80">{user?.role ?? ''}</div>
+                </div>
+              </div>
+              <PortalMenuItem
+                icon={User}
+                label="Profile"
+                onClick={() => { setProfileMenu(null); router.push(profilePath); }}
+              />
+              <PortalMenuItem
+                icon={LogOut}
+                label="Logout"
+                danger
+                onClick={() => { setProfileMenu(null); logout(); }}
+              />
+            </PortalMenu>
+          )}
         </header>
 
         <main className="flex-1 overflow-y-auto p-8">
