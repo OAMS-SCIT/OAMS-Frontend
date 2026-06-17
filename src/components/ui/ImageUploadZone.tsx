@@ -148,6 +148,8 @@ export function ImageUploadZone({
                   disabled={uploading}
                   className="absolute top-0.5 right-0.5 rounded-full flex items-center justify-center w-[18px] h-[18px] bg-danger hover:opacity-90 transition-opacity disabled:opacity-50"
                   title="Remove"
+                  aria-label="Remove image"
+                  data-testid="remove-existing-image"
                 >
                   <X className="w-2.5 h-2.5 text-white" />
                 </button>
@@ -169,6 +171,8 @@ export function ImageUploadZone({
                 onClick={(e) => { e.stopPropagation(); removeImage(img.key); }}
                 className="absolute top-0.5 right-0.5 rounded-full flex items-center justify-center w-[18px] h-[18px] bg-danger hover:opacity-90 transition-opacity"
                 title="Remove"
+                aria-label="Remove image"
+                data-testid="remove-staged-image"
               >
                 <X className="w-2.5 h-2.5 text-white" />
               </button>
