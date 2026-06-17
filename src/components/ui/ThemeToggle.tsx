@@ -14,9 +14,10 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
       onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
       className={`inline-flex h-9 w-9 items-center justify-center rounded-control border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:scale-[0.96] ${className}`}
     >
-      {/* Both icons render on the server; CSS picks one — avoids any hydration branch on theme */}
-      <Sun size={16} className="dark:hidden" />
-      <Moon size={16} className="hidden dark:block" />
+      {/* Show the target state: Moon in light mode (click → dark), Sun in dark mode (click → light).
+          Both icons render on the server; CSS picks one — avoids any hydration branch on theme */}
+      <Moon size={16} className="dark:hidden" />
+      <Sun size={16} className="hidden dark:block" />
     </button>
   );
 }
