@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Search, Eye, ChevronDown, RefreshCw, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Search, Eye, RefreshCw, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
 import type { ActiveAssignmentListItem, AssetCondition, CategoryListItem } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -131,17 +132,13 @@ export function ActiveAssignments() {
             className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
           />
         </div>
-        <div className="relative">
-          <select
-            value={filterCategory}
-            onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
-            className={`appearance-none rounded-control border border-input bg-input-background text-2sm px-3 pr-8 py-2 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${filterCategory ? 'text-foreground' : 'text-muted-foreground/70'}`}
-          >
-            <option value="">All Categories</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name}</option>)}
-          </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-muted-foreground/70" />
-        </div>
+        <Select
+          value={filterCategory}
+          onValueChange={(v) => { setFilterCategory(v); setPage(1); }}
+          ariaLabel="Category"
+          placeholder="All Categories"
+          options={[{ value: '', label: 'All Categories' }, ...categories.map((c) => ({ value: c.id, label: c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name }))]}
+        />
         <div className="flex items-center gap-2">
           <input
             type="date"

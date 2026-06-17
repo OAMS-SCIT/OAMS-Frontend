@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { ImageUploadZone, type UploadedImage } from '@/components/ui/ImageUploadZone';
+import { Select } from '@/components/ui/Select';
 import { toast } from 'sonner';
 import {
   ApiError,
@@ -325,19 +326,14 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
     if (attr.type === 'Dropdown') {
       return (
         <FormField key={attr.id} fieldId={fieldId} label={attr.label} required={attr.isRequired} error={err}>
-          <select
-            id={fieldId}
+          <Select
             value={val}
-            onChange={(e) => setAttr(attr.id, e.target.value)}
-            className="form-input"
-          >
-            <option value="">Select…</option>
-            {attr.options.map((opt) => (
-              <option key={opt.id} value={opt.label}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onValueChange={(v) => setAttr(attr.id, v)}
+            placeholder="Select…"
+            ariaLabel={attr.label}
+            className="w-full"
+            options={[{ value: '', label: 'Select…' }, ...attr.options.map((opt) => ({ value: opt.label, label: opt.label }))]}
+          />
         </FormField>
       );
     }
@@ -414,17 +410,15 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             {/* Section 2 - Category & Dynamic Attributes */}
             <FormSection title="Category & Attributes">
               <FormField label="Category" required error={errors.categoryId}>
-                <select
+                <Select
                   value={form.categoryId}
-                  onChange={(e) => set('categoryId', e.target.value)}
-                  className="form-input"
-                  disabled={isEdit} // category locked after creation
-                >
-                  <option value="">Select a category…</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name}</option>
-                  ))}
-                </select>
+                  onValueChange={(v) => set('categoryId', v)}
+                  placeholder="Select a category…"
+                  ariaLabel="Category"
+                  className="w-full"
+                  disabled={isEdit}
+                  options={[{ value: '', label: 'Select a category…' }, ...categories.map((c) => ({ value: c.id, label: c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name }))]}
+                />
               </FormField>
               {!form.categoryId && (
                 <p className="text-xs text-muted-foreground/80 italic">Select a category to see additional fields</p>

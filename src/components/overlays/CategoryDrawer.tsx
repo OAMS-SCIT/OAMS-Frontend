@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { toast } from 'sonner';
@@ -351,21 +352,15 @@ export function CategoryDrawer({ categoryId, onClose, onSaved }: Props) {
                         <label className="block mb-1 text-2xs font-medium text-foreground/80">
                           Type
                         </label>
-                        <select
+                        <Select
                           value={row.type}
-                          onChange={(e) =>
-                            updateRow(i, {
-                              type: e.target.value as AttributeType,
-                            })
+                          onValueChange={(v) =>
+                            updateRow(i, { type: v as AttributeType })
                           }
-                          className="cat-input cat-input-sm"
-                        >
-                          {ATTRIBUTE_TYPES.map((t) => (
-                            <option key={t} value={t}>
-                              {t}
-                            </option>
-                          ))}
-                        </select>
+                          ariaLabel="Attribute type"
+                          className="w-full text-2xs py-1.5"
+                          options={ATTRIBUTE_TYPES.map((t) => ({ value: t, label: t }))}
+                        />
                       </div>
                     </div>
 

@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
 import type { CategoryListItem } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Select } from '@/components/ui/Select';
 import { PortalMenu, PortalMenuItem } from '@/components/ui/PortalMenu';
 import {
   ApiError,
@@ -147,15 +148,17 @@ export function CategoryManagement() {
             className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
           />
         </div>
-        <select
+        <Select
           value={filterStatus}
-          onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-          className="rounded-control border border-input bg-input-background text-2sm text-foreground px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40"
-        >
-          <option value="">All Statuses</option>
-          <option>Active</option>
-          <option>Inactive</option>
-        </select>
+          onValueChange={(v) => { setFilterStatus(v); setPage(1); }}
+          ariaLabel="Status"
+          placeholder="All Statuses"
+          options={[
+            { value: '', label: 'All Statuses' },
+            { value: 'Active', label: 'Active' },
+            { value: 'Inactive', label: 'Inactive' },
+          ]}
+        />
       </div>
 
       <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">

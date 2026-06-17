@@ -7,6 +7,7 @@ import { useDrawerAnimation } from './useDrawerAnimation';
 import { toast } from 'sonner';
 import { ApiError, updateAssetStatus } from '@/lib/api';
 import type { AssetDetail, AssetListItem, ManualAssetStatus } from '@/types';
+import { Select } from '@/components/ui/Select';
 
 // Accepts either the full detail shape or the lighter list item shape
 type AssetLike = Pick<AssetDetail | AssetListItem, 'id' | 'name' | 'status'>;
@@ -84,15 +85,13 @@ export function ChangeStatusDrawer({ asset, onClose, onSaved }: Props) {
               <label className="block mb-1.5 text-xs font-medium text-foreground/80">
                 Asset Status <span className="text-danger">*</span>
               </label>
-              <select
+              <Select
                 value={selected}
-                onChange={(e) => setSelected(e.target.value as ManualAssetStatus)}
-                className="w-full appearance-none rounded-control border border-input bg-input-background text-2sm text-foreground px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
-              >
-                {MANUAL_STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+                onValueChange={(v) => setSelected(v as ManualAssetStatus)}
+                ariaLabel="Asset Status"
+                className="w-full"
+                options={MANUAL_STATUSES.map((s) => ({ value: s, label: s }))}
+              />
               <p className="text-2xs text-muted-foreground/80 mt-1.5">
                 "Assigned" status is managed automatically by the Assignment module.
               </p>

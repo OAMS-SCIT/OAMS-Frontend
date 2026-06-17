@@ -7,6 +7,7 @@ import { useDrawerAnimation } from './useDrawerAnimation';
 import { toast } from 'sonner';
 import { ApiError, createUpgrade, updateUpgrade } from '@/lib/api';
 import type { AssetUpgrade, CreateUpgradePayload, UpgradeType } from '@/types';
+import { Select } from '@/components/ui/Select';
 
 interface Props {
   assetId: string;
@@ -145,11 +146,10 @@ export function AddUpgradeDrawer({
                     onChange={(e) => set('upgradeDate', e.target.value)} className="upg-input" />
                 </Field>
                 <Field label="Upgrade Type" required error={errors.upgradeType}>
-                  <select value={form.upgradeType}
-                    onChange={(e) => set('upgradeType', e.target.value)} className="upg-input">
-                    <option value="">Select type…</option>
-                    {UPGRADE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <Select value={form.upgradeType}
+                    onValueChange={(v) => set('upgradeType', v)} className="w-full"
+                    placeholder="Select type…" ariaLabel="Upgrade Type"
+                    options={[{ value: '', label: 'Select type…' }, ...UPGRADE_TYPES.map((t) => ({ value: t, label: t }))]} />
                 </Field>
               </div>
 

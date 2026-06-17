@@ -7,6 +7,7 @@ import type { DesignationManageItem, UserListItem, UserRole, UserStatus } from '
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Select } from '@/components/ui/Select';
 import { PortalMenu } from '@/components/ui/PortalMenu';
 import { OverlayPortal } from '@/components/overlays/OverlayPortal';
 import { CreateUserDrawer } from '@/components/overlays/CreateUserDrawer';
@@ -333,18 +334,20 @@ export function UserManagement() {
                 placeholder="Search by name or email..."
                 className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring" />
             </div>
-            <select value={filterRole} onChange={e => { setFilterRole(e.target.value as UserRole | ''); setUserPage(1); }}
-              className="rounded-control border border-input bg-input-background text-2sm text-foreground px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40">
-              <option value="">All Roles</option>
-              <option value="Admin">Admin</option>
-              <option value="Employee">Employee</option>
-            </select>
-            <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value as UserStatus | ''); setUserPage(1); }}
-              className="rounded-control border border-input bg-input-background text-2sm text-foreground px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40">
-              <option value="">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+            <Select value={filterRole} onValueChange={v => { setFilterRole(v as UserRole | ''); setUserPage(1); }}
+              ariaLabel="Role" placeholder="All Roles"
+              options={[
+                { value: '', label: 'All Roles' },
+                { value: 'Admin', label: 'Admin' },
+                { value: 'Employee', label: 'Employee' },
+              ]} />
+            <Select value={filterStatus} onValueChange={v => { setFilterStatus(v as UserStatus | ''); setUserPage(1); }}
+              ariaLabel="Status" placeholder="All Statuses"
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'Active', label: 'Active' },
+                { value: 'Inactive', label: 'Inactive' },
+              ]} />
           </div>
 
           <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">
@@ -493,12 +496,13 @@ export function UserManagement() {
                 placeholder="Search designations..."
                 className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring" />
             </div>
-            <select value={dFilterStatus} onChange={e => { setDFilterStatus(e.target.value as 'Active' | 'Inactive' | ''); setDPage(1); }}
-              className="rounded-control border border-input bg-input-background text-2sm text-foreground px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40">
-              <option value="">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+            <Select value={dFilterStatus} onValueChange={v => { setDFilterStatus(v as 'Active' | 'Inactive' | ''); setDPage(1); }}
+              ariaLabel="Status" placeholder="All Statuses"
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'Active', label: 'Active' },
+                { value: 'Inactive', label: 'Inactive' },
+              ]} />
           </div>
 
           <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">

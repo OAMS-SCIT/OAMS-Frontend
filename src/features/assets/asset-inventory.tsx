@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PortalMenu, PortalMenuItem } from '@/components/ui/PortalMenu';
+import { Select } from '@/components/ui/Select';
 import { RegisterAssetDrawer } from '@/components/overlays/RegisterAssetDrawer';
 import { ChangeStatusDrawer } from '@/components/overlays/ChangeStatusDrawer';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
@@ -173,18 +174,12 @@ export function AssetInventory() {
         </div>
         <div className="flex items-center gap-2">
           <SelectFilter value={filterStatus} onChange={(v) => { setFilterStatus(v); setPage(1); }} options={STATUSES} placeholder="Status" />
-          <div className="relative">
-            <select
-              value={sortBy}
-              onChange={(e) => { setSortBy(e.target.value as SortBy); setPage(1); }}
-              className="appearance-none rounded-control border border-input bg-input-background text-2sm text-foreground px-3 pr-8 py-2 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40"
-            >
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>Sort: {o.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-muted-foreground/70" />
-          </div>
+          <Select
+            value={sortBy}
+            onValueChange={(v) => { setSortBy(v as SortBy); setPage(1); }}
+            ariaLabel="Sort by"
+            options={SORT_OPTIONS.map((o) => ({ value: o.value, label: `Sort: ${o.label}` }))}
+          />
           <button
             onClick={() => setSortOrder((o) => (o === 'ASC' ? 'DESC' : 'ASC'))}
             className="rounded-control border border-input px-3 py-2 text-xs text-muted-foreground hover:bg-muted transition-colors"
@@ -377,17 +372,13 @@ function SelectFilter({ value, onChange, options, placeholder }: {
   value: string; onChange: (v: string) => void; options: string[]; placeholder: string;
 }) {
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`appearance-none rounded-control border border-input bg-input-background text-2sm px-3 pr-8 py-2 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 ${value ? 'text-foreground' : 'text-muted-foreground/70'}`}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
-      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-muted-foreground/70" />
-    </div>
+    <Select
+      value={value}
+      onValueChange={onChange}
+      ariaLabel={placeholder}
+      placeholder={placeholder}
+      options={[{ value: '', label: placeholder }, ...options.map((o) => ({ value: o, label: o }))]}
+    />
   );
 }
 
