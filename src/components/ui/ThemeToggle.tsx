@@ -1,23 +1,51 @@
 'use client';
 
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, Monitor } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
+
+const OPTIONS = [
+  { value: 'system', label: 'System', Icon: Monitor },
+  { value: 'light', label: 'Light', Icon: Sun },
+  { value: 'dark', label: 'Dark', Icon: Moon },
+] as const;
 
 export function ThemeToggle({ className = '' }: { className?: string }) {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // The selected theme is only known on the client. Wait for mount before
+  // marking the active option so the server and first client render match
+  // (avoids a hydration mismatch on the highlighted segment).
+  useEffect(() => setMounted(true), []);
 
   return (
-    <button
-      type="button"
-      aria-label="Toggle theme"
-      title="Toggle theme"
-      onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-control border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:scale-[0.96] ${className}`}
+    <div
+      role="radiogroup"
+      aria-label="Theme"
+      className={`inline-flex items-center gap-0.5 rounded-control border border-border bg-card p-0.5 ${className}`}
     >
-      {/* Show the target state: Moon in light mode (click → dark), Sun in dark mode (click → light).
-          Both icons render on the server; CSS picks one — avoids any hydration branch on theme */}
-      <Moon size={16} className="dark:hidden" />
-      <Sun size={16} className="hidden dark:block" />
-    </button>
+      {OPTIONS.map(({ value, label, Icon }) => {
+        const active = mounted && theme === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            aria-label={`${label} theme`}
+            title={`${label} theme`}
+            onClick={() => setTheme(value)}
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-[calc(var(--radius-control)-3px)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:scale-[0.96] ${
+              active
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Icon size={15} />
+          </button>
+        );
+      })}
+    </div>
   );
 }
