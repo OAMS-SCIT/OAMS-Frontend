@@ -46,16 +46,12 @@ export function PortalMenu({ anchor, onClose, children }: Props) {
       {/* The actual menu */}
       <div
         ref={menuRef}
-        className="rounded-xl shadow-lg overflow-hidden py-1"
+        className="rounded-xl overflow-hidden py-1 min-w-40 bg-popover text-popover-foreground border border-border shadow-pop motion-safe:animate-pop-in"
         style={{
           position: 'fixed',
           top: anchor.top,
           right: anchor.right,
           zIndex: 9999,
-          minWidth: 160,
-          background: '#fff',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
         }}
         // Prevent the backdrop click from firing when clicking inside the menu
         onClick={(e) => e.stopPropagation()}
@@ -82,8 +78,7 @@ export function PortalMenuItem({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-      style={{ fontSize: 13, color: danger ? '#EF4444' : '#334155' }}
+      className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-2sm hover:bg-muted transition-colors ${danger ? 'text-danger' : 'text-foreground'}`}
     >
       <Icon className="w-3.5 h-3.5" />
       {label}

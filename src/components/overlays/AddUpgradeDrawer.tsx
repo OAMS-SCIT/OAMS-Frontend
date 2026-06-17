@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { OverlayPortal } from './OverlayPortal';
+import { useDrawerAnimation } from './useDrawerAnimation';
 import { toast } from 'sonner';
 import { ApiError, createUpgrade, updateUpgrade } from '@/lib/api';
 import type { AssetUpgrade, CreateUpgradePayload, UpgradeType } from '@/types';
+import { Select } from '@/components/ui/Select';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 interface Props {
   assetId: string;
@@ -100,53 +104,53 @@ export function AddUpgradeDrawer({
     }
   };
 
+  const { closing, requestClose } = useDrawerAnimation(onClose);
   return (
-    <>
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(15,36,96,0.45)' }} onClick={onClose} />
-      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col" style={{ width: 520, background: '#fff', boxShadow: '-8px 0 32px rgba(0,0,0,0.14)' }}>
+    <OverlayPortal>
+      <div className={`fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] ${closing ? 'motion-safe:animate-overlay-out' : 'motion-safe:animate-overlay-in'}`} onClick={requestClose} />
+      <div className={`fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] ${closing ? 'motion-safe:animate-drawer-out' : 'motion-safe:animate-drawer-in'}`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #E2E8F0' }}>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <div>
-            <h2 className="font-bold" style={{ fontSize: 18, color: '#1E293B' }}>
+            <h2 className="font-bold text-lg tracking-[-0.02em] text-foreground">
               {isEdit ? 'Edit Upgrade Entry' : 'Add Upgrade Entry'}
             </h2>
-            <p style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>
+            <p className="text-2sm text-muted-foreground mt-0.5">
               {isEdit ? 'Update this upgrade log entry' : 'Log an upgrade performed on this asset'}
             </p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 transition-colors">
-            <X className="w-5 h-5" style={{ color: '#64748B' }} />
+          <button onClick={requestClose} className="rounded-control p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
           {/* Asset identity */}
-          <div className="rounded-xl p-4" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
+          <div className="rounded-lg p-4 bg-muted/60 border border-border">
+            <div className="micro-label mb-1">
               Asset
             </div>
-            <div className="font-semibold" style={{ fontSize: 15, color: '#1E293B' }}>{assetName}</div>
-            <div style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'monospace', marginTop: 2 }}>{assetDisplayId}</div>
+            <div className="font-semibold text-[15px] text-foreground">{assetName}</div>
+            <div className="text-xs text-muted-foreground/80 font-mono mt-0.5">{assetDisplayId}</div>
           </div>
 
           {/* Form */}
           <div>
-            <div className="font-semibold mb-3 pb-2" style={{ fontSize: 14, color: '#1E293B', borderBottom: '1px solid #F1F5F9' }}>
+            <div className="font-semibold mb-3 pb-2 text-sm text-foreground border-b border-border/60">
               Upgrade Details
             </div>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Upgrade Date" required error={errors.upgradeDate}>
-                  <input type="date" value={form.upgradeDate}
-                    onChange={(e) => set('upgradeDate', e.target.value)} className="upg-input" />
+                  <DatePicker value={form.upgradeDate}
+                    onChange={(v) => set('upgradeDate', v)} ariaLabel="Upgrade Date" className="w-full" />
                 </Field>
                 <Field label="Upgrade Type" required error={errors.upgradeType}>
-                  <select value={form.upgradeType}
-                    onChange={(e) => set('upgradeType', e.target.value)} className="upg-input">
-                    <option value="">Select type…</option>
-                    {UPGRADE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <Select value={form.upgradeType}
+                    onValueChange={(v) => set('upgradeType', v)} className="w-full"
+                    placeholder="Select type…" ariaLabel="Upgrade Type"
+                    options={[{ value: '', label: 'Select type…' }, ...UPGRADE_TYPES.map((t) => ({ value: t, label: t }))]} />
                 </Field>
               </div>
 
@@ -165,8 +169,7 @@ export function AddUpgradeDrawer({
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Cost" required error={errors.cost}>
                   <div className="relative">
-                    <span className="absolute top-1/2 -translate-y-1/2 text-sm pointer-events-none select-none"
-                      style={{ left: 12, color: '#94A3B8' }}>$</span>
+                    <span className="absolute top-1/2 -translate-y-1/2 text-sm pointer-events-none select-none left-3 text-muted-foreground/70">$</span>
                     <input type="number" value={form.cost}
                       onChange={(e) => set('cost', e.target.value)}
                       className="upg-input" style={{ paddingLeft: 28 }}
@@ -191,16 +194,13 @@ export function AddUpgradeDrawer({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-6 py-4 justify-end"
-          style={{ borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-          <button onClick={onClose}
-            className="rounded-lg border px-5 py-2.5 font-medium transition-colors hover:bg-gray-50"
-            style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>
+        <div className="flex items-center gap-3 px-6 py-4 justify-end border-t border-border bg-muted/60 rounded-bl-[16px]">
+          <button onClick={requestClose}
+            className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving}
-            className="rounded-lg px-5 py-2.5 font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60"
-            style={{ fontSize: 14, background: '#1E3A8A' }}>
+            className="rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60">
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Confirm'}
           </button>
         </div>
@@ -209,21 +209,24 @@ export function AddUpgradeDrawer({
       <style>{`
         .upg-input {
           width: 100%;
-          border: 1px solid #CBD5E1;
-          border-radius: 8px;
+          border: 1px solid var(--input);
+          border-radius: 0.625rem;
           padding: 8px 12px;
           font-size: 13px;
-          color: #1E293B;
-          background: #fff;
+          color: var(--foreground);
+          background: var(--input-background);
           outline: none;
           transition: border-color 0.15s, box-shadow 0.15s;
         }
         .upg-input:focus {
-          border-color: #3B82F6;
-          box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+          border-color: var(--ring);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 15%, transparent);
+        }
+        .upg-input::placeholder {
+          color: color-mix(in srgb, var(--muted-foreground) 60%, transparent);
         }
       `}</style>
-    </>
+    </OverlayPortal>
   );
 }
 
@@ -232,11 +235,11 @@ function Field({ label, required, error, children }: {
 }) {
   return (
     <div>
-      <label className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
-        {label} {required && <span style={{ color: '#EF4444' }}>*</span>}
+      <label className="block mb-1.5 text-xs font-medium text-foreground/80">
+        {label} {required && <span className="text-danger">*</span>}
       </label>
       {children}
-      {error && <p style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>{error}</p>}
+      {error && <p className="text-xs text-danger mt-1">{error}</p>}
     </div>
   );
 }

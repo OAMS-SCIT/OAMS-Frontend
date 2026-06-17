@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -27,25 +27,21 @@ export function LoginPage({ onSubmit, loading = false, error = null }: Props) {
 
   return (
     <AuthShell>
-      <h1 className="font-bold mb-1" style={{ fontSize: 26, color: '#1E293B' }}>
+      <h1 className="font-bold mb-1 text-[26px] tracking-[-0.02em] text-foreground">
         Welcome Back
       </h1>
-      <p style={{ fontSize: 14, color: '#64748B', marginBottom: 28 }}>Sign in to OAMS Admin</p>
+      <p className="text-sm text-muted-foreground mb-7">Sign in to OAMS Admin</p>
 
       <form className="space-y-4" onSubmit={handleSubmit} noValidate>
         <div>
           <label
             htmlFor="email"
-            className="block mb-1.5"
-            style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}
+            className="block mb-1.5 text-xs font-medium text-foreground/80"
           >
             Email Address
           </label>
           <div className="relative">
-            <Mail
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-              style={{ color: '#94A3B8' }}
-            />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
             <input
               id="email"
               name="email"
@@ -54,8 +50,7 @@ export function LoginPage({ onSubmit, loading = false, error = null }: Props) {
               value={email}
               onChange={e => setEmail(e.target.value)}
               disabled={loading}
-              className="w-full rounded-lg border pl-9 pr-3 py-2.5 focus:outline-none focus:ring-2 disabled:opacity-60"
-              style={{ borderColor: '#CBD5E1', fontSize: 14 }}
+              className="w-full rounded-control border border-input bg-input-background text-sm pl-9 pr-3 py-2.5 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring disabled:opacity-60"
               placeholder="admin@company.com"
             />
           </div>
@@ -63,16 +58,12 @@ export function LoginPage({ onSubmit, loading = false, error = null }: Props) {
         <div>
           <label
             htmlFor="password"
-            className="block mb-1.5"
-            style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}
+            className="block mb-1.5 text-xs font-medium text-foreground/80"
           >
             Password
           </label>
           <div className="relative">
-            <Lock
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-              style={{ color: '#94A3B8' }}
-            />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
             <input
               id="password"
               name="password"
@@ -81,15 +72,13 @@ export function LoginPage({ onSubmit, loading = false, error = null }: Props) {
               value={password}
               onChange={e => setPassword(e.target.value)}
               disabled={loading}
-              className="w-full rounded-lg border pl-9 pr-10 py-2.5 focus:outline-none focus:ring-2 disabled:opacity-60"
-              style={{ borderColor: '#CBD5E1', fontSize: 14 }}
+              className="w-full rounded-control border border-input bg-input-background text-sm pl-9 pr-10 py-2.5 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring disabled:opacity-60"
               placeholder="••••••••"
             />
             <button
               type="button"
               onClick={() => setShowPassword(s => !s)}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-              style={{ color: '#94A3B8' }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-muted-foreground transition-colors"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -97,8 +86,7 @@ export function LoginPage({ onSubmit, loading = false, error = null }: Props) {
           <div className="flex justify-end mt-1.5">
             <Link
               href="/forgot-password"
-              style={{ fontSize: 12, color: '#3B82F6' }}
-              className="hover:underline"
+              className="text-xs text-primary hover:underline"
             >
               Forgot Password?
             </Link>
@@ -106,7 +94,7 @@ export function LoginPage({ onSubmit, loading = false, error = null }: Props) {
         </div>
 
         {error && (
-          <p role="alert" style={{ fontSize: 13, color: '#EF4444' }}>
+          <p role="alert" className="text-2sm text-danger">
             {error}
           </p>
         )}
@@ -114,15 +102,14 @@ export function LoginPage({ onSubmit, loading = false, error = null }: Props) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 rounded-lg py-3 font-bold text-white hover:opacity-90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-          style={{ fontSize: 15, background: '#1E3A8A' }}
+          className="w-full flex items-center justify-center gap-2 rounded-control py-3 font-bold text-[15px] bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(29,78,216,0.3)] transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           {loading ? 'Signing in…' : 'Login'}
         </button>
       </form>
 
-      <p className="text-center mt-8" style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.5 }}>
+      <p className="text-center mt-8 text-xs text-muted-foreground/80 leading-normal">
         Only authorized administrators may access this system.
       </p>
     </AuthShell>

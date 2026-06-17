@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
 import type { CategoryListItem } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Select } from '@/components/ui/Select';
 import { PortalMenu, PortalMenuItem } from '@/components/ui/PortalMenu';
 import {
   ApiError,
@@ -125,45 +126,44 @@ export function CategoryManagement() {
   };
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-bold" style={{ fontSize: 24, color: '#1E293B' }}>Asset Categories</h1>
+        <h1 className="font-bold text-2xl tracking-[-0.02em] text-foreground">Asset Categories</h1>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 rounded-lg px-4 py-2.5 font-semibold text-white hover:opacity-90 transition-colors"
-          style={{ background: '#1E3A8A', fontSize: 14 }}
+          className="flex items-center gap-2 rounded-control px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(29,78,216,0.25)] transition-all hover:opacity-90 active:scale-[0.98]"
         >
           <Plus className="w-4 h-4" /> Create Category
         </button>
       </div>
 
-      <div className="rounded-xl mb-4 p-4 flex items-center gap-3" style={{ background: '#fff', border: '1px solid #E2E8F0' }}>
+      <div className="rounded-lg mb-4 p-4 flex items-center gap-3 bg-card border border-border shadow-card">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search category name..."
-            className="w-full rounded-lg border pl-9 pr-3 py-2 focus:outline-none"
-            style={{ borderColor: '#CBD5E1', fontSize: 13 }}
+            className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
           />
         </div>
-        <select
+        <Select
           value={filterStatus}
-          onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-          className="rounded-lg border px-3 py-2"
-          style={{ borderColor: '#CBD5E1', fontSize: 13 }}
-        >
-          <option value="">All Statuses</option>
-          <option>Active</option>
-          <option>Inactive</option>
-        </select>
+          onValueChange={(v) => { setFilterStatus(v); setPage(1); }}
+          ariaLabel="Status"
+          placeholder="All Statuses"
+          options={[
+            { value: '', label: 'All Statuses' },
+            { value: 'Active', label: 'Active' },
+            { value: 'Inactive', label: 'Inactive' },
+          ]}
+        />
       </div>
 
-      <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">
         {loading ? (
-          <div className="flex items-center justify-center py-16" style={{ fontSize: 13, color: '#64748B' }}>
+          <div className="flex items-center justify-center py-16 text-2sm text-muted-foreground">
             Loading categories…
           </div>
         ) : error ? (
@@ -174,8 +174,7 @@ export function CategoryManagement() {
             action={
               <button
                 onClick={() => load()}
-                className="flex items-center gap-2 rounded-lg px-4 py-2 text-white hover:opacity-90"
-                style={{ background: '#1E3A8A', fontSize: 13, fontWeight: 600 }}
+                className="flex items-center gap-2 rounded-control px-4 py-2 text-2sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
               >
                 <RefreshCw className="w-4 h-4" /> Retry
               </button>
@@ -189,8 +188,7 @@ export function CategoryManagement() {
             action={
               <button
                 onClick={openCreate}
-                className="flex items-center gap-2 rounded-lg px-4 py-2 text-white hover:opacity-90"
-                style={{ background: '#1E3A8A', fontSize: 13, fontWeight: 600 }}
+                className="flex items-center gap-2 rounded-control px-4 py-2 text-2sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
               >
                 <Plus className="w-4 h-4" /> Create Category
               </button>
@@ -200,9 +198,9 @@ export function CategoryManagement() {
           <>
             <table className="w-full">
               <thead>
-                <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
+                <tr className="bg-muted/60 border-b-2 border-border">
                   {['Category Name', 'Description', 'No. of Attributes', 'No. of Assets', 'Status', 'Date Created', 'Actions'].map((h) => (
-                    <th key={h} className="text-left px-5 py-3" style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                    <th key={h} className="text-left px-5 py-3 micro-label">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -210,29 +208,28 @@ export function CategoryManagement() {
                 {categories.map((cat, i) => (
                   <tr
                     key={cat.id}
-                    style={{ background: i % 2 === 0 ? '#fff' : '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}
-                    className="hover:bg-blue-50/30 transition-colors"
+                    className={`border-b border-border/60 transition-colors hover:bg-primary/[0.04] ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}
                   >
                     <td className="px-5 py-4">
-                      <div className="font-semibold" title={cat.name.length > 45 ? cat.name : undefined} style={{ fontSize: 13, color: '#1E293B' }}>
+                      <div className="font-semibold text-2sm text-foreground" title={cat.name.length > 45 ? cat.name : undefined}>
                         {cat.name.length > 45 ? cat.name.slice(0, 45) + '…' : cat.name}
                       </div>
                     </td>
-                    <td className="px-5 py-4" style={{ maxWidth: 200 }}>
-                      <div style={{ fontSize: 13, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td className="px-5 py-4 max-w-[200px]">
+                      <div className="text-2sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">
                         {cat.description}
                       </div>
                     </td>
                     <td className="px-5 py-4 text-center">
-                      <span className="rounded-full px-2.5 py-0.5 font-semibold" style={{ fontSize: 13, background: '#EFF6FF', color: '#1E3A8A' }}>
+                      <span className="rounded-full px-2.5 py-0.5 font-semibold text-2sm bg-secondary text-secondary-foreground nums">
                         {cat.attributeCount}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-center">
-                      <span className="font-semibold" style={{ fontSize: 13, color: '#1E293B' }}>{cat.assetCount}</span>
+                      <span className="font-semibold text-2sm text-foreground nums">{cat.assetCount}</span>
                     </td>
                     <td className="px-5 py-4"><StatusBadge status={cat.status} /></td>
-                    <td className="px-5 py-4" style={{ fontSize: 13, color: '#64748B' }}>{formatDate(cat.createdAt)}</td>
+                    <td className="px-5 py-4 text-2sm text-muted-foreground nums">{formatDate(cat.createdAt)}</td>
                     <td className="px-5 py-4">
                       <div>
                         <button
@@ -241,8 +238,7 @@ export function CategoryManagement() {
                             const rect = e.currentTarget.getBoundingClientRect();
                             setOpenMenu({ id: cat.id, top: rect.bottom + 4, right: window.innerWidth - rect.right });
                           }}
-                          className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors"
-                          style={{ color: '#64748B' }}
+                          className="rounded-control p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
@@ -260,25 +256,23 @@ export function CategoryManagement() {
                 ))}
               </tbody>
             </table>
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid #F1F5F9' }}>
-              <span style={{ fontSize: 13, color: '#64748B' }}>
+            <div className="flex items-center justify-between px-5 py-4 border-t border-border/60">
+              <span className="text-2sm text-muted-foreground nums">
                 Showing {Math.min((page - 1) * PER_PAGE + 1, total)}–{Math.min(page * PER_PAGE, total)} of {total} categories
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="rounded-lg px-3 py-1.5 border transition-colors hover:bg-gray-50 disabled:opacity-40"
-                  style={{ fontSize: 13, color: '#475569', borderColor: '#E2E8F0' }}
+                  className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40"
                 >
                   Previous
                 </button>
-                <span style={{ fontSize: 13, color: '#64748B' }}>Page {page} of {totalPages}</span>
+                <span className="text-2sm text-muted-foreground nums">Page {page} of {totalPages}</span>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="rounded-lg px-3 py-1.5 border transition-colors hover:bg-gray-50 disabled:opacity-40"
-                  style={{ fontSize: 13, color: '#475569', borderColor: '#E2E8F0' }}
+                  className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40"
                 >
                   Next
                 </button>
