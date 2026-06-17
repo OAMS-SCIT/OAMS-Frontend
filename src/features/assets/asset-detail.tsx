@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor, ZoomIn } from 'lucide-react';
+import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor, ZoomIn, RefreshCw } from 'lucide-react';
 import type { AssetDetail as AssetDetailType, AssetHistoryEntry, AssetUpgrade, Assignment, AssignmentHistoryItem } from '@/types';
 import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment, getAssetAssignments, getAssetHistory } from '@/lib/api';
 import { AssetHistoryTimeline } from './AssetHistoryTimeline';
@@ -15,6 +15,7 @@ import { RegisterAssetDrawer } from '@/components/overlays/RegisterAssetDrawer';
 import { AssignAssetDrawer } from '@/components/overlays/AssignAssetDrawer';
 import { ReturnAssetDrawer } from '@/components/overlays/ReturnAssetDrawer';
 import { AddUpgradeDrawer } from '@/components/overlays/AddUpgradeDrawer';
+import { ChangeStatusDrawer } from '@/components/overlays/ChangeStatusDrawer';
 import { ImageLightbox } from '@/components/overlays/ImageLightbox';
 
 function InfoRow({ label, value, mono, style }: {
@@ -60,6 +61,7 @@ export function AssetDetail() {
   const [showEdit, setShowEdit] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
   const [showReturn, setShowReturn] = useState(false);
+  const [showChangeStatus, setShowChangeStatus] = useState(false);
   const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
   const [returnSaving, setReturnSaving] = useState(false);
   const [showAddUpgrade, setShowAddUpgrade] = useState(false);
@@ -344,6 +346,10 @@ export function AssetDetail() {
                   <RotateCcw className="w-4 h-4" /> Process Return
                 </button>
               )}
+              <button onClick={() => setShowChangeStatus(true)}
+                className="flex items-center gap-2 rounded-control border border-border px-4 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
+                <RefreshCw className="w-4 h-4" /> Change Status
+              </button>
               <button onClick={() => setShowEdit(true)}
                 className="flex items-center gap-2 rounded-control border border-border px-4 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
                 <Pencil className="w-4 h-4" /> Edit Asset
@@ -634,6 +640,13 @@ export function AssetDetail() {
           onClose={() => setShowReturn(false)}
           onConfirm={handleConfirmReturn}
           saving={returnSaving}
+        />
+      )}
+      {showChangeStatus && (
+        <ChangeStatusDrawer
+          asset={asset}
+          onClose={() => setShowChangeStatus(false)}
+          onSaved={(updated) => { setAsset(updated); setShowChangeStatus(false); refreshAssetLog(); }}
         />
       )}
       {showAddUpgrade && (
