@@ -100,9 +100,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const [attrLoadError, setAttrLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
-  // Edit mode: images already saved on the server + an in-flight upload flag.
+  // Edit mode: images already saved on the server, plus the IDs the user has
+  // marked for removal. Both adds (uploadedImages) and removals are staged
+  // locally and only flushed to the backend on the "Edit Asset" click.
   const [existingImages, setExistingImages] = useState<AssetImageItem[]>([]);
-  const [imageUploading, setImageUploading] = useState(false);
+  const [removedImageIds, setRemovedImageIds] = useState<string[]>([]);
 
   // Load categories list + (edit) existing asset on mount
   useEffect(() => {
@@ -239,6 +241,22 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           warrantyProvider: form.warrantyProvider.trim() || undefined,
           customAttributes,
         });
+        // Flush deferred image changes. Deletes run BEFORE the upload so the
+        // backend's 5-image cap is evaluated against the post-deletion count.
+        // Each call returns the full updated detail, so the last one wins.
+        try {
+          for (const imageId of removedImageIds) {
+            saved = await deleteAssetImage(assetId!, imageId);
+          }
+          if (uploadedImages.length > 0) {
+            saved = await uploadAssetImages(
+              assetId!,
+              uploadedImages.map((i) => i.file),
+            );
+          }
+        } catch {
+          toast.error('Asset details saved, but updating images failed. Try again from Edit.');
+        }
         toast.success('Asset updated successfully.');
       } else {
         saved = await createAsset({
@@ -272,6 +290,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         }
         toast.success('Asset registered successfully.');
       }
+      // Staged previews are object URLs — revoke them now that they're saved.
+      uploadedImages.forEach((i) => URL.revokeObjectURL(i.previewUrl));
       onSaved(saved);
       onClose();
     } catch (err) {
@@ -281,40 +301,14 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
     }
   };
 
-  // ── Edit-mode image management (immediate upload/delete) ───────────────────
+  // ── Edit-mode image management (deferred to "Edit Asset" click) ────────────
 
-  // In edit mode the "Asset Images" zone never stages files — each selection is
-  // uploaded right away, the asset detail is refreshed, and the parent (detail
-  // page) is notified so the hero updates. New-file object URLs are revoked.
-  const handleEditImagesChange = async (next: UploadedImage[]) => {
-    if (!assetId || next.length === 0) return;
-    setImageUploading(true);
-    try {
-      const updated = await uploadAssetImages(assetId, next.map((i) => i.file));
-      setExistingImages(updated.images);
-      onSaved(updated);
-      toast.success(next.length > 1 ? 'Images uploaded.' : 'Image uploaded.');
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Failed to upload image.');
-    } finally {
-      next.forEach((i) => URL.revokeObjectURL(i.previewUrl));
-      setImageUploading(false);
-    }
-  };
-
-  const handleRemoveExistingImage = async (imageId: string) => {
-    if (!assetId) return;
-    setImageUploading(true);
-    try {
-      const updated = await deleteAssetImage(assetId, imageId);
-      setExistingImages(updated.images);
-      onSaved(updated);
-      toast.success('Image removed.');
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Failed to remove image.');
-    } finally {
-      setImageUploading(false);
-    }
+  // Mark an existing (server) image for deletion. The actual DELETE is deferred
+  // to handleSave so nothing hits the backend until "Edit Asset" is clicked;
+  // clicking Cancel discards the removal. New files are staged via
+  // setUploadedImages (same as register) and uploaded on save too.
+  const handleRemoveExistingImage = (imageId: string) => {
+    setRemovedImageIds((ids) => [...ids, imageId]);
   };
 
   // ── Render helpers ────────────────────────────────────────────────────────
@@ -501,16 +495,18 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
               </FormField>
             </FormSection>
 
-            {/* Section 6 - Images. Register: stage + upload after create.
-                Edit: existing images with immediate add (upload) / remove (delete). */}
+            {/* Section 6 - Images. Both modes stage changes locally and flush
+                them on save. Edit also shows existing server images, hiding any
+                the user has marked for removal. */}
             <FormSection title="Asset Images">
               {isEdit ? (
                 <ImageUploadZone
-                  images={[]}
-                  onChange={handleEditImagesChange}
-                  existing={existingImages.map((i) => ({ id: i.id, url: i.url }))}
+                  images={uploadedImages}
+                  onChange={setUploadedImages}
+                  existing={existingImages
+                    .filter((i) => !removedImageIds.includes(i.id))
+                    .map((i) => ({ id: i.id, url: i.url }))}
                   onRemoveExisting={handleRemoveExistingImage}
-                  uploading={imageUploading}
                 />
               ) : (
                 <ImageUploadZone images={uploadedImages} onChange={setUploadedImages} />
