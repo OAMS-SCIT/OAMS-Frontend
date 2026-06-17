@@ -112,7 +112,7 @@ export function EditUserDrawer({ user, onClose, onSave }: Props) {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         contactNumber: form.contactNumber.trim(),
-        designationId: form.designationId || undefined,
+        designationId: form.designationId,
         role: form.role,
       });
       toast.success(`${form.firstName} ${form.lastName} updated successfully.`);
