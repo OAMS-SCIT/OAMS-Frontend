@@ -134,11 +134,11 @@ export function PersonalProfile({
   };
 
   return (
-    <div>
-      <h1 className="font-bold mb-6" style={{ fontSize: 24, color: '#1E293B' }}>Personal Profile</h1>
+    <div className="motion-safe:animate-fade-rise">
+      <h1 className="font-bold mb-6 text-2xl tracking-[-0.02em] text-foreground">Personal Profile</h1>
 
-      <div className="mx-auto" style={{ maxWidth: 680 }}>
-        <div className="rounded-2xl p-8" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div className="mx-auto max-w-[680px]">
+        <div className="rounded-2xl p-8 bg-card border border-border shadow-card">
           {/* Avatar */}
           <div className="flex flex-col items-center mb-8">
             <div className="relative">
@@ -148,13 +148,12 @@ export function PersonalProfile({
                   src={avatarSrc}
                   alt={`${user.firstName} ${user.lastName}`}
                   onError={() => setImgError(true)}
-                  className="rounded-full object-cover"
-                  style={{ width: 96, height: 96 }}
+                  className="rounded-full object-cover w-24 h-24"
                 />
               ) : (
                 <div
-                  className="flex items-center justify-center rounded-full text-white font-bold"
-                  style={{ width: 96, height: 96, background: avatarColor(`${user.firstName} ${user.lastName}`), fontSize: 32 }}>
+                  className="flex items-center justify-center rounded-full text-white font-bold w-24 h-24 text-[32px]"
+                  style={{ background: avatarColor(`${user.firstName} ${user.lastName}`) }}>
                   {avatarInitials(`${user.firstName} ${user.lastName}`)}
                 </div>
               )}
@@ -163,9 +162,8 @@ export function PersonalProfile({
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
                 aria-label="Change profile picture"
-                className="absolute bottom-0 right-0 flex items-center justify-center rounded-full shadow-md disabled:opacity-60"
-                style={{ width: 30, height: 30, background: '#fff', border: '2px solid #E2E8F0' }}>
-                <Camera className="w-4 h-4" style={{ color: '#64748B' }} />
+                className="absolute bottom-0 right-0 flex items-center justify-center rounded-full shadow-md w-[30px] h-[30px] bg-card border-2 border-border transition-colors hover:bg-muted disabled:opacity-60">
+                <Camera className="w-4 h-4 text-muted-foreground" />
               </button>
               <input
                 ref={fileInputRef}
@@ -176,10 +174,10 @@ export function PersonalProfile({
               />
             </div>
             <div className="mt-3 text-center">
-              <div className="font-bold" style={{ fontSize: 18, color: '#1E293B' }}>{user.firstName} {user.lastName}</div>
-              <div style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>{designationName}</div>
+              <div className="font-bold text-lg tracking-[-0.01em] text-foreground">{user.firstName} {user.lastName}</div>
+              <div className="text-2sm text-muted-foreground mt-0.5">{designationName}</div>
               <div className="mt-2"><StatusBadge status={user.role} /></div>
-              {uploading && <div style={{ fontSize: 11, color: '#64748B', marginTop: 6 }}>Uploading…</div>}
+              {uploading && <div className="text-2xs text-muted-foreground mt-1.5">Uploading…</div>}
             </div>
           </div>
 
@@ -195,42 +193,41 @@ export function PersonalProfile({
             </div>
             <FormField label="Email Address">
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
                 {/* paddingLeft is set inline because the `.pf-input` padding
                     shorthand (in the <style> below) would otherwise override a
                     `pl-9` utility class and let the text sit under the icon. */}
-                <input type="email" value={user.email} readOnly className="pf-input" style={{ background: '#F8FAFC', color: '#94A3B8', cursor: 'not-allowed', paddingLeft: 36 }} />
+                <input type="email" value={user.email} readOnly className="pf-input" style={{ paddingLeft: 36 }} />
               </div>
-              <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>Email cannot be changed. Contact your administrator.</p>
+              <p className="text-2xs text-muted-foreground/80 mt-1">Email cannot be changed. Contact your administrator.</p>
             </FormField>
             <FormField label="Contact Number">
               <input type="text" value={contactNumber} onChange={e => setContactNumber(e.target.value)} className="pf-input" />
             </FormField>
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Designation">
-                <input type="text" value={designationName} readOnly className="pf-input" style={{ background: '#F8FAFC', color: '#94A3B8', cursor: 'not-allowed' }} />
+                <input type="text" value={designationName} readOnly className="pf-input" />
               </FormField>
               <FormField label="Role">
-                <div className="rounded-lg border px-3 py-2 flex items-center" style={{ borderColor: '#E2E8F0', background: '#F8FAFC' }}>
+                <div className="rounded-control border border-border bg-muted px-3 py-2 flex items-center">
                   <StatusBadge status={user.role} />
                 </div>
               </FormField>
             </div>
             <div className="flex items-center justify-end pt-2">
-              <button onClick={handleSave} disabled={!canSave} className="rounded-lg px-6 py-2.5 font-semibold text-white hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ fontSize: 14, background: '#1E3A8A' }}>
+              <button onClick={handleSave} disabled={!canSave} className="rounded-control px-6 py-2.5 text-sm font-semibold bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(29,78,216,0.25)] transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
                 {savingProfile ? 'Saving…' : 'Save Changes'}
               </button>
             </div>
           </div>
 
-          <div className="my-8" style={{ borderTop: '1px solid #E2E8F0' }} />
+          <div className="my-8 border-t border-border" />
 
           {/* Reset Password */}
           <div>
             <div className="flex items-center gap-2 mb-5">
-              <Lock className="w-4 h-4" style={{ color: '#64748B' }} />
-              <h3 className="font-semibold" style={{ fontSize: 16, color: '#1E293B' }}>Reset Password</h3>
+              <Lock className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-semibold text-base tracking-[-0.01em] text-foreground">Reset Password</h3>
             </div>
             <div className="space-y-4">
               <FormField label="Current Password">
@@ -245,30 +242,33 @@ export function PersonalProfile({
                 </FormField>
               </div>
               {passwordError && (
-                <p style={{ fontSize: 12, color: '#EF4444' }}>{passwordError}</p>
+                <p className="text-xs text-danger">{passwordError}</p>
               )}
               <div className="flex justify-end">
-                <button onClick={handleUpdatePassword} disabled={savingPassword} className="rounded-lg border px-6 py-2.5 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ fontSize: 14, borderColor: '#1E3A8A', color: '#1E3A8A' }}>
+                <button onClick={handleUpdatePassword} disabled={savingPassword} className="rounded-control border border-primary px-6 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed">
                   {savingPassword ? 'Updating…' : 'Update Password'}
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="my-8" style={{ borderTop: '1px solid #E2E8F0' }} />
+          <div className="my-8 border-t border-border" />
 
           {/* Logout */}
           <button onClick={onLogout}
-            className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 font-semibold border hover:bg-red-50 transition-colors"
-            style={{ fontSize: 14, color: '#EF4444', borderColor: '#FCA5A5' }}>
+            className="w-full flex items-center justify-center gap-2 rounded-control py-2.5 text-sm font-semibold border border-danger/40 text-danger transition-colors hover:bg-danger-surface">
             <LogOut className="w-4 h-4" />
             Logout
           </button>
         </div>
       </div>
 
-      <style>{`.pf-input { width: 100%; border: 1px solid #CBD5E1; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #1E293B; background: #fff; outline: none; } .pf-input:focus { border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }`}</style>
+      <style>{`
+        .pf-input { width: 100%; border: 1px solid var(--input); border-radius: 0.625rem; padding: 8px 12px; font-size: 13px; color: var(--foreground); background: var(--input-background); outline: none; transition: border-color .15s ease, box-shadow .15s ease; }
+        .pf-input:focus { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 15%, transparent); }
+        .pf-input::placeholder { color: color-mix(in srgb, var(--muted-foreground) 60%, transparent); }
+        .pf-input[readonly] { background: var(--muted); color: var(--muted-foreground); cursor: not-allowed; }
+      `}</style>
     </div>
   );
 }
@@ -276,7 +276,7 @@ export function PersonalProfile({
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{label}</label>
+      <label className="block mb-1.5 text-xs font-medium text-foreground/80">{label}</label>
       {children}
     </div>
   );

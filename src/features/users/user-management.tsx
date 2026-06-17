@@ -7,7 +7,9 @@ import type { DesignationManageItem, UserListItem, UserRole, UserStatus } from '
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Select } from '@/components/ui/Select';
 import { PortalMenu } from '@/components/ui/PortalMenu';
+import { OverlayPortal } from '@/components/overlays/OverlayPortal';
 import { CreateUserDrawer } from '@/components/overlays/CreateUserDrawer';
 import { EditUserDrawer } from '@/components/overlays/EditUserDrawer';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
@@ -60,18 +62,19 @@ function DesignationDialog({ title, initialValue = '', onConfirm, onClose }: Des
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(15,36,96,0.45)' }}>
-      <div className="rounded-2xl shadow-2xl flex flex-col" style={{ width: 440, background: '#fff' }}>
-        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
-          <h2 className="font-bold" style={{ fontSize: 16, color: '#1E293B' }}>{title}</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-gray-100" style={{ color: '#94A3B8' }}>
+    <OverlayPortal>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in">
+      <div className="rounded-2xl flex flex-col w-[440px] bg-card text-card-foreground shadow-pop motion-safe:animate-pop-in">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h2 className="font-bold text-base tracking-[-0.01em] text-foreground">{title}</h2>
+          <button onClick={onClose} className="rounded-control p-1.5 text-muted-foreground/80 transition-colors hover:bg-muted hover:text-foreground">
             <X className="w-4 h-4" />
           </button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-5">
-            <label className="block font-medium mb-1.5" style={{ fontSize: 13, color: '#374151' }}>
-              Designation Name <span style={{ color: '#EF4444' }}>*</span>
+            <label className="block font-medium mb-1.5 text-2sm text-foreground/80">
+              Designation Name <span className="text-danger">*</span>
             </label>
             <input
               ref={inputRef}
@@ -79,25 +82,23 @@ function DesignationDialog({ title, initialValue = '', onConfirm, onClose }: Des
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Senior Software Engineer"
-              className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2"
-              style={{ borderColor: '#CBD5E1', fontSize: 13 }}
+              className="w-full rounded-control border border-input bg-input-background text-2sm px-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
             />
           </div>
-          <div className="flex items-center gap-3 px-6 py-4 justify-end" style={{ borderTop: '1px solid #E2E8F0', background: '#F8FAFC', borderRadius: '0 0 16px 16px' }}>
+          <div className="flex items-center gap-3 px-6 py-4 justify-end border-t border-border bg-muted/60 rounded-b-2xl">
             <button type="button" onClick={onClose}
-              className="rounded-lg border px-5 py-2.5 font-medium hover:bg-gray-50 transition-colors"
-              style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>
+              className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
               Cancel
             </button>
             <button type="submit" disabled={!name.trim() || saving}
-              className="rounded-lg px-5 py-2.5 font-semibold text-white hover:opacity-90 transition-colors disabled:opacity-50"
-              style={{ fontSize: 14, background: '#1E3A8A' }}>
+              className="rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50">
               {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
         </form>
       </div>
     </div>
+    </OverlayPortal>
   );
 }
 
@@ -284,34 +285,33 @@ export function UserManagement() {
   };
 
   return (
-    <div>
+    <div className="motion-safe:animate-fade-rise">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-bold" style={{ fontSize: 24, color: '#1E293B' }}>User Management</h1>
+        <h1 className="font-bold text-2xl tracking-[-0.02em] text-foreground">User Management</h1>
         {tab === 'users' && (
           <button onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 rounded-lg px-4 py-2.5 font-semibold text-white hover:opacity-90 transition-colors"
-            style={{ background: '#1E3A8A', fontSize: 14 }}>
+            className="flex items-center gap-2 rounded-control px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(29,78,216,0.25)] transition-all hover:opacity-90 active:scale-[0.98]">
             <Plus className="w-4 h-4" /> Create User
           </button>
         )}
         {tab === 'designations' && (
           <button onClick={() => setShowCreateDesig(true)}
-            className="flex items-center gap-2 rounded-lg px-4 py-2.5 font-semibold text-white hover:opacity-90 transition-colors"
-            style={{ background: '#1E3A8A', fontSize: 14 }}>
+            className="flex items-center gap-2 rounded-control px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(29,78,216,0.25)] transition-all hover:opacity-90 active:scale-[0.98]">
             <Plus className="w-4 h-4" /> New Designation
           </button>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b mb-5" style={{ borderColor: '#E2E8F0' }}>
+      <div className="flex border-b border-border mb-5">
         {[
           { key: 'users', label: 'Users' },
           { key: 'designations', label: 'Designations' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as 'users' | 'designations')}
-            className="mr-6 py-3 font-medium transition-colors"
-            style={{ fontSize: 14, color: tab === t.key ? '#1E3A8A' : '#64748B', borderBottom: tab === t.key ? '2px solid #1E3A8A' : '2px solid transparent' }}>
+            className={`mr-6 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              tab === t.key ? 'text-primary border-primary' : 'text-muted-foreground border-transparent hover:text-foreground'
+            }`}>
             {t.label}
           </button>
         ))}
@@ -320,38 +320,39 @@ export function UserManagement() {
       {/* ── Users tab ── */}
       {tab === 'users' && (
         <div>
-          <div className="flex items-start gap-3 rounded-xl p-4 mb-5" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-            <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#2563EB' }} />
-            <p style={{ fontSize: 13, color: '#1D4ED8' }}>
+          <div className="flex items-start gap-3 rounded-lg p-4 mb-5 bg-info-surface border border-info/30">
+            <Info className="w-4 h-4 mt-0.5 shrink-0 text-info" />
+            <p className="text-2sm text-info-foreground">
               Only Admin-role users can log into the system. Employee accounts are used for asset tracking only.
             </p>
           </div>
 
-          <div className="rounded-xl mb-4 p-4 flex items-center gap-3 flex-wrap" style={{ background: '#fff', border: '1px solid #E2E8F0' }}>
-            <div className="relative flex-1" style={{ minWidth: 240 }}>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
+          <div className="rounded-lg mb-4 p-4 flex items-center gap-3 flex-wrap bg-card border border-border shadow-card">
+            <div className="relative flex-1 min-w-60">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
               <input type="text" value={userSearch} onChange={e => setUserSearch(e.target.value)}
                 placeholder="Search by name or email..."
-                className="w-full rounded-lg border pl-9 pr-3 py-2 focus:outline-none"
-                style={{ borderColor: '#CBD5E1', fontSize: 13 }} />
+                className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring" />
             </div>
-            <select value={filterRole} onChange={e => { setFilterRole(e.target.value as UserRole | ''); setUserPage(1); }}
-              className="rounded-lg border px-3 py-2" style={{ borderColor: '#CBD5E1', fontSize: 13 }}>
-              <option value="">All Roles</option>
-              <option value="Admin">Admin</option>
-              <option value="Employee">Employee</option>
-            </select>
-            <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value as UserStatus | ''); setUserPage(1); }}
-              className="rounded-lg border px-3 py-2" style={{ borderColor: '#CBD5E1', fontSize: 13 }}>
-              <option value="">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+            <Select value={filterRole} onValueChange={v => { setFilterRole(v as UserRole | ''); setUserPage(1); }}
+              ariaLabel="Role" placeholder="All Roles"
+              options={[
+                { value: '', label: 'All Roles' },
+                { value: 'Admin', label: 'Admin' },
+                { value: 'Employee', label: 'Employee' },
+              ]} />
+            <Select value={filterStatus} onValueChange={v => { setFilterStatus(v as UserStatus | ''); setUserPage(1); }}
+              ariaLabel="Status" placeholder="All Statuses"
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'Active', label: 'Active' },
+                { value: 'Inactive', label: 'Inactive' },
+              ]} />
           </div>
 
-          <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">
             {userLoading ? (
-              <div className="flex items-center justify-center py-16" style={{ fontSize: 13, color: '#64748B' }}>
+              <div className="flex items-center justify-center py-16 text-2sm text-muted-foreground">
                 Loading users…
               </div>
             ) : userError ? (
@@ -361,8 +362,7 @@ export function UserManagement() {
                 subtitle={userError}
                 action={
                   <button onClick={() => loadUsers()}
-                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-white hover:opacity-90"
-                    style={{ background: '#1E3A8A', fontSize: 13, fontWeight: 600 }}>
+                    className="flex items-center gap-2 rounded-control px-4 py-2 text-2sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]">
                     <RefreshCw className="w-4 h-4" /> Retry
                   </button>
                 }
@@ -373,23 +373,22 @@ export function UserManagement() {
               <>
                 <table className="w-full table-fixed">
                   <thead>
-                    <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
+                    <tr className="bg-muted/60 border-b-2 border-border">
                       {['Name', 'Email Address', 'Contact', 'Designation', 'Role', 'Status', 'Actions'].map(h => (
-                        <th key={h} className="text-left px-5 py-3" style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', width: h === 'Name' ? '22%' : undefined }}>{h}</th>
+                        <th key={h} className="text-left px-5 py-3 micro-label" style={{ width: h === 'Name' ? '22%' : undefined }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((user, i) => (
-                      <tr key={user.id} style={{ background: i % 2 === 0 ? '#fff' : '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}
-                        className="hover:bg-blue-50/30 transition-colors">
+                      <tr key={user.id}
+                        className={`border-b border-border/60 transition-colors hover:bg-primary/[0.04] ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}>
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3 min-w-0">
                             <Avatar user={user} size={34} />
                             <div className="min-w-0 flex-1">
                               <div
-                                className="font-medium truncate"
-                                style={{ fontSize: 13, color: '#1E293B' }}
+                                className="font-medium text-2sm text-foreground truncate"
                                 title={`${user.firstName} ${user.lastName}`}
                               >
                                 {user.firstName} {user.lastName}
@@ -397,15 +396,18 @@ export function UserManagement() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#475569' }}>{user.email}</td>
-                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B' }}>{user.contactNumber}</td>
-                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B' }}>{user.designation?.name ?? '—'}</td>
+                        <td className="px-5 py-3.5 text-2sm text-foreground/70">{user.email}</td>
+                        <td className="px-5 py-3.5 text-2sm text-muted-foreground nums">{user.contactNumber}</td>
+                        <td className="px-5 py-3.5 text-2sm text-muted-foreground">{user.designation?.name ?? '—'}</td>
                         <td className="px-5 py-3.5"><StatusBadge status={user.role} /></td>
                         <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2 rounded-full px-3 py-1"
-                            style={{ display: 'inline-flex', background: user.status === 'Active' ? '#ECFDF5' : '#F8FAFC', border: '1px solid', borderColor: user.status === 'Active' ? '#A7F3D0' : '#E2E8F0' }}>
-                            <div className="rounded-full" style={{ width: 8, height: 8, background: user.status === 'Active' ? '#22C55E' : '#94A3B8' }} />
-                            <span style={{ fontSize: 12, fontWeight: 500, color: user.status === 'Active' ? '#059669' : '#64748B' }}>{user.status}</span>
+                          <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 border ${
+                            user.status === 'Active'
+                              ? 'bg-success-surface border-success/30'
+                              : 'bg-neutral-surface border-border'
+                          }`}>
+                            <div className={`rounded-full w-2 h-2 ${user.status === 'Active' ? 'bg-success' : 'bg-neutral'}`} />
+                            <span className={`text-xs font-medium ${user.status === 'Active' ? 'text-success-foreground' : 'text-muted-foreground'}`}>{user.status}</span>
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
@@ -415,21 +417,18 @@ export function UserManagement() {
                               const rect = e.currentTarget.getBoundingClientRect();
                               setOpenMenu({ id: user.id, top: rect.bottom + 4, right: window.innerWidth - rect.right });
                             }}
-                            className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors"
-                            style={{ color: '#64748B' }}
+                            className="rounded-control p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                           >
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
                           {openMenu?.id === user.id && (
                             <PortalMenu anchor={openMenu} onClose={() => setOpenMenu(null)}>
                               <button onClick={() => setOpenMenu(null)}
-                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-                                style={{ fontSize: 13, color: '#334155' }}>
+                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-2sm text-foreground hover:bg-muted transition-colors">
                                 <Eye className="w-3.5 h-3.5" /> View Profile
                               </button>
                               <button onClick={() => { setOpenMenu(null); setEditTarget(user); }}
-                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-                                style={{ fontSize: 13, color: '#334155' }}>
+                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-2sm text-foreground hover:bg-muted transition-colors">
                                 <Pencil className="w-3.5 h-3.5" /> Edit
                               </button>
                               {(() => {
@@ -437,28 +436,24 @@ export function UserManagement() {
                                 const label = user.status === 'Active' ? 'Deactivate' : 'Activate';
                                 return isSelf && user.status === 'Active' ? (
                                   <button disabled
-                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left opacity-40 cursor-not-allowed"
-                                    style={{ fontSize: 13, color: '#D97706' }}>
+                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-2sm text-warning-foreground opacity-40 cursor-not-allowed">
                                     <UserX className="w-3.5 h-3.5" /> {label}
                                   </button>
                                 ) : (
                                   <button onClick={() => handleToggleStatus(user)}
-                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-                                    style={{ fontSize: 13, color: '#D97706' }}>
+                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-2sm text-warning-foreground hover:bg-muted transition-colors">
                                     <UserX className="w-3.5 h-3.5" /> {label}
                                   </button>
                                 );
                               })()}
                               {currentUser?.id === user.id ? (
                                 <button disabled
-                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left opacity-40 cursor-not-allowed"
-                                  style={{ fontSize: 13, color: '#EF4444' }}>
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-2sm text-danger opacity-40 cursor-not-allowed">
                                   <Trash2 className="w-3.5 h-3.5" /> Remove User
                                 </button>
                               ) : (
                                 <button onClick={() => handleDeleteUser(user)}
-                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-                                  style={{ fontSize: 13, color: '#EF4444' }}>
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-2sm text-danger hover:bg-muted transition-colors">
                                   <Trash2 className="w-3.5 h-3.5" /> Remove User
                                 </button>
                               )}
@@ -469,20 +464,18 @@ export function UserManagement() {
                     ))}
                   </tbody>
                 </table>
-                <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid #F1F5F9' }}>
-                  <span style={{ fontSize: 13, color: '#64748B' }}>
+                <div className="flex items-center justify-between px-5 py-4 border-t border-border/60">
+                  <span className="text-2sm text-muted-foreground nums">
                     Showing {Math.min((userPage - 1) * PER_PAGE + 1, userTotal)}–{Math.min(userPage * PER_PAGE, userTotal)} of {userTotal} users
                   </span>
                   <div className="flex items-center gap-2">
                     <button onClick={() => setUserPage(p => Math.max(1, p - 1))} disabled={userPage === 1}
-                      className="rounded-lg px-3 py-1.5 border transition-colors hover:bg-gray-50 disabled:opacity-40"
-                      style={{ fontSize: 13, color: '#475569', borderColor: '#E2E8F0' }}>
+                      className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40">
                       Previous
                     </button>
-                    <span style={{ fontSize: 13, color: '#64748B' }}>Page {userPage} of {userTotalPages}</span>
+                    <span className="text-2sm text-muted-foreground nums">Page {userPage} of {userTotalPages}</span>
                     <button onClick={() => setUserPage(p => Math.min(userTotalPages, p + 1))} disabled={userPage >= userTotalPages}
-                      className="rounded-lg px-3 py-1.5 border transition-colors hover:bg-gray-50 disabled:opacity-40"
-                      style={{ fontSize: 13, color: '#475569', borderColor: '#E2E8F0' }}>
+                      className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40">
                       Next
                     </button>
                   </div>
@@ -496,25 +489,25 @@ export function UserManagement() {
       {/* ── Designations tab ── */}
       {tab === 'designations' && (
         <div>
-          <div className="rounded-xl mb-4 p-4 flex items-center gap-3 flex-wrap" style={{ background: '#fff', border: '1px solid #E2E8F0' }}>
-            <div className="relative flex-1" style={{ minWidth: 240 }}>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
+          <div className="rounded-lg mb-4 p-4 flex items-center gap-3 flex-wrap bg-card border border-border shadow-card">
+            <div className="relative flex-1 min-w-60">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
               <input type="text" value={dSearch} onChange={e => setDSearch(e.target.value)}
                 placeholder="Search designations..."
-                className="w-full rounded-lg border pl-9 pr-3 py-2 focus:outline-none"
-                style={{ borderColor: '#CBD5E1', fontSize: 13 }} />
+                className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring" />
             </div>
-            <select value={dFilterStatus} onChange={e => { setDFilterStatus(e.target.value as 'Active' | 'Inactive' | ''); setDPage(1); }}
-              className="rounded-lg border px-3 py-2" style={{ borderColor: '#CBD5E1', fontSize: 13 }}>
-              <option value="">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+            <Select value={dFilterStatus} onValueChange={v => { setDFilterStatus(v as 'Active' | 'Inactive' | ''); setDPage(1); }}
+              ariaLabel="Status" placeholder="All Statuses"
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'Active', label: 'Active' },
+                { value: 'Inactive', label: 'Inactive' },
+              ]} />
           </div>
 
-          <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">
             {dLoading ? (
-              <div className="flex items-center justify-center py-16" style={{ fontSize: 13, color: '#64748B' }}>
+              <div className="flex items-center justify-center py-16 text-2sm text-muted-foreground">
                 Loading designations…
               </div>
             ) : dError ? (
@@ -524,8 +517,7 @@ export function UserManagement() {
                 subtitle={dError}
                 action={
                   <button onClick={() => loadDesignations()}
-                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-white hover:opacity-90"
-                    style={{ background: '#1E3A8A', fontSize: 13, fontWeight: 600 }}>
+                    className="flex items-center gap-2 rounded-control px-4 py-2 text-2sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]">
                     <RefreshCw className="w-4 h-4" /> Retry
                   </button>
                 }
@@ -536,22 +528,22 @@ export function UserManagement() {
               <>
                 <table className="w-full">
                   <thead>
-                    <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
+                    <tr className="bg-muted/60 border-b-2 border-border">
                       {['Designation Name', 'Last Modified', 'Status', 'Actions'].map(h => (
-                        <th key={h} className="text-left px-5 py-3" style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                        <th key={h} className="text-left px-5 py-3 micro-label">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {designations.map((d, i) => (
-                      <tr key={d.id} style={{ background: i % 2 === 0 ? '#fff' : '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
-                        <td className="px-5 py-3.5 font-medium" style={{ fontSize: 13, color: '#1E293B' }}>{d.name}</td>
-                        <td className="px-5 py-3.5" style={{ fontSize: 13, color: '#64748B' }}>{formatDate(d.updatedAt)}</td>
+                      <tr key={d.id} className={`border-b border-border/60 transition-colors hover:bg-primary/[0.04] ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}>
+                        <td className="px-5 py-3.5 font-medium text-2sm text-foreground">{d.name}</td>
+                        <td className="px-5 py-3.5 text-2sm text-muted-foreground nums">{formatDate(d.updatedAt)}</td>
                         <td className="px-5 py-3.5"><StatusBadge status={d.status} /></td>
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
                             <button onClick={() => setEditDesig(d)}
-                              className="hover:underline" style={{ fontSize: 13, color: '#2563EB' }}>
+                              className="hover:underline text-2sm text-primary">
                               Edit
                             </button>
                             <button
@@ -562,12 +554,11 @@ export function UserManagement() {
                                   void executeDesignationStatusChange(d, 'Active');
                                 }
                               }}
-                              className="hover:underline"
-                              style={{ fontSize: 13, color: '#D97706' }}>
+                              className="hover:underline text-2sm text-warning-foreground">
                               {d.status === 'Active' ? 'Deactivate' : 'Activate'}
                             </button>
                             <button onClick={() => setDeleteDesig(d)}
-                              className="hover:underline" style={{ fontSize: 13, color: '#EF4444' }}>
+                              className="hover:underline text-2sm text-danger">
                               Delete
                             </button>
                           </div>
@@ -576,20 +567,18 @@ export function UserManagement() {
                     ))}
                   </tbody>
                 </table>
-                <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid #F1F5F9' }}>
-                  <span style={{ fontSize: 13, color: '#64748B' }}>
+                <div className="flex items-center justify-between px-5 py-4 border-t border-border/60">
+                  <span className="text-2sm text-muted-foreground nums">
                     Showing {Math.min((dPage - 1) * PER_PAGE + 1, dTotal)}–{Math.min(dPage * PER_PAGE, dTotal)} of {dTotal} designations
                   </span>
                   <div className="flex items-center gap-2">
                     <button onClick={() => setDPage(p => Math.max(1, p - 1))} disabled={dPage === 1}
-                      className="rounded-lg px-3 py-1.5 border transition-colors hover:bg-gray-50 disabled:opacity-40"
-                      style={{ fontSize: 13, color: '#475569', borderColor: '#E2E8F0' }}>
+                      className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40">
                       Previous
                     </button>
-                    <span style={{ fontSize: 13, color: '#64748B' }}>Page {dPage} of {dTotalPages}</span>
+                    <span className="text-2sm text-muted-foreground nums">Page {dPage} of {dTotalPages}</span>
                     <button onClick={() => setDPage(p => Math.min(dTotalPages, p + 1))} disabled={dPage >= dTotalPages}
-                      className="rounded-lg px-3 py-1.5 border transition-colors hover:bg-gray-50 disabled:opacity-40"
-                      style={{ fontSize: 13, color: '#475569', borderColor: '#E2E8F0' }}>
+                      className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40">
                       Next
                     </button>
                   </div>

@@ -107,19 +107,15 @@ export function ImageUploadZone({
         onDragOver={(e) => { e.preventDefault(); if (!uploading) setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => { if (uploading) { e.preventDefault(); return; } onDrop(e); }}
-        className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-8 transition-colors"
-        style={{
-          borderColor: dragging ? '#3B82F6' : '#CBD5E1',
-          background: dragging ? '#EFF6FF' : '#FAFAFA',
-          cursor: uploading ? 'not-allowed' : 'pointer',
-          opacity: uploading ? 0.6 : 1,
-        }}
+        className={`rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-8 transition-colors ${
+          dragging ? 'border-info bg-secondary' : 'border-input bg-muted/50'
+        } ${uploading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
       >
-        <CloudUpload className="w-8 h-8 mb-3" style={{ color: dragging ? '#3B82F6' : '#CBD5E1' }} />
-        <div className="font-medium mb-1" style={{ fontSize: 14, color: dragging ? '#2563EB' : '#64748B' }}>
+        <CloudUpload className={`w-8 h-8 mb-3 ${dragging ? 'text-info' : 'text-muted-foreground/50'}`} />
+        <div className={`font-medium mb-1 text-sm ${dragging ? 'text-primary' : 'text-muted-foreground'}`}>
           {uploading ? 'Uploading…' : 'Drag images here or click to browse'}
         </div>
-        <div style={{ fontSize: 12, color: '#94A3B8' }}>
+        <div className="text-xs text-muted-foreground/80">
           {ACCEPTED_EXT} · Max {MAX_FILES} images · {total}/{MAX_FILES} added
         </div>
         <input
@@ -138,8 +134,7 @@ export function ImageUploadZone({
           {existing.map((img) => (
             <div
               key={img.id}
-              className="relative rounded-lg overflow-hidden"
-              style={{ width: 72, height: 72, border: '1px solid #E2E8F0', background: '#F8FAFC' }}
+              className="relative rounded-md overflow-hidden w-[72px] h-[72px] border border-border bg-muted"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -151,8 +146,7 @@ export function ImageUploadZone({
                 <button
                   onClick={(e) => { e.stopPropagation(); if (!uploading) onRemoveExisting(img.id); }}
                   disabled={uploading}
-                  className="absolute top-0.5 right-0.5 rounded-full flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50"
-                  style={{ width: 18, height: 18, background: '#EF4444' }}
+                  className="absolute top-0.5 right-0.5 rounded-full flex items-center justify-center w-[18px] h-[18px] bg-danger hover:opacity-90 transition-opacity disabled:opacity-50"
                   title="Remove"
                 >
                   <X className="w-2.5 h-2.5 text-white" />
@@ -163,8 +157,7 @@ export function ImageUploadZone({
           {images.map((img) => (
             <div
               key={img.key}
-              className="relative rounded-lg overflow-hidden"
-              style={{ width: 72, height: 72, border: '1px solid #E2E8F0', background: '#F8FAFC' }}
+              className="relative rounded-md overflow-hidden w-[72px] h-[72px] border border-border bg-muted"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -174,16 +167,14 @@ export function ImageUploadZone({
               />
               <button
                 onClick={(e) => { e.stopPropagation(); removeImage(img.key); }}
-                className="absolute top-0.5 right-0.5 rounded-full flex items-center justify-center hover:opacity-90 transition-opacity"
-                style={{ width: 18, height: 18, background: '#EF4444' }}
+                className="absolute top-0.5 right-0.5 rounded-full flex items-center justify-center w-[18px] h-[18px] bg-danger hover:opacity-90 transition-opacity"
                 title="Remove"
               >
                 <X className="w-2.5 h-2.5 text-white" />
               </button>
-              <div className="absolute bottom-0 left-0 right-0 flex items-center gap-0.5 px-1 py-0.5"
-                style={{ background: 'rgba(0,0,0,0.5)' }}>
+              <div className="absolute bottom-0 left-0 right-0 flex items-center gap-0.5 px-1 py-0.5 bg-black/50">
                 <ImageIcon className="w-2.5 h-2.5 text-white shrink-0" />
-                <span className="text-white truncate" style={{ fontSize: 8 }}>{img.file.name}</span>
+                <span className="text-white truncate text-[8px]">{img.file.name}</span>
               </div>
             </div>
           ))}

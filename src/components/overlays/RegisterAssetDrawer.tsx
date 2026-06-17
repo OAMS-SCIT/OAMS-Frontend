@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { OverlayPortal } from './OverlayPortal';
+import { useDrawerAnimation } from './useDrawerAnimation';
 import { ImageUploadZone, type UploadedImage } from '@/components/ui/ImageUploadZone';
+import { Select } from '@/components/ui/Select';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { toast } from 'sonner';
 import {
   ApiError,
@@ -323,19 +327,14 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
     if (attr.type === 'Dropdown') {
       return (
         <FormField key={attr.id} fieldId={fieldId} label={attr.label} required={attr.isRequired} error={err}>
-          <select
-            id={fieldId}
+          <Select
             value={val}
-            onChange={(e) => setAttr(attr.id, e.target.value)}
-            className="form-input"
-          >
-            <option value="">Select…</option>
-            {attr.options.map((opt) => (
-              <option key={opt.id} value={opt.label}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onValueChange={(v) => setAttr(attr.id, v)}
+            placeholder="Select…"
+            ariaLabel={attr.label}
+            className="w-full"
+            options={[{ value: '', label: 'Select…' }, ...attr.options.map((opt) => ({ value: opt.label, label: opt.label }))]}
+          />
         </FormField>
       );
     }
@@ -356,28 +355,29 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
 
   // ── JSX ───────────────────────────────────────────────────────────────────
 
+  const { closing, requestClose } = useDrawerAnimation(onClose);
   return (
-    <>
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(15,36,96,0.45)' }} onClick={onClose} />
-      <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col" style={{ width: 520, background: '#fff', boxShadow: '-8px 0 32px rgba(0,0,0,0.14)' }}>
+    <OverlayPortal>
+      <div className={`fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] ${closing ? 'motion-safe:animate-overlay-out' : 'motion-safe:animate-overlay-in'}`} onClick={requestClose} />
+      <div className={`fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] ${closing ? 'motion-safe:animate-drawer-out' : 'motion-safe:animate-drawer-in'}`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #E2E8F0' }}>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <div>
-            <h2 className="font-bold" style={{ fontSize: 18, color: '#1E293B' }}>
+            <h2 className="font-bold text-lg tracking-[-0.02em] text-foreground">
               {isEdit ? 'Edit Asset' : 'Register New Asset'}
             </h2>
-            <p style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>
+            <p className="text-2sm text-muted-foreground mt-0.5">
               {isEdit ? 'Update the details for this asset' : 'Fill in the details to register a new asset'}
             </p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 transition-colors">
-            <X className="w-5 h-5" style={{ color: '#64748B' }} />
+          <button onClick={requestClose} className="rounded-control p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
         {loadingInit ? (
-          <div className="flex-1 flex items-center justify-center" style={{ fontSize: 13, color: '#64748B' }}>
+          <div className="flex-1 flex items-center justify-center text-2sm text-muted-foreground">
             Loading…
           </div>
         ) : (
@@ -411,23 +411,21 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             {/* Section 2 - Category & Dynamic Attributes */}
             <FormSection title="Category & Attributes">
               <FormField label="Category" required error={errors.categoryId}>
-                <select
+                <Select
                   value={form.categoryId}
-                  onChange={(e) => set('categoryId', e.target.value)}
-                  className="form-input"
-                  disabled={isEdit} // category locked after creation
-                >
-                  <option value="">Select a category…</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name}</option>
-                  ))}
-                </select>
+                  onValueChange={(v) => set('categoryId', v)}
+                  placeholder="Select a category…"
+                  ariaLabel="Category"
+                  className="w-full"
+                  disabled={isEdit}
+                  options={[{ value: '', label: 'Select a category…' }, ...categories.map((c) => ({ value: c.id, label: c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name }))]}
+                />
               </FormField>
               {!form.categoryId && (
-                <p style={{ fontSize: 12, color: '#94A3B8', fontStyle: 'italic' }}>Select a category to see additional fields</p>
+                <p className="text-xs text-muted-foreground/80 italic">Select a category to see additional fields</p>
               )}
               {loadingAttrs && (
-                <p style={{ fontSize: 12, color: '#94A3B8' }}>Loading attributes…</p>
+                <p className="text-xs text-muted-foreground/80">Loading attributes…</p>
               )}
               {attrLoadError && !loadingAttrs && (
                 <p style={{ fontSize: 12, color: '#EF4444' }}>
@@ -441,13 +439,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             <FormSection title="Purchase Details">
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Purchase Date" required error={errors.purchaseDate}>
-                  <input type="date" value={form.purchaseDate} onChange={(e) => set('purchaseDate', e.target.value)} className="form-input" />
+                  <DatePicker value={form.purchaseDate} onChange={(v) => set('purchaseDate', v)} ariaLabel="Purchase Date" className="w-full" />
                 </FormField>
                 <FormField label="Purchase Price" required error={errors.purchasePrice}>
                   <div className="relative">
-                    <span
-                      className="absolute top-1/2 -translate-y-1/2 pointer-events-none select-none text-sm"
-                      style={{ left: 12, color: '#94A3B8', zIndex: 1 }}>
+                    <span className="absolute top-1/2 -translate-y-1/2 pointer-events-none select-none text-sm left-3 z-[1] text-muted-foreground/70">
                       $
                     </span>
                     <input type="number" value={form.purchasePrice}
@@ -471,10 +467,10 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             <FormSection title="Warranty">
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Warranty Start Date">
-                  <input type="date" value={form.warrantyStartDate} onChange={(e) => set('warrantyStartDate', e.target.value)} className="form-input" />
+                  <DatePicker value={form.warrantyStartDate} onChange={(v) => set('warrantyStartDate', v)} ariaLabel="Warranty Start Date" className="w-full" />
                 </FormField>
                 <FormField label="Warranty Expiry Date" error={errors.warrantyExpiryDate}>
-                  <input type="date" value={form.warrantyExpiryDate} onChange={(e) => set('warrantyExpiryDate', e.target.value)} className="form-input" />
+                  <DatePicker value={form.warrantyExpiryDate} onChange={(v) => set('warrantyExpiryDate', v)} ariaLabel="Warranty Expiry Date" className="w-full" />
                 </FormField>
               </div>
               <FormField label="Warranty Provider / Contact (Optional)">
@@ -489,13 +485,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 <div className="flex gap-2">
                   {CONDITIONS.map((c) => (
                     <button key={c} onClick={() => set('condition', c)}
-                      className="flex-1 rounded-lg py-2 border transition-all"
-                      style={{
-                        fontSize: 13, fontWeight: 500,
-                        borderColor: form.condition === c ? '#3B82F6' : '#E2E8F0',
-                        background: form.condition === c ? '#EFF6FF' : '#fff',
-                        color: form.condition === c ? '#2563EB' : '#64748B',
-                      }}>
+                      className={`flex-1 rounded-control py-2 border text-2sm font-medium transition-all ${
+                        form.condition === c
+                          ? 'border-primary bg-secondary text-secondary-foreground'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                      }`}>
                       {c}
                     </button>
                   ))}
@@ -526,14 +520,12 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         )}
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-6 py-4 justify-end" style={{ borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-          <button onClick={onClose} className="rounded-lg border px-5 py-2.5 font-medium transition-colors hover:bg-gray-50"
-            style={{ fontSize: 14, borderColor: '#E2E8F0', color: '#475569' }}>
+        <div className="flex items-center gap-3 px-6 py-4 justify-end border-t border-border bg-muted/60 rounded-bl-[16px]">
+          <button onClick={requestClose} className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving || loadingInit || loadingAttrs}
-            className="rounded-lg px-5 py-2.5 font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60"
-            style={{ fontSize: 14, background: '#1E3A8A' }}>
+            className="rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60">
             {saving ? 'Saving…' : isEdit ? 'Edit Asset' : 'Register Asset'}
           </button>
         </div>
@@ -542,30 +534,33 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
       <style>{`
         .form-input {
           width: 100%;
-          border: 1px solid #CBD5E1;
-          border-radius: 8px;
+          border: 1px solid var(--input);
+          border-radius: 0.625rem;
           padding: 8px 12px;
           font-size: 13px;
-          color: #1E293B;
-          background: #fff;
+          color: var(--foreground);
+          background: var(--input-background);
           outline: none;
           transition: border-color 0.15s, box-shadow 0.15s;
         }
         .form-input:focus {
-          border-color: #3B82F6;
-          box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+          border-color: var(--ring);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 15%, transparent);
         }
-        .form-input:disabled { background: #F8FAFC; cursor: not-allowed; }
+        .form-input::placeholder {
+          color: color-mix(in srgb, var(--muted-foreground) 60%, transparent);
+        }
+        .form-input:disabled { background: var(--muted); cursor: not-allowed; }
         .form-input.font-mono { font-family: monospace; }
       `}</style>
-    </>
+    </OverlayPortal>
   );
 }
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="font-semibold mb-3 pb-2" style={{ fontSize: 14, color: '#1E293B', borderBottom: '1px solid #F1F5F9' }}>{title}</div>
+      <div className="font-semibold mb-3 pb-2 text-sm text-foreground border-b border-border/60">{title}</div>
       <div className="space-y-3">{children}</div>
     </div>
   );
@@ -574,11 +569,11 @@ function FormSection({ title, children }: { title: string; children: React.React
 function FormField({ label, fieldId, required, error, children }: { label: string; fieldId?: string; required?: boolean; error?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label htmlFor={fieldId} className="block mb-1.5" style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
-        {label} {required && <span style={{ color: '#EF4444' }}>*</span>}
+      <label htmlFor={fieldId} className="block mb-1.5 text-xs font-medium text-foreground/80">
+        {label} {required && <span className="text-danger">*</span>}
       </label>
       {children}
-      {error && <p style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>{error}</p>}
+      {error && <p className="text-xs text-danger mt-1">{error}</p>}
     </div>
   );
 }
