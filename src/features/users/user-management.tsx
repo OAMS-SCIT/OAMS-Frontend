@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Plus, Search, MoreHorizontal, Eye, Pencil, UserX, Trash2, Info, RefreshCw, X } from 'lucide-react';
 import type { DesignationManageItem, UserListItem, UserRole, UserStatus } from '@/types';
@@ -106,6 +107,7 @@ function DesignationDialog({ title, initialValue = '', onConfirm, onClose }: Des
 
 export function UserManagement() {
   const { user: currentUser } = useAuth();
+  const router = useRouter();
   const [tab, setTab] = useState<'users' | 'designations'>('users');
 
   // ── Users tab state ──
@@ -436,7 +438,7 @@ export function UserManagement() {
                           </button>
                           {openMenu?.id === user.id && (
                             <PortalMenu anchor={openMenu} onClose={() => setOpenMenu(null)}>
-                              <button onClick={() => setOpenMenu(null)}
+                              <button onClick={() => { setOpenMenu(null); router.push(`/admin/users/${user.id}`); }}
                                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-2sm text-foreground hover:bg-muted transition-colors">
                                 <Eye className="w-3.5 h-3.5" /> View Profile
                               </button>
