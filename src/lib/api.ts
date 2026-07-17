@@ -1,13 +1,16 @@
 import type {
   ActiveAssignmentListItem,
   Assignment,
+  AssignmentConditionImages,
   AssignmentHistoryItem,
+  AssetCostSummary,
   AssetDetail,
   AssetHistoryEntry,
   AssetListItem,
   AssetStatus,
   AssetUpgrade,
   AuthUser,
+  ConditionImageItem,
   CreateAssignmentPayload,
   CategoryDetail,
   CategoryListItem,
@@ -317,6 +320,8 @@ export interface GetCategoriesParams {
   status?: string;
   page?: number;
   limit?: number;
+  sortBy?: 'name' | 'createdAt';
+  order?: 'ASC' | 'DESC';
 }
 
 export function getCategories(
@@ -327,6 +332,8 @@ export function getCategories(
     status: params.status,
     page: params.page,
     limit: params.limit,
+    sortBy: params.sortBy,
+    order: params.order,
   };
   return request<PaginatedResult<CategoryListItem>>('/categories', { query });
 }
@@ -571,4 +578,38 @@ export function getAssetHistory(
   assetId: string,
 ): Promise<{ data: AssetHistoryEntry[] }> {
   return request<{ data: AssetHistoryEntry[] }>(`/assets/${assetId}/history`);
+}
+
+// ── Cost Summary (OAMS-263/265) ────────────────────────────────────────────
+
+export function getAssetCostSummary(assetId: string): Promise<AssetCostSummary> {
+  return request<AssetCostSummary>(`/assets/${assetId}/cost-summary`);
+}
+
+// ── Condition Images (OAMS-257/262) ───────────────────────────────────────
+
+/** Upload condition images for a specific assignment event (type: 'assigned' | 'returned'). */
+export function uploadConditionImages(
+  assignmentId: string,
+  files: File[],
+  type: 'assigned' | 'returned',
+): Promise<ConditionImageItem[]> {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  return request<ConditionImageItem[]>(`/assignments/${assignmentId}/condition-images`, {
+    method: 'POST',
+    body: formData,
+    query: { type },
+  });
+}
+
+/** Get all condition images for an assignment, grouped by type. */
+export function getAssignmentConditionImages(
+  assignmentId: string,
+): Promise<AssignmentConditionImages> {
+  return request<AssignmentConditionImages>(
+    `/assignments/${assignmentId}/condition-images`,
+  );
 }
