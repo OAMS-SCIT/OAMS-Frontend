@@ -27,8 +27,9 @@ import * as os from 'os';
 // ── Config ─────────────────────────────────────────────────────────────────────
 
 const BASE_URL       = process.env.BASE_URL       ?? 'http://localhost:3000';
-// BE runs on 4000 with /api global prefix (matches BE .env PORT=4000 + setGlobalPrefix('api')).
-const API_URL        = process.env.API_URL        ?? 'http://localhost:4000/api';
+// Use 127.0.0.1 to avoid macOS IPv6/IPv4 split where Node.js fetch resolves
+// "localhost" to ::1 but NestJS listens on 0.0.0.0 (IPv4 only).
+const API_URL        = process.env.API_URL        ?? 'http://127.0.0.1:4000/api';
 const ADMIN_EMAIL    = process.env.ADMIN_EMAIL    ?? 'admin@oams.com';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'Admin@123';
 const SEED_ASSET_ID  = process.env.ASSET_ID       ?? '';
@@ -105,23 +106,44 @@ let employeeId   = '';
 // Setup — get an asset + create a fresh assignment
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.beforeAll(async () => {
-  // Confirm the API is reachable
-  const loginUrl = `${API_URL}/auth/login`;
-  console.log(`ℹ Pinging backend at: ${loginUrl}`);
-  const ping = await fetch(loginUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
-  }).catch((e) => { console.error(`✖ Fetch error: ${e.message}`); return null; });
-
-  if (!ping) {
-    throw new Error(`Backend unreachable at ${loginUrl} — is the BE server running?`);
+/** Retry a fetch up to maxAttempts times with a delay between each. */
+async function fetchWithRetry(
+  url: string,
+  opts: RequestInit,
+  maxAttempts = 5,
+  delayMs = 2000,
+): Promise<Response> {
+  let lastErr: unknown;
+  for (let i = 1; i <= maxAttempts; i++) {
+    try {
+      const res = await fetch(url, opts);
+      return res;
+    } catch (e) {
+      lastErr = e;
+      console.warn(`  Attempt ${i}/${maxAttempts} failed: ${(e as Error).message}. Retrying in ${delayMs}ms…`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
   }
+  throw new Error(`Backend unreachable at ${url} after ${maxAttempts} attempts: ${(lastErr as Error).message}`);
+}
+
+test.beforeAll(async () => {
+  const loginUrl = `${API_URL}/auth/login`;
+  const loginBody = JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  const loginHeaders = { 'Content-Type': 'application/json' };
+
+  console.log(`ℹ Connecting to backend at: ${loginUrl}`);
+  const ping = await fetchWithRetry(loginUrl, { method: 'POST', headers: loginHeaders, body: loginBody });
+
   if (!ping.ok) {
     const body = await ping.text().catch(() => '');
-    throw new Error(`Auth failed (${ping.status}) at ${loginUrl}: ${body}`);
+    throw new Error(`Auth failed (${ping.status}): ${body}`);
   }
+
+  // Re-use the token from the ping so we don't call login twice.
+  const loginData = await ping.json();
+  _token = loginData.accessToken;
+  console.log(`✔ Authenticated as ${ADMIN_EMAIL}`);
 
   if (!assetId) {
     const result = await apiFetch('/assets?status=Available&limit=1');
