@@ -42,8 +42,10 @@ function BreakdownTable({ rows }: { rows: CostBreakdownItem[] }) {
 
   const displayed = filter === 'All' ? rows : rows.filter((r) => r.category === filter);
 
-  // All categories that actually appear in the data (plus 'All').
-  const availableCategories = ['All', ...Array.from(new Set(rows.map((r) => r.category)))];
+  // Always show all known categories so the empty-state is reachable even when a
+  // category has no rows yet (e.g. no upgrades yet → "Upgrade" still appears and
+  // clicking it shows "No cost entries for the selected category.").
+  const availableCategories = [...CATEGORIES];
 
   return (
     <div className="p-6 pt-5">

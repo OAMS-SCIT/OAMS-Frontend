@@ -46,10 +46,10 @@ async function login(page: Page) {
 
 /** Create a minimal 1×1 red PNG in a temp dir and return its path. */
 function makePng(name: string): string {
+  // Valid 1×1 RGB (red) PNG with correct CRCs — generated via Node zlib/crc32.
   const PNG_1X1 = Buffer.from(
-    '89504e470d0a1a0a0000000d49484452000000010000000108020000009001' +
-    '2e0000000c4944415478016360f8cfc00000000200014a54a9000000000049454e44ae426082',
-    'hex',
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP4z8AAAAMBAQD3A0FDAAAAAElFTkSuQmCC',
+    'base64',
   );
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oams-'));
   const fp  = path.join(dir, name);
@@ -603,7 +603,10 @@ test.describe('OAMS-263 — Cost Summary tab', () => {
     await page.getByRole('button', { name: /^cost summary$/i }).click();
 
     await expect(page.getByText(/total cost/i)).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(expectedTotal)).toBeVisible({ timeout: 5_000 });
+    // Use the card's own div — the label "Total Cost" and value are siblings inside it.
+    // `.filter({ hasText: /total cost/i })` on a div that also contains the value is strict-safe.
+    const totalCostCard = page.locator('div').filter({ hasText: /^Total Cost/ }).first();
+    await expect(totalCostCard.getByText(expectedTotal)).toBeVisible({ timeout: 5_000 });
   });
 
   test('Purchase Cost card value matches API purchaseCost', async ({ page }) => {
@@ -617,7 +620,9 @@ test.describe('OAMS-263 — Cost Summary tab', () => {
     await page.getByRole('button', { name: /^cost summary$/i }).click();
     await expect(page.getByText(/purchase cost/i)).toBeVisible({ timeout: 10_000 });
 
-    await expect(page.getByText(fmt(summary.purchaseCost))).toBeVisible();
+    // Scope to the Purchase Cost card to avoid strict-mode violations from duplicate dollar values.
+    const purchaseCostCard = page.locator('div').filter({ hasText: /^Purchase Cost/ }).first();
+    await expect(purchaseCostCard.getByText(fmt(summary.purchaseCost))).toBeVisible();
   });
 
   test('Cost Summary tab is refreshed each time it is activated', async ({ page }) => {
@@ -760,9 +765,10 @@ test.describe('OAMS-265 — Cost Breakdown table', () => {
     await page.getByRole('button', { name: /all categories/i }).click();
     await page.getByRole('button', { name: /^purchase$/i }).click();
 
-    // Reset to All
+    // Reset to All — re-open dropdown (filter button is now "Purchase"), then pick "All Categories".
+    // The filter button is "Purchase", so only one "All Categories" button exists (the dropdown item).
     await page.getByRole('button', { name: /^purchase$/i }).first().click();
-    await page.getByRole('button', { name: /all categories/i }).nth(1).click();
+    await page.getByRole('button', { name: /all categories/i }).first().click();
 
     // Should show same total count as before
     const afterReset = await page.locator('table tbody tr').count();
