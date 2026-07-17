@@ -27,8 +27,8 @@ import * as os from 'os';
 // ── Config ─────────────────────────────────────────────────────────────────────
 
 const BASE_URL       = process.env.BASE_URL       ?? 'http://localhost:3000';
-// BE runs on 3001 by default (NEXT_PUBLIC_API_URL in FE .env), with /api global prefix.
-const API_URL        = process.env.API_URL        ?? 'http://localhost:3001/api';
+// BE runs on 4000 with /api global prefix (matches BE .env PORT=4000 + setGlobalPrefix('api')).
+const API_URL        = process.env.API_URL        ?? 'http://localhost:4000/api';
 const ADMIN_EMAIL    = process.env.ADMIN_EMAIL    ?? 'admin@oams.com';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'Admin@123';
 const SEED_ASSET_ID  = process.env.ASSET_ID       ?? '';
