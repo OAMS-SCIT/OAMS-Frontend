@@ -145,28 +145,22 @@ test.beforeAll(async () => {
   _token = loginData.accessToken;
   console.log(`✔ Authenticated as ${ADMIN_EMAIL}`);
 
-  // ── 1. Pick any asset (ignore status — most tests only need history/cost data) ─
-  if (!assetId) {
-    const result = await apiFetch('/assets?limit=1');
-    if (!result?.data?.[0]) throw new Error('No assets in DB. Seed the database first.');
-    assetId = result.data[0].id;
-  }
-  console.log(`ℹ Using asset: ${assetId}`);
-
-  // ── 2. Find an existing active assignment for this asset (reuse across runs) ──
-  const existingHistory = await apiFetch(`/assignments/asset/${assetId}?limit=10`);
-  const activeAssignment = existingHistory?.data?.find((a: { isReturned: boolean }) => !a.isReturned);
-  if (activeAssignment) {
-    assignmentId = activeAssignment.id;
-    employeeId   = activeAssignment.employee?.id ?? '';
-    console.log(`ℹ Reusing active assignment: ${assignmentId}`);
+  // ── 1. Reuse any existing active assignment in the system ────────────────────
+  const activeList = await apiFetch('/assignments?limit=1');
+  if (activeList?.data?.[0]) {
+    const a = activeList.data[0];
+    assignmentId = a.id;
+    assetId      = assetId || a.asset?.id || a.assetId;
+    employeeId   = a.employee?.id ?? a.assignee?.id ?? '';
+    console.log(`ℹ Reusing active assignment: ${assignmentId} (asset: ${assetId})`);
     return;
   }
 
-  // ── 3. No active assignment — create one on any Available asset ───────────────
+  // ── 2. No active assignment — create one on an Available asset ────────────────
   const availableResult = await apiFetch('/assets?status=Available&limit=1');
   const availableAsset  = availableResult?.data?.[0];
-  if (availableAsset) assetId = availableAsset.id; // prefer an available asset
+  if (!availableAsset) throw new Error('No active assignments and no Available assets in DB. Seed the database or return an existing assignment.');
+  assetId = availableAsset.id;
 
   const users = await apiFetch('/users?role=Employee&status=Active&limit=1');
   employeeId = users?.data?.[0]?.id ?? '';
@@ -180,6 +174,7 @@ test.beforeAll(async () => {
   });
   assignmentId = assignment?.id ?? '';
   if (!assignmentId) throw new Error(`Assignment creation failed: ${JSON.stringify(assignment)}`);
+  console.log(`ℹ Created new assignment: ${assignmentId} (asset: ${assetId})`);
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
