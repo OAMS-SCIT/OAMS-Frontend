@@ -27,7 +27,8 @@ import * as os from 'os';
 // ── Config ─────────────────────────────────────────────────────────────────────
 
 const BASE_URL       = process.env.BASE_URL       ?? 'http://localhost:3000';
-const API_URL        = process.env.API_URL        ?? 'http://localhost:4000';
+// BE runs on 3001 by default (NEXT_PUBLIC_API_URL in FE .env), with /api global prefix.
+const API_URL        = process.env.API_URL        ?? 'http://localhost:3001/api';
 const ADMIN_EMAIL    = process.env.ADMIN_EMAIL    ?? 'admin@oams.com';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'Admin@123';
 const SEED_ASSET_ID  = process.env.ASSET_ID       ?? '';
@@ -106,10 +107,20 @@ let employeeId   = '';
 
 test.beforeAll(async () => {
   // Confirm the API is reachable
-  const ping = await fetch(`${API_URL}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }) }).catch(() => null);
-  if (!ping?.ok) {
-    console.warn('⚠ Backend not reachable — all tests will be skipped.');
-    return;
+  const loginUrl = `${API_URL}/auth/login`;
+  console.log(`ℹ Pinging backend at: ${loginUrl}`);
+  const ping = await fetch(loginUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
+  }).catch((e) => { console.error(`✖ Fetch error: ${e.message}`); return null; });
+
+  if (!ping) {
+    throw new Error(`Backend unreachable at ${loginUrl} — is the BE server running?`);
+  }
+  if (!ping.ok) {
+    const body = await ping.text().catch(() => '');
+    throw new Error(`Auth failed (${ping.status}) at ${loginUrl}: ${body}`);
   }
 
   if (!assetId) {
