@@ -145,21 +145,32 @@ test.beforeAll(async () => {
   _token = loginData.accessToken;
   console.log(`✔ Authenticated as ${ADMIN_EMAIL}`);
 
+  // ── 1. Pick any asset (ignore status — most tests only need history/cost data) ─
   if (!assetId) {
-    const result = await apiFetch('/assets?status=Available&limit=1');
-    if (!result?.data?.[0]) {
-      console.warn('⚠ No available assets — create one first or set ASSET_ID env var.');
-      return;
-    }
+    const result = await apiFetch('/assets?limit=1');
+    if (!result?.data?.[0]) throw new Error('No assets in DB. Seed the database first.');
     assetId = result.data[0].id;
   }
+  console.log(`ℹ Using asset: ${assetId}`);
+
+  // ── 2. Find an existing active assignment for this asset (reuse across runs) ──
+  const existingHistory = await apiFetch(`/assignments/asset/${assetId}?limit=10`);
+  const activeAssignment = existingHistory?.data?.find((a: { isReturned: boolean }) => !a.isReturned);
+  if (activeAssignment) {
+    assignmentId = activeAssignment.id;
+    employeeId   = activeAssignment.employee?.id ?? '';
+    console.log(`ℹ Reusing active assignment: ${assignmentId}`);
+    return;
+  }
+
+  // ── 3. No active assignment — create one on any Available asset ───────────────
+  const availableResult = await apiFetch('/assets?status=Available&limit=1');
+  const availableAsset  = availableResult?.data?.[0];
+  if (availableAsset) assetId = availableAsset.id; // prefer an available asset
 
   const users = await apiFetch('/users?role=Employee&status=Active&limit=1');
   employeeId = users?.data?.[0]?.id ?? '';
-  if (!employeeId) {
-    console.warn('⚠ No active employee users found.');
-    return;
-  }
+  if (!employeeId) throw new Error('No active Employee users found. Seed the database.');
 
   const today = new Date().toISOString().split('T')[0];
   const assignment = await apiFetch('/assignments', {
@@ -168,7 +179,7 @@ test.beforeAll(async () => {
     body: JSON.stringify({ assetId, assigneeId: employeeId, assignmentDate: today }),
   });
   assignmentId = assignment?.id ?? '';
-  if (!assignmentId) console.warn('⚠ Assignment creation failed:', assignment);
+  if (!assignmentId) throw new Error(`Assignment creation failed: ${JSON.stringify(assignment)}`);
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
