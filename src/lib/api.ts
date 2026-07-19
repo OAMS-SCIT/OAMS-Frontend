@@ -7,6 +7,7 @@ import type {
   AssetListItem,
   AssetStatus,
   AssetUpgrade,
+  BrandListItem,
   AuthUser,
   CreateAssignmentPayload,
   CategoryDetail,
@@ -374,7 +375,7 @@ export interface GetAssetsParams {
   search?: string;
   categoryId?: string;
   status?: AssetStatus | '';
-  brand?: string;
+  brandId?: string;
   sortBy?: 'name' | 'purchaseDate' | 'warrantyExpiryDate' | 'createdAt';
   sortOrder?: 'ASC' | 'DESC';
   page?: number;
@@ -388,13 +389,25 @@ export function getAssets(
     search: params.search,
     categoryId: params.categoryId,
     status: params.status || undefined,
-    brand: params.brand,
+    brandId: params.brandId,
     sortBy: params.sortBy,
     sortOrder: params.sortOrder,
     page: params.page,
     limit: params.limit,
   };
   return request<PaginatedResult<AssetListItem>>('/assets', { query });
+}
+
+// ── Brands ────────────────────────────────────────────────────────────────
+
+/** All brands, sorted A–Z, for the Asset Registration brand dropdown. */
+export function getBrands(): Promise<BrandListItem[]> {
+  return request<BrandListItem[]>('/brands');
+}
+
+/** Create a brand. Throws ApiError(409) "This brand already exists" on a dup. */
+export function createBrand(name: string): Promise<BrandListItem> {
+  return request<BrandListItem>('/brands', { method: 'POST', body: { name } });
 }
 
 export function getAsset(id: string): Promise<AssetDetail> {
