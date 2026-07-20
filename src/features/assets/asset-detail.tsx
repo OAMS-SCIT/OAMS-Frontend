@@ -364,7 +364,7 @@ export function AssetDetail() {
         {/* Core Specs */}
         <div className="rounded-2xl p-5 bg-card border border-border shadow-card">
           <h3 className="font-semibold mb-3 text-sm tracking-[-0.01em] text-foreground">Core Specifications</h3>
-          <InfoRow label="Brand" value={asset.brand} />
+          <InfoRow label="Brand" value={asset.brand.name} />
           <InfoRow label="Model" value={asset.model} />
           <InfoRow label="Serial Number" value={asset.serialNumber} mono />
           <InfoRow label="Category" value={asset.category.name} />

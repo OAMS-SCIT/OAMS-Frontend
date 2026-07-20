@@ -202,12 +202,18 @@ export interface UpdateCategoryPayload {
 
 // ── API response shapes — Assets ──────────────────────────────────────────
 
+/** Returned by GET /api/brands — the Asset Registration brand dropdown. */
+export interface BrandListItem {
+  id: string;
+  name: string;
+}
+
 /** Returned in GET /api/assets list. */
 export interface AssetListItem {
   id: string;
   displayId: string;
   name: string;
-  brand: string;
+  brand: { id: string; name: string };
   model: string;
   serialNumber: string;
   category: { id: string; name: string };
@@ -239,7 +245,7 @@ export interface AssetDetail {
   displayId: string;
   name: string;
   description: string | null;
-  brand: string;
+  brand: { id: string; name: string };
   model: string;
   serialNumber: string;
   category: { id: string; name: string };
@@ -272,7 +278,9 @@ export interface AttributeValuePayload {
 export interface CreateAssetPayload {
   name: string;
   description?: string;
-  brand: string;
+  /** Provide brandId for an existing brand, OR brandName to resolve-or-create. */
+  brandId?: string;
+  brandName?: string;
   model: string;
   serialNumber: string;
   categoryId: string;
