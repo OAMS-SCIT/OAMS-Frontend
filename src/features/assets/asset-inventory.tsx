@@ -275,7 +275,7 @@ export function AssetInventory() {
                         </div>
                       </td>
                       <td className="px-5 py-3.5">
-                        <div className="text-2sm text-foreground/80">{asset.brand}</div>
+                        <div className="text-2sm text-foreground/80">{asset.brand.name}</div>
                         <div className="text-2xs text-muted-foreground/80">{asset.model}</div>
                       </td>
                       <td className="px-5 py-3.5 text-2sm text-muted-foreground">{asset.category.name}</td>
