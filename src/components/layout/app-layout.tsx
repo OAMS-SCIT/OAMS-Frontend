@@ -190,7 +190,11 @@ function BreadcrumbDisplay({ pathname, role }: { pathname: string; role: AppRole
     '/employee/history': ['My Asset History'],
     '/employee/profile': ['My Profile'],
   };
-  const base = pathname.startsWith('/admin/inventory/') ? ['Asset Inventory', 'Asset Detail'] : segments[pathname];
+  const base = pathname.startsWith('/admin/inventory/')
+    ? ['Asset Inventory', 'Asset Detail']
+    : pathname.startsWith('/admin/users/')
+      ? ['User Management', 'Employee Profile']
+      : segments[pathname];
   if (!base) return <span className="text-2sm text-muted-foreground">OAMS</span>;
   return (
     <div className="flex items-center gap-2 text-2sm">

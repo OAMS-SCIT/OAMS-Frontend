@@ -5,6 +5,7 @@ import { AssetStatus } from '@/types';
 const STATUS_STYLES: Record<string, { badge: string; dot: string }> = {
   'Available': { badge: 'bg-success-surface text-success-foreground', dot: 'bg-success' },
   'Assigned': { badge: 'bg-info-surface text-info-foreground', dot: 'bg-info' },
+  'Returned': { badge: 'bg-neutral-surface text-neutral-foreground', dot: 'bg-neutral' },
   'Under Repair': { badge: 'bg-warning-surface text-warning-foreground', dot: 'bg-warning' },
   'Reserved': { badge: 'bg-purple-surface text-purple-foreground', dot: 'bg-purple' },
   'Lost/Stolen': { badge: 'bg-danger-surface text-danger-foreground', dot: 'bg-danger' },

@@ -20,6 +20,7 @@ import type {
   DashboardSummary,
   DesignationListItem,
   DesignationManageItem,
+  EmployeeAssignmentItem,
   LoginResponse,
   ManualAssetStatus,
   PaginatedResult,
@@ -226,6 +227,11 @@ export function getUsers(
     limit: params.limit,
   };
   return request<PaginatedResult<UserListItem>>('/users', { query });
+}
+
+/** Single user by id (GET /api/users/:id) — backs the Employee Full Profile view. */
+export function getUser(id: string): Promise<UserListItem> {
+  return request<UserListItem>(`/users/${id}`);
 }
 
 export function updateUserStatus(id: string, status: UserStatus): Promise<UserListItem> {
@@ -565,6 +571,21 @@ export function getAssetAssignments(
   assetId: string,
 ): Promise<AssignmentHistoryItem[]> {
   return request<AssignmentHistoryItem[]>(`/assets/${assetId}/assignments`);
+}
+
+/**
+ * An employee's assignments (GET /api/assignments/employee/:employeeId).
+ * `isReturned` omitted → all records (history log); `false` → active only
+ * (currently-assigned list); `true` → returned only. Ordered newest-first.
+ */
+export function getEmployeeAssignments(
+  employeeId: string,
+  isReturned?: boolean,
+): Promise<PaginatedResult<EmployeeAssignmentItem>> {
+  return request<PaginatedResult<EmployeeAssignmentItem>>(
+    `/assignments/employee/${employeeId}`,
+    { query: { isReturned, limit: 100 } },
+  );
 }
 
 export function getAssetHistory(

@@ -384,6 +384,27 @@ export interface AssignmentHistoryItem {
   returnedAt: string | null;
 }
 
+/**
+ * A row in an employee's assignment list (GET /api/assignments/employee/:id).
+ * Used by the Employee Full Profile view for both the currently-assigned table
+ * and the full history log. `returnedAt` is the closed flag: null = still
+ * active (Handover Date shows "—"), set = returned.
+ */
+export interface EmployeeAssignmentItem {
+  id: string;
+  asset: {
+    id: string;
+    displayId: string;
+    name: string;
+    category: { id: string; name: string } | null;
+    status: AssetStatus;
+  };
+  assignmentDate: string;
+  /** Actual return (handover) date; null while the asset is still assigned. */
+  returnDate: string | null;
+  returnedAt: string | null;
+}
+
 /** POST /api/assignments request body. */
 export interface CreateAssignmentPayload {
   assetId: string;
