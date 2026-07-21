@@ -8,6 +8,7 @@ import type { DesignationManageItem, UserListItem, UserRole, UserStatus } from '
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { Select } from '@/components/ui/Select';
 import { PortalMenu } from '@/components/ui/PortalMenu';
 import { OverlayPortal } from '@/components/overlays/OverlayPortal';
@@ -144,6 +145,23 @@ export function UserManagement() {
 
   const userTotalPages = Math.max(1, Math.ceil(userTotal / PER_PAGE));
   const dTotalPages = Math.max(1, Math.ceil(dTotal / PER_PAGE));
+  const hasActiveUserFilters = Boolean(userSearch || filterRole || filterStatus);
+  const hasActiveDesignationFilters = Boolean(dSearch || dFilterStatus);
+
+  const clearUserFilters = () => {
+    setUserSearch('');
+    setUserDebouncedSearch('');
+    setFilterRole('');
+    setFilterStatus('');
+    setUserPage(1);
+  };
+
+  const clearDesignationFilters = () => {
+    setDSearch('');
+    setDDebouncedSearch('');
+    setDFilterStatus('');
+    setDPage(1);
+  };
 
   // ── Debounce: users ──
   useEffect(() => {
@@ -350,6 +368,7 @@ export function UserManagement() {
                 { value: 'Active', label: 'Active' },
                 { value: 'Inactive', label: 'Inactive' },
               ]} />
+            <ClearFiltersButton onClear={clearUserFilters} disabled={!hasActiveUserFilters} />
           </div>
 
           <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">
@@ -518,6 +537,7 @@ export function UserManagement() {
                 { value: 'Active', label: 'Active' },
                 { value: 'Inactive', label: 'Inactive' },
               ]} />
+            <ClearFiltersButton onClear={clearDesignationFilters} disabled={!hasActiveDesignationFilters} />
           </div>
 
           <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">

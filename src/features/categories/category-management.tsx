@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
 import type { CategoryListItem } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { Select } from '@/components/ui/Select';
 import { PortalMenu, PortalMenuItem } from '@/components/ui/PortalMenu';
 import {
@@ -45,6 +46,14 @@ export function CategoryManagement() {
   const [error, setError] = useState<string | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const hasActiveFilters = Boolean(search || filterStatus);
+
+  const clearFilters = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setFilterStatus('');
+    setPage(1);
+  };
 
   // Debounce search
   useEffect(() => {
@@ -159,6 +168,7 @@ export function CategoryManagement() {
             { value: 'Inactive', label: 'Inactive' },
           ]}
         />
+        <ClearFiltersButton onClear={clearFilters} disabled={!hasActiveFilters} />
       </div>
 
       <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">

@@ -11,6 +11,7 @@ import type { AssetDetail, AssetListItem, AssetStatus } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { PortalMenu, PortalMenuItem } from '@/components/ui/PortalMenu';
 import { Select } from '@/components/ui/Select';
 import { RegisterAssetDrawer } from '@/components/overlays/RegisterAssetDrawer';
@@ -63,6 +64,14 @@ export function AssetInventory() {
   const [deletingAsset, setDeletingAsset] = useState<AssetListItem | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const hasActiveFilters = Boolean(search || filterStatus);
+
+  const clearFilters = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setFilterStatus('');
+    setPage(1);
+  };
 
   // Debounce search
   useEffect(() => {
@@ -187,6 +196,7 @@ export function AssetInventory() {
           >
             {sortOrder === 'ASC' ? '↑ Asc' : '↓ Desc'}
           </button>
+          <ClearFiltersButton onClear={clearFilters} disabled={!hasActiveFilters} />
         </div>
       </div>
 
