@@ -9,10 +9,22 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import type { ActiveAssignmentListItem, AssetCondition, CategoryListItem } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { ReturnAssetDrawer } from '@/components/overlays/ReturnAssetDrawer';
 import { ApiError, getAssignments, getCategories, returnAssignment } from '@/lib/api';
 
 const PER_PAGE = 10;
+
+const TABLE_COLUMNS = [
+  { label: 'Asset Name', width: '16%' },
+  { label: 'Asset ID', width: '9%' },
+  { label: 'Serial Number', width: '12%' },
+  { label: 'Assignee', width: '15%' },
+  { label: 'Assignment Date', width: '11%' },
+  { label: 'Expected Return', width: '11%' },
+  { label: 'Status', width: '9%' },
+  { label: 'Actions', width: '17%' },
+] as const;
 
 const assigneeName = (a: ActiveAssignmentListItem['assignee']) =>
   `${a.firstName} ${a.lastName}`.trim();
@@ -41,6 +53,17 @@ export function ActiveAssignments() {
   const [returnSaving, setReturnSaving] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const hasActiveFilters = Boolean(search || filterCategory || dateFrom || dateTo || overdueOnly);
+
+  const clearFilters = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setFilterCategory('');
+    setDateFrom('');
+    setDateTo('');
+    setOverdueOnly(false);
+    setPage(1);
+  };
 
   // Debounce search
   useEffect(() => {
@@ -122,8 +145,8 @@ export function ActiveAssignments() {
       </div>
 
       {/* Filter bar */}
-      <div className="rounded-lg mb-4 p-4 flex items-center gap-3 flex-wrap bg-card border border-border shadow-card">
-        <div className="relative flex-1 min-w-60">
+      <div className="rounded-lg mb-4 p-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between bg-card border border-border shadow-card">
+        <div className="relative w-full lg:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
           <input
             type="text"
@@ -133,39 +156,42 @@ export function ActiveAssignments() {
             className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
           />
         </div>
-        <Select
-          value={filterCategory}
-          onValueChange={(v) => { setFilterCategory(v); setPage(1); }}
-          ariaLabel="Category"
-          placeholder="All Categories"
-          options={[{ value: '', label: 'All Categories' }, ...categories.map((c) => ({ value: c.id, label: c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name }))]}
-        />
-        <div className="flex items-center gap-2">
-          <DatePicker
-            value={dateFrom}
-            onChange={(v) => { setDateFrom(v); setPage(1); }}
-            ariaLabel="Assignment date from"
-            placeholder="From"
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={filterCategory}
+            onValueChange={(v) => { setFilterCategory(v); setPage(1); }}
+            ariaLabel="Category"
+            placeholder="All Categories"
+            options={[{ value: '', label: 'All Categories' }, ...categories.map((c) => ({ value: c.id, label: c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name }))]}
           />
-          <span className="text-2sm text-muted-foreground/70">–</span>
-          <DatePicker
-            value={dateTo}
-            onChange={(v) => { setDateTo(v); setPage(1); }}
-            ariaLabel="Assignment date to"
-            placeholder="To"
-          />
+          <div className="flex items-center gap-2">
+            <DatePicker
+              value={dateFrom}
+              onChange={(v) => { setDateFrom(v); setPage(1); }}
+              ariaLabel="Assignment date from"
+              placeholder="From"
+            />
+            <span className="text-2sm text-muted-foreground/70">–</span>
+            <DatePicker
+              value={dateTo}
+              onChange={(v) => { setDateTo(v); setPage(1); }}
+              ariaLabel="Assignment date to"
+              placeholder="To"
+            />
+          </div>
+          <button
+            onClick={() => { setOverdueOnly((o) => !o); setPage(1); }}
+            className={`flex items-center gap-2 rounded-control border px-3 py-2 text-2sm font-medium transition-all whitespace-nowrap ${
+              overdueOnly
+                ? 'border-warning bg-warning-surface text-warning-foreground'
+                : 'border-border bg-card text-muted-foreground hover:bg-muted'
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4" />
+            Overdue Only
+          </button>
+          <ClearFiltersButton onClear={clearFilters} disabled={!hasActiveFilters} />
         </div>
-        <button
-          onClick={() => { setOverdueOnly((o) => !o); setPage(1); }}
-          className={`flex items-center gap-2 rounded-control border px-3 py-2 text-2sm font-medium transition-all ${
-            overdueOnly
-              ? 'border-warning bg-warning-surface text-warning-foreground'
-              : 'border-border bg-card text-muted-foreground hover:bg-muted'
-          }`}
-        >
-          <AlertTriangle className="w-4 h-4" />
-          Overdue Only
-        </button>
       </div>
 
       {/* Table */}
@@ -190,11 +216,11 @@ export function ActiveAssignments() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px]">
+              <table className="w-full table-fixed min-w-[980px]">
                 <thead>
                   <tr className="bg-muted/60 border-b-2 border-border">
-                    {['Asset Name', 'Asset ID', 'Serial Number', 'Assignee', 'Assignment Date', 'Expected Return', 'Status', 'Actions'].map((h) => (
-                      <th key={h} className="text-left px-5 py-3 micro-label whitespace-nowrap">{h}</th>
+                    {TABLE_COLUMNS.map(({ label, width }) => (
+                      <th key={label} className="text-left px-5 py-3 micro-label whitespace-nowrap" style={{ width }}>{label}</th>
                     ))}
                   </tr>
                 </thead>
@@ -207,19 +233,19 @@ export function ActiveAssignments() {
                       } ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}
                     >
                       <td className="px-5 py-3.5">
-                        <div className="font-medium text-2sm text-foreground">{row.asset.name}</div>
-                        {row.asset.category && <div className="text-2xs text-muted-foreground/80">{row.asset.category.name}</div>}
+                        <div className="font-medium text-2sm text-foreground truncate" title={row.asset.name}>{row.asset.name}</div>
+                        {row.asset.category && <div className="text-2xs text-muted-foreground/80 truncate">{row.asset.category.name}</div>}
                       </td>
-                      <td className="px-5 py-3.5 text-xs text-muted-foreground/80 font-mono">{row.asset.displayId}</td>
-                      <td className="px-5 py-3.5 text-xs text-muted-foreground font-mono">{row.asset.serialNumber}</td>
+                      <td className="px-5 py-3.5 text-xs text-muted-foreground/80 font-mono truncate">{row.asset.displayId}</td>
+                      <td className="px-5 py-3.5 text-xs text-muted-foreground font-mono truncate" title={row.asset.serialNumber}>{row.asset.serialNumber}</td>
                       <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           <Avatar user={row.assignee} size={26} />
-                          <div className="text-2sm text-foreground/80 font-medium">{assigneeName(row.assignee)}</div>
+                          <div className="text-2sm text-foreground/80 font-medium truncate">{assigneeName(row.assignee)}</div>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 text-2sm text-muted-foreground nums">{row.assignmentDate}</td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-5 py-3.5 text-2sm text-muted-foreground nums whitespace-nowrap">{row.assignmentDate}</td>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
                         {row.expectedReturnDate ? (
                           <span className={`text-2sm nums ${row.isOverdue ? 'text-danger font-semibold' : 'text-muted-foreground'}`}>
                             {row.expectedReturnDate}
@@ -228,7 +254,7 @@ export function ActiveAssignments() {
                           <span className="text-2sm text-muted-foreground/50">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
                         {row.isOverdue ? (
                           <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium text-2xs bg-warning-surface text-warning-foreground">
                             <AlertTriangle className="w-3 h-3" /> Overdue
@@ -240,13 +266,13 @@ export function ActiveAssignments() {
                         )}
                       </td>
                       <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <button onClick={() => router.push(`/admin/inventory/${row.asset.id}`)}
-                            className="flex items-center gap-1 rounded-control px-3 py-1.5 border border-border text-xs text-foreground/70 transition-colors hover:bg-muted">
+                            className="flex items-center gap-1 rounded-control px-3 py-1.5 border border-border text-xs text-foreground/70 transition-colors hover:bg-muted whitespace-nowrap">
                             <Eye className="w-3.5 h-3.5" /> View Detail
                           </button>
                           <button onClick={() => setReturnRow(row)}
-                            className="flex items-center gap-1 rounded-control px-3 py-1.5 border border-warning/40 text-xs text-warning-foreground transition-colors hover:bg-warning-surface">
+                            className="flex items-center gap-1 rounded-control px-3 py-1.5 border border-warning/40 text-xs text-warning-foreground transition-colors hover:bg-warning-surface whitespace-nowrap">
                             <RotateCcw className="w-3.5 h-3.5" /> Process Return
                           </button>
                         </div>
