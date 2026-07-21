@@ -394,9 +394,12 @@ export interface AssignmentHistoryItem {
 
 /**
  * A row in an employee's assignment list (GET /api/assignments/employee/:id).
- * Used by the Employee Full Profile view for both the currently-assigned table
- * and the full history log. `returnedAt` is the closed flag: null = still
- * active (Handover Date shows "—"), set = returned.
+ * Powers the single Assigned Assets table on the Employee Full Profile view,
+ * which shows active and returned records together.
+ *
+ * Note this endpoint exposes the closed state as the boolean `isReturned` —
+ * unlike Assignment / AssignmentHistoryItem, which carry a `returnedAt`
+ * timestamp. Reading `returnedAt` here yields undefined.
  */
 export interface EmployeeAssignmentItem {
   id: string;
@@ -410,7 +413,13 @@ export interface EmployeeAssignmentItem {
   assignmentDate: string;
   /** Actual return (handover) date; null while the asset is still assigned. */
   returnDate: string | null;
-  returnedAt: string | null;
+  /**
+   * Closed flag — the ONLY source of truth for Assigned vs Returned.
+   * Do not derive status from `returnDate`: an active assignment legitimately
+   * has `returnDate: null`, so treating a null date as "returned" inverts it.
+   */
+  isReturned: boolean;
+  assignedBy: { id: string; firstName: string; lastName: string } | null;
 }
 
 /** POST /api/assignments request body. */
