@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { X, Paperclip, FileText, ImageIcon, XCircle } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { toast } from 'sonner';
-import { ApiError, createUpgrade, updateUpgrade } from '@/lib/api';
+import { ApiError, createUpgrade, updateUpgrade, uploadUpgradeInvoice } from '@/lib/api';
 import type { AssetUpgrade, CreateUpgradePayload, UpgradeType } from '@/types';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -29,7 +29,6 @@ const EMPTY = {
   specAfter: '',
   cost: '',
   vendorName: '',
-  notes: '',
 };
 
 export function AddUpgradeDrawer({
@@ -46,6 +45,12 @@ export function AddUpgradeDrawer({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  // Invoice file state
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  // Existing URL when editing — shown as current attachment
+  const [existingInvoiceUrl, setExistingInvoiceUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (existing) {
       setForm({
@@ -55,8 +60,8 @@ export function AddUpgradeDrawer({
         specAfter: existing.specAfter,
         cost: String(existing.cost),
         vendorName: existing.vendorName,
-        notes: existing.notes ?? '',
       });
+      setExistingInvoiceUrl(existing.invoiceUrl ?? null);
     }
   }, [existing]);
 
@@ -87,13 +92,19 @@ export function AddUpgradeDrawer({
       specAfter: form.specAfter.trim(),
       cost: parseFloat(form.cost),
       vendorName: form.vendorName.trim(),
-      notes: form.notes.trim() || undefined,
     };
 
     try {
-      const saved = isEdit
+      // Step 1: create or update the upgrade record
+      let saved = isEdit
         ? await updateUpgrade(existing!.id, payload)
         : await createUpgrade(assetId, payload);
+
+      // Step 2: upload invoice file if a new one was picked
+      if (invoiceFile) {
+        saved = await uploadUpgradeInvoice(saved.id, invoiceFile);
+      }
+
       toast.success(isEdit ? 'Upgrade entry updated.' : 'Upgrade entry added.');
       onSaved(saved);
       onClose();
@@ -183,11 +194,55 @@ export function AddUpgradeDrawer({
                 </Field>
               </div>
 
-              <Field label="Notes (Optional)">
-                <textarea value={form.notes}
-                  onChange={(e) => set('notes', e.target.value)}
-                  rows={3} className="upg-input" style={{ resize: 'vertical' }}
-                  placeholder="Any additional notes about this upgrade…" />
+              <Field label="Reference / Invoice (Optional)">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setInvoiceFile(f);
+                  }}
+                />
+                {/* Show newly picked file */}
+                {invoiceFile ? (
+                  <div className="flex items-center gap-2 rounded-control border border-border px-3 py-2 bg-muted/40">
+                    {invoiceFile.type === 'application/pdf'
+                      ? <FileText className="w-4 h-4 text-danger shrink-0" />
+                      : <ImageIcon className="w-4 h-4 text-primary shrink-0" />}
+                    <span className="text-xs text-foreground/80 truncate flex-1">{invoiceFile.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => { setInvoiceFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                      className="text-muted-foreground hover:text-danger transition-colors"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : existingInvoiceUrl ? (
+                  /* Show existing attachment when editing */
+                  <div className="flex items-center gap-2 rounded-control border border-border px-3 py-2 bg-muted/40">
+                    <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-xs text-muted-foreground truncate flex-1">Existing invoice attached</span>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Replace
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 w-full rounded-control border border-dashed border-border px-3 py-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:border-ring"
+                  >
+                    <Paperclip className="w-4 h-4 shrink-0" />
+                    Attach invoice or receipt (JPEG, PNG, PDF · max 10 MB)
+                  </button>
+                )}
               </Field>
             </div>
           </div>
