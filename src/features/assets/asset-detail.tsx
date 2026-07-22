@@ -163,12 +163,12 @@ function AssignmentHistoryRow({
         </td>
 
         {/* Notes */}
-        <td className="px-5 py-3.5 text-2sm text-muted-foreground max-w-[220px] whitespace-normal">
-          {row.notes ?? '—'}
+        <td className="px-5 py-3.5 align-top">
+          <NoteCell note={row.notes} />
         </td>
 
         {/* Assigned By */}
-        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap">
+        <td className="px-5 py-3.5 text-2sm text-muted-foreground align-top break-words">
           {row.assignedBy ? `${row.assignedBy.firstName} ${row.assignedBy.lastName}` : '—'}
         </td>
       </tr>
@@ -198,13 +198,13 @@ function AssignmentHistoryRow({
 
 const HISTORY_COLUMNS = [
   { label: 'Assignee', width: '18%' },
-  { label: 'Assigned Date', width: '10%' },
-  { label: 'Expected Return', width: '10%' },
-  { label: 'Actual Return', width: '12%' },
-  { label: 'Condition (Assign)', width: '10%' },
-  { label: 'Condition (Return)', width: '10%' },
-  { label: 'Notes', width: '22%' },
-  { label: 'Assigned By', width: '8%' },
+  { label: 'Assigned', width: '10%' },
+  { label: 'Expected', width: '10%' },
+  { label: 'Returned', width: '13%' },
+  { label: 'Cond. (assign)', width: '11%' },
+  { label: 'Cond. (return)', width: '11%' },
+  { label: 'Notes', width: '15%' },
+  { label: 'Assigned by', width: '12%' },
 ] as const;
 
 function NoteCell({ note }: { note: string | null }) {
@@ -666,11 +666,11 @@ export function AssetDetail() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full table-fixed min-w-[1120px]">
+              <table className="w-full table-fixed min-w-[920px]">
                 <thead>
                   <tr className="bg-muted/60 border-b border-border">
                     {HISTORY_COLUMNS.map(({ label, width }) => (
-                      <th key={label} className="text-left px-5 py-3 micro-label whitespace-nowrap align-top" style={{ width }}>
+                      <th key={label} className="text-left px-5 py-3 micro-label align-top" style={{ width }}>
                         {label}
                       </th>
                     ))}
@@ -680,58 +680,6 @@ export function AssetDetail() {
                   {history.map((row, i) => (
                     <AssignmentHistoryRow key={row.id} row={row} index={i} />
                   ))}
-                  {history.map((row, i) => {
-                    const isActive = row.returnedAt === null;
-                    return (
-                      <tr key={row.id}
-                        className={`border-b border-border/60 border-l-[3px] ${
-                          isActive ? 'border-l-primary' : 'border-l-transparent'
-                        } ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}>
-                        <td className="px-5 py-3.5 align-top">
-                          <div className="flex items-start gap-2.5 min-w-0">
-                            <Avatar user={row.assignee} size={30} />
-                            <div className="min-w-0">
-                              <div className="text-2sm text-foreground font-semibold truncate">
-                                {row.assignee.firstName} {row.assignee.lastName}
-                              </div>
-                              <div className="text-xs text-muted-foreground/80 truncate">
-                                {row.assignee.designation?.name ?? '—'}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap nums align-top">{row.assignmentDate}</td>
-                        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap nums align-top">{row.expectedReturnDate ?? '—'}</td>
-                        <td className="px-5 py-3.5 whitespace-nowrap align-top">
-                          {row.returnDate ? (
-                            <span className="text-2sm text-muted-foreground nums">{row.returnDate}</span>
-                          ) : (
-                            <span className="inline-flex items-center font-medium rounded-full text-2xs px-2.5 py-[3px] bg-info-surface text-info-foreground">
-                              Currently Assigned
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3.5 align-top">
-                          {row.conditionAtAssignment
-                            ? <ConditionBadge condition={row.conditionAtAssignment} />
-                            : <span className="text-2sm text-muted-foreground/80">—</span>}
-                        </td>
-                        <td className="px-5 py-3.5 align-top">
-                          {row.conditionAtReturn
-                            ? <ConditionBadge condition={row.conditionAtReturn} />
-                            : <span className="text-2sm text-muted-foreground/80">—</span>}
-                        </td>
-                        <td className="px-5 py-3.5 align-top">
-                          <NoteCell note={row.notes} />
-                        </td>
-                        <td className="px-5 py-3.5 text-2sm text-muted-foreground align-top">
-                          <span className="block truncate" title={row.assignedBy ? `${row.assignedBy.firstName} ${row.assignedBy.lastName}` : undefined}>
-                            {row.assignedBy ? `${row.assignedBy.firstName} ${row.assignedBy.lastName}` : '—'}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
                 </tbody>
               </table>
             </div>
