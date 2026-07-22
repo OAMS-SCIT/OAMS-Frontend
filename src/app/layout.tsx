@@ -2,7 +2,6 @@
 import { Inter } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/providers/auth-provider';
-import { AppProvider } from '@/providers/app-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
 import './globals.css';
 
@@ -26,10 +25,8 @@ export default function RootLayout({
       <body className="min-h-full">
         <ThemeProvider>
           <AuthProvider>
-            <AppProvider>
-              {children}
-              <Toaster />
-            </AppProvider>
+            {children}
+            <Toaster />
           </AuthProvider>
         </ThemeProvider>
       </body>

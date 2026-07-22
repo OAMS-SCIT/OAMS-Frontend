@@ -155,8 +155,8 @@ export function Dashboard() {
 
       {/* Charts */}
       <div className="grid grid-cols-[3fr_2fr] gap-5 mb-6">
-        <div className="rounded-2xl p-6 bg-card border border-border shadow-card">
-          <div className="flex items-center justify-between mb-5">
+        <div className="rounded-2xl p-6 bg-card border border-border shadow-card flex flex-col h-[280px]">
+          <div className="flex items-center justify-between mb-4 shrink-0">
             <h2 className="font-semibold text-base tracking-[-0.01em] text-foreground">Asset Category Breakdown</h2>
             <button onClick={() => router.push('/admin/categories')} className="flex items-center gap-1 text-2sm text-primary transition-opacity hover:opacity-80">
               View All Categories <ArrowRight className="w-3.5 h-3.5" />
@@ -165,25 +165,25 @@ export function Dashboard() {
           {categoryData.length === 0 ? (
             <p className="text-2sm text-muted-foreground/80">No assets registered yet.</p>
           ) : (
-            <div className="flex items-center gap-8">
-              <div className="w-[180px] h-[180px]">
+            <div className="flex items-start gap-6 flex-1 min-h-0">
+              <div className="w-[160px] h-[160px] shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={categoryData} dataKey="count" cx="50%" cy="50%" innerRadius={52} outerRadius={80} paddingAngle={3} stroke="var(--card)">
+                    <Pie data={categoryData} dataKey="count" cx="50%" cy="50%" innerRadius={46} outerRadius={72} paddingAngle={3} stroke="var(--card)">
                       {categoryData.map((_, i) => <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />)}
                     </Pie>
                     <Tooltip formatter={(v) => [v ?? 0, 'Assets']} contentStyle={CHART_TOOLTIP_STYLE} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex-1 space-y-3">
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1">
                 {categoryData.map((cat, i) => (
                   <div key={cat.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <div className="rounded-full shrink-0 w-2.5 h-2.5" style={{ background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }} />
-                      <span className="text-2sm text-foreground/80">{cat.name}</span>
+                      <span className="text-2sm text-foreground/80 truncate">{cat.name}</span>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0 ml-2">
                       <span className="font-semibold text-2sm text-foreground nums">{cat.count}</span>
                       <span className="text-xs text-muted-foreground/80 min-w-8 nums">{cat.percentage}%</span>
                     </div>
@@ -194,26 +194,30 @@ export function Dashboard() {
           )}
         </div>
 
-        <div className="rounded-2xl p-6 bg-card border border-border shadow-card">
-          <h2 className="font-semibold mb-5 text-base tracking-[-0.01em] text-foreground">Asset Status Overview</h2>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={statusData} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 0 }}>
-              <XAxis type="number" hide />
-              <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-              <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={14}>
-                {statusData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <div className="space-y-1.5 mt-3">
-            {statusData.map(s => (
-              <div key={s.name} className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{s.name}</span>
-                <span className="font-semibold text-xs text-foreground nums">
-                  {s.count} <span className="text-muted-foreground/80 font-normal">({total ? Math.round((s.count / total) * 100) : 0}%)</span>
-                </span>
-              </div>
-            ))}
+        <div className="rounded-2xl p-6 bg-card border border-border shadow-card flex flex-col h-[280px]">
+          <h2 className="font-semibold mb-4 shrink-0 text-base tracking-[-0.01em] text-foreground">Asset Status Overview</h2>
+          <div className="flex flex-col flex-1 min-h-0 gap-3">
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={statusData} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 0 }}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                  <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={14}>
+                    {statusData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="shrink-0 space-y-1.5">
+              {statusData.map(s => (
+                <div key={s.name} className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{s.name}</span>
+                  <span className="font-semibold text-xs text-foreground nums">
+                    {s.count} <span className="text-muted-foreground/80 font-normal">({total ? Math.round((s.count / total) * 100) : 0}%)</span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

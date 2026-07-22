@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { ImageUploadZone, type UploadedImage } from '@/components/ui/ImageUploadZone';
-import { Select } from '@/components/ui/Select';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import { BrandCombobox, type BrandComboboxHandle } from '@/components/ui/BrandCombobox';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { toast } from 'sonner';
 import {
@@ -13,6 +14,7 @@ import {
   createAsset,
   deleteAssetImage,
   getAsset,
+  getBrands,
   getCategories,
   getCategory,
   updateAsset,
@@ -24,6 +26,7 @@ import type {
   AssetImageItem,
   AttributeDetail,
   AttributeValuePayload,
+  BrandListItem,
   CategoryListItem,
 } from '@/types';
 
@@ -43,7 +46,10 @@ const CONDITIONS: AssetCondition[] = ['New', 'Good', 'Fair', 'Poor'];
 interface FormState {
   name: string;
   description: string;
-  brand: string;
+  /** Existing-brand id; mutually exclusive with brandName. */
+  brandId: string;
+  /** New-brand name (created on save); mutually exclusive with brandId. */
+  brandName: string;
   model: string;
   serialNumber: string;
   categoryId: string;
@@ -59,7 +65,7 @@ interface FormState {
 }
 
 const EMPTY_FORM: FormState = {
-  name: '', description: '', brand: '', model: '', serialNumber: '',
+  name: '', description: '', brandId: '', brandName: '', model: '', serialNumber: '',
   categoryId: '', purchaseDate: '', purchasePrice: '', vendorName: '',
   purchaseOrderRef: '', warrantyStartDate: '', warrantyExpiryDate: '',
   warrantyProvider: '', condition: 'New', location: '',
@@ -69,7 +75,8 @@ function assetDetailToForm(a: AssetDetail): FormState {
   return {
     name: a.name,
     description: a.description ?? '',
-    brand: a.brand,
+    brandId: a.brand.id,
+    brandName: '',
     model: a.model,
     serialNumber: a.serialNumber,
     categoryId: a.category.id,
@@ -93,6 +100,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [categories, setCategories] = useState<CategoryListItem[]>([]);
+  const [brands, setBrands] = useState<BrandListItem[]>([]);
+  const brandRef = useRef<BrandComboboxHandle>(null);
   const [categoryAttrs, setCategoryAttrs] = useState<AttributeDetail[]>([]);
 
   const [loadingInit, setLoadingInit] = useState(true);
@@ -110,8 +119,12 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   useEffect(() => {
     const init = async () => {
       try {
-        const catResult = await getCategories({ status: 'Active', limit: 100 });
+        const [catResult, brandResult] = await Promise.all([
+          getCategories({ status: 'Active', limit: 100 }),
+          getBrands(),
+        ]);
         setCategories(catResult.data);
+        setBrands(brandResult);
 
         if (assetId) {
           const asset = await getAsset(assetId);
@@ -166,6 +179,18 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
     setErrors((e) => ({ ...e, [k]: '' }));
   };
 
+  // Brand is one-of: an existing id OR a new name (created on save). Setting one
+  // clears the other so only a single value is ever sent.
+  const selectExistingBrand = (id: string) => {
+    setForm((f) => ({ ...f, brandId: id, brandName: '' }));
+    setErrors((e) => ({ ...e, brand: '' }));
+  };
+  const selectNewBrand = (name: string) => {
+    setForm((f) => ({ ...f, brandId: '', brandName: name }));
+    setErrors((e) => ({ ...e, brand: '' }));
+  };
+  const clearBrand = () => setForm((f) => ({ ...f, brandId: '', brandName: '' }));
+
   const setAttr = (attributeId: string, value: string) => {
     setAttrValues((prev) => ({ ...prev, [attributeId]: value }));
     setErrors((e) => ({ ...e, [`attr_${attributeId}`]: '' }));
@@ -173,10 +198,10 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
 
   // ── Validation ────────────────────────────────────────────────────────────
 
-  const validate = (): boolean => {
+  const validate = (brand: { brandId?: string; brandName?: string }): boolean => {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = 'Asset name is required';
-    if (!form.brand.trim()) e.brand = 'Brand is required';
+    if (!brand.brandId && !brand.brandName) e.brand = 'Brand is required';
     if (!form.model.trim()) e.model = 'Model is required';
     if (!form.serialNumber.trim()) e.serialNumber = 'Serial number is required';
     if (!form.categoryId) e.categoryId = 'Category is required';
@@ -211,7 +236,15 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    if (!validate()) {
+    // Resolve the brand: a committed existing id / new name from form state, or
+    // whatever is still typed in the field (exact match → id, else new name).
+    // Read the return value directly since form state may not update this tick.
+    const brand: { brandId?: string; brandName?: string } =
+      form.brandId || form.brandName
+        ? { brandId: form.brandId || undefined, brandName: form.brandName || undefined }
+        : brandRef.current?.commitTyped() ?? {};
+
+    if (!validate(brand)) {
       toast.error('Please fix the highlighted fields before saving.');
       return;
     }
@@ -227,7 +260,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         saved = await updateAsset(assetId!, {
           name: form.name.trim(),
           description: form.description.trim() || undefined,
-          brand: form.brand.trim(),
+          brandId: brand.brandId,
+          brandName: brand.brandName,
           model: form.model.trim(),
           serialNumber: form.serialNumber.trim(),
           condition: form.condition,
@@ -262,7 +296,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         saved = await createAsset({
           name: form.name.trim(),
           description: form.description.trim() || undefined,
-          brand: form.brand.trim(),
+          brandId: brand.brandId,
+          brandName: brand.brandName,
           model: form.model.trim(),
           serialNumber: form.serialNumber.trim(),
           categoryId: form.categoryId,
@@ -289,6 +324,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           }
         }
         toast.success('Asset registered successfully.');
+      }
+      // If we sent a new brand name and the resolved brand wasn't already in our
+      // list, the backend created it — surface the spec's confirmation message.
+      if (brand.brandName && !brands.some((b) => b.id === saved.brand.id)) {
+        toast.success('Brand added successfully');
       }
       // Staged previews are object URLs — revoke them now that they're saved.
       uploadedImages.forEach((i) => URL.revokeObjectURL(i.previewUrl));
@@ -321,10 +361,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
     if (attr.type === 'Dropdown') {
       return (
         <FormField key={attr.id} fieldId={fieldId} label={attr.label} required={attr.isRequired} error={err}>
-          <Select
+          <SearchableSelect
             value={val}
             onValueChange={(v) => setAttr(attr.id, v)}
             placeholder="Select…"
+            searchPlaceholder={`Search ${attr.label.toLowerCase()}…`}
             ariaLabel={attr.label}
             className="w-full"
             options={[{ value: '', label: 'Select…' }, ...attr.options.map((opt) => ({ value: opt.label, label: opt.label }))]}
@@ -388,8 +429,16 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
               </FormField>
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Brand" required error={errors.brand}>
-                  <input type="text" value={form.brand} onChange={(e) => set('brand', e.target.value)}
-                    className="form-input" placeholder="e.g. Dell" />
+                  <BrandCombobox
+                    ref={brandRef}
+                    brands={brands}
+                    brandId={form.brandId}
+                    brandName={form.brandName}
+                    onSelectExisting={selectExistingBrand}
+                    onSelectNew={selectNewBrand}
+                    onClear={clearBrand}
+                    error={errors.brand}
+                  />
                 </FormField>
                 <FormField label="Model" required error={errors.model}>
                   <input type="text" value={form.model} onChange={(e) => set('model', e.target.value)}
@@ -405,10 +454,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             {/* Section 2 - Category & Dynamic Attributes */}
             <FormSection title="Category & Attributes">
               <FormField label="Category" required error={errors.categoryId}>
-                <Select
+                <SearchableSelect
                   value={form.categoryId}
                   onValueChange={(v) => set('categoryId', v)}
                   placeholder="Select a category…"
+                  searchPlaceholder="Search categories…"
                   ariaLabel="Category"
                   className="w-full"
                   disabled={isEdit}

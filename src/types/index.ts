@@ -202,12 +202,18 @@ export interface UpdateCategoryPayload {
 
 // ── API response shapes — Assets ──────────────────────────────────────────
 
+/** Returned by GET /api/brands — the Asset Registration brand dropdown. */
+export interface BrandListItem {
+  id: string;
+  name: string;
+}
+
 /** Returned in GET /api/assets list. */
 export interface AssetListItem {
   id: string;
   displayId: string;
   name: string;
-  brand: string;
+  brand: { id: string; name: string };
   model: string;
   serialNumber: string;
   category: { id: string; name: string };
@@ -239,7 +245,7 @@ export interface AssetDetail {
   displayId: string;
   name: string;
   description: string | null;
-  brand: string;
+  brand: { id: string; name: string };
   model: string;
   serialNumber: string;
   category: { id: string; name: string };
@@ -272,7 +278,9 @@ export interface AttributeValuePayload {
 export interface CreateAssetPayload {
   name: string;
   description?: string;
-  brand: string;
+  /** Provide brandId for an existing brand, OR brandName to resolve-or-create. */
+  brandId?: string;
+  brandName?: string;
   model: string;
   serialNumber: string;
   categoryId: string;
@@ -395,6 +403,36 @@ export interface AssignmentHistoryItem {
   returnConditionImages: ConditionImageItem[];
 }
 
+/**
+ * A row in an employee's assignment list (GET /api/assignments/employee/:id).
+ * Powers the single Assigned Assets table on the Employee Full Profile view,
+ * which shows active and returned records together.
+ *
+ * Note this endpoint exposes the closed state as the boolean `isReturned` —
+ * unlike Assignment / AssignmentHistoryItem, which carry a `returnedAt`
+ * timestamp. Reading `returnedAt` here yields undefined.
+ */
+export interface EmployeeAssignmentItem {
+  id: string;
+  asset: {
+    id: string;
+    displayId: string;
+    name: string;
+    category: { id: string; name: string } | null;
+    status: AssetStatus;
+  };
+  assignmentDate: string;
+  /** Actual return (handover) date; null while the asset is still assigned. */
+  returnDate: string | null;
+  /**
+   * Closed flag — the ONLY source of truth for Assigned vs Returned.
+   * Do not derive status from `returnDate`: an active assignment legitimately
+   * has `returnDate: null`, so treating a null date as "returned" inverts it.
+   */
+  isReturned: boolean;
+  assignedBy: { id: string; firstName: string; lastName: string } | null;
+}
+
 /** POST /api/assignments request body. */
 export interface CreateAssignmentPayload {
   assetId: string;
@@ -442,6 +480,8 @@ export interface UpdateUserPayload {
   contactNumber?: string;
   designationId?: string;
   role?: UserRole;
+  /** Only accepted before the user's first login; omitted otherwise. */
+  email?: string;
 }
 
 // POST /api/users request body

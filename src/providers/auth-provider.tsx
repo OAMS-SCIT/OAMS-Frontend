@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   login as apiLogin,
   logout as apiLogout,
@@ -87,6 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setStatus('unauthenticated');
     router.replace('/login');
+    // Fired after the redirect is queued, not on /login itself: the Toaster
+    // lives in the root layout and outlives this client-side navigation, so
+    // the confirmation lands on the login screen regardless of which logout
+    // control was used.
+    toast.success('You have been logged out.');
   }, [router]);
 
   const refresh = useCallback(async () => {

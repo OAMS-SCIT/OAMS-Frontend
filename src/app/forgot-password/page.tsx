@@ -5,21 +5,22 @@ import { useRouter } from 'next/navigation';
 import { ForgotPasswordPage } from '@/features/auth/forgot-password-page';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, requestForgotPassword } from '@/lib/api';
+import { landingPathFor } from '@/lib/routes';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ForgotPasswordRoutePage() {
   const router = useRouter();
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      router.replace('/admin/dashboard');
+    if (status === 'authenticated' && user) {
+      router.replace(landingPathFor(user));
     }
-  }, [status, router]);
+  }, [status, user, router]);
 
   const handleSubmit = async (email: string) => {
     const trimmedEmail = email.trim();

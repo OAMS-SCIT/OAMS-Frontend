@@ -6,7 +6,7 @@ import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 import { AuthShell } from '@/features/auth/auth-shell';
 
 interface Props {
-  /** Called when the admin submits valid-looking credentials. */
+  /** Called when the user submits valid-looking credentials. */
   onSubmit: (email: string, password: string) => void;
   /** True while the login request is in flight; disables the form. */
   loading?: boolean;
@@ -30,7 +30,7 @@ export function LoginPage({ onSubmit, loading = false, error = null }: Props) {
       <h1 className="font-bold mb-1 text-[26px] tracking-[-0.02em] text-foreground">
         Welcome Back
       </h1>
-      <p className="text-sm text-muted-foreground mb-7">Sign in to OAMS Admin</p>
+      <p className="text-sm text-muted-foreground mb-7">Sign in to OAMS</p>
 
       <form className="space-y-4" onSubmit={handleSubmit} noValidate>
         <div>
@@ -51,7 +51,7 @@ export function LoginPage({ onSubmit, loading = false, error = null }: Props) {
               onChange={e => setEmail(e.target.value)}
               disabled={loading}
               className="w-full rounded-control border border-input bg-input-background text-sm pl-9 pr-3 py-2.5 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring disabled:opacity-60"
-              placeholder="admin@company.com"
+              placeholder="you@company.com"
             />
           </div>
         </div>
@@ -108,10 +108,6 @@ export function LoginPage({ onSubmit, loading = false, error = null }: Props) {
           {loading ? 'Signing in…' : 'Login'}
         </button>
       </form>
-
-      <p className="text-center mt-8 text-xs text-muted-foreground/80 leading-normal">
-        Only authorized administrators may access this system.
-      </p>
     </AuthShell>
   );
 }
