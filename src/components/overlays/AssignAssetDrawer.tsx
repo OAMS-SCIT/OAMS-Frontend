@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, Search, ChevronDown } from 'lucide-react';
+import { X, Search, ChevronDown, ImageIcon, Upload } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { toast } from 'sonner';
-import { ApiError, createAssignment, getUsers } from '@/lib/api';
+import { ApiError, createAssignment, uploadConditionImages, getUsers } from '@/lib/api';
 import type { AssetDetail, UserListItem } from '@/types';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { ImageUploadZone } from '@/components/ui/ImageUploadZone';
+import type { UploadedImage } from '@/components/ui/ImageUploadZone';
 
 // Only the asset fields this panel needs to display.
 type AssetLike = Pick<AssetDetail, 'id' | 'name' | 'displayId' | 'serialNumber'>;
@@ -35,6 +37,12 @@ export function AssignAssetDrawer({ asset, onClose, onAssigned }: Props) {
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  // Step 2: optional condition images after assignment is created.
+  const [step, setStep] = useState<1 | 2>(1);
+  const [createdAssignmentId, setCreatedAssignmentId] = useState<string | null>(null);
+  const [conditionImages, setConditionImages] = useState<UploadedImage[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   // Any active user (Admin or Employee) can be an assignee.
   useEffect(() => {
@@ -89,7 +97,7 @@ export function AssignAssetDrawer({ asset, onClose, onAssigned }: Props) {
     if (!validate()) return;
     setSaving(true);
     try {
-      await createAssignment({
+      const assignment = await createAssignment({
         assetId: asset.id,
         assigneeId: selectedEmployeeId,
         assignmentDate,
@@ -97,12 +105,35 @@ export function AssignAssetDrawer({ asset, onClose, onAssigned }: Props) {
         notes: notes.trim() || undefined,
       });
       toast.success(`"${asset.name}" assigned successfully.`);
-      onAssigned();
-      onClose();
+      // Transition to Step 2 (optional condition images).
+      setCreatedAssignmentId(assignment.id);
+      setStep(2);
+      onAssigned(); // refresh parent immediately so asset status updates
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Failed to assign asset.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUploadAndClose = async () => {
+    if (!createdAssignmentId || conditionImages.length === 0) {
+      onClose();
+      return;
+    }
+    setUploadingImages(true);
+    try {
+      await uploadConditionImages(
+        createdAssignmentId,
+        conditionImages.map((img) => img.file),
+        'assigned',
+      );
+      toast.success('Condition images uploaded.');
+    } catch {
+      toast.error('Images could not be uploaded — you can add them later.');
+    } finally {
+      setUploadingImages(false);
+      onClose();
     }
   };
 
@@ -113,13 +144,64 @@ export function AssignAssetDrawer({ asset, onClose, onAssigned }: Props) {
       <div className={`fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] ${closing ? 'motion-safe:animate-drawer-out' : 'motion-safe:animate-drawer-in'}`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
-          <h2 className="font-bold text-lg tracking-[-0.02em] text-foreground">Assign Asset</h2>
+          <div>
+            <h2 className="font-bold text-lg tracking-[-0.02em] text-foreground">Assign Asset</h2>
+            {step === 2 && (
+              <p className="text-2xs text-muted-foreground mt-0.5">Step 2 of 2 — Condition Images (Optional)</p>
+            )}
+          </div>
           <button onClick={requestClose} className="rounded-control p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Body */}
+        {/* ── Step 2: Condition images ─────────────────────────────────────── */}
+        {step === 2 && (
+          <>
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+              <div className="rounded-lg p-4 bg-success-surface border border-border">
+                <div className="text-sm font-semibold text-success-foreground mb-0.5">
+                  Assignment created!
+                </div>
+                <div className="text-2sm text-muted-foreground">
+                  Optionally upload photos of the asset's condition at the time of assignment.
+                  These will be attached to the assignment record and visible in the History Log.
+                </div>
+              </div>
+              <div>
+                <label className="block mb-2 text-xs font-medium text-foreground/80 flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  Condition Photos at Assignment
+                </label>
+                <ImageUploadZone
+                  images={conditionImages}
+                  onChange={setConditionImages}
+                  uploading={uploadingImages}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-6 py-4 justify-end border-t border-border bg-muted/60 rounded-bl-[16px]">
+              <button
+                onClick={() => onClose()}
+                className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted"
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleUploadAndClose}
+                disabled={uploadingImages || conditionImages.length === 0}
+                className="flex items-center gap-2 rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
+              >
+                <Upload className="w-4 h-4" />
+                {uploadingImages ? 'Uploading…' : `Upload ${conditionImages.length > 0 ? `(${conditionImages.length})` : ''} & Close`}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── Step 1: Assignment form ──────────────────────────────────────── */}
+        {step === 1 && (
+        <>
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {/* Asset being assigned */}
           <div className="rounded-lg p-4 bg-muted/60 border border-border">
@@ -225,7 +307,7 @@ export function AssignAssetDrawer({ asset, onClose, onAssigned }: Props) {
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer — Step 1 */}
         <div className="flex items-center gap-3 px-6 py-4 justify-end border-t border-border bg-muted/60 rounded-bl-[16px]">
           <button onClick={requestClose} className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
             Cancel
@@ -235,6 +317,8 @@ export function AssignAssetDrawer({ asset, onClose, onAssigned }: Props) {
             {saving ? 'Assigning…' : 'Confirm Assignment'}
           </button>
         </div>
+        </>
+        )}
       </div>
     </OverlayPortal>
   );

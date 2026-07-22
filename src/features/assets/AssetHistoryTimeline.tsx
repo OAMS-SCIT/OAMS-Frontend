@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
   PlusCircle,
@@ -7,6 +8,8 @@ import {
   ArrowLeftRight,
   UserPlus,
   UserMinus,
+  ImageIcon,
+  Loader2,
 } from 'lucide-react';
 import type {
   AssetEventType,
@@ -15,8 +18,11 @@ import type {
   AssetHistoryStatusChange,
   AssetHistoryAssignedChange,
   AssetHistoryReturnedChange,
+  ConditionImageItem,
 } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { ImageLightbox } from '@/components/overlays/ImageLightbox';
+import { getAssignmentConditionImages } from '@/lib/api';
 
 // ── Event metadata ────────────────────────────────────────────────────────────
 
@@ -105,16 +111,85 @@ function StatusChangeDetail({ changes }: { changes: AssetHistoryStatusChange }) 
 
 function Timestamp({ date }: { date: string }) {
   const d = new Date(date);
-  const relative = formatDistanceToNow(d, { addSuffix: true });
   const absolute = format(d, "dd MMM yyyy 'at' HH:mm");
+
+  // If the event is from today show relative time; otherwise show the exact date.
+  const isToday = format(d, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+  const display = isToday
+    ? formatDistanceToNow(d, { addSuffix: true })
+    : format(d, 'dd MMM yyyy');
 
   return (
     <span
       title={absolute}
       className="text-2xs text-muted-foreground/80 cursor-default whitespace-nowrap"
     >
-      {relative}
+      {display}
     </span>
+  );
+}
+
+// ── View Images button (OAMS-257) ─────────────────────────────────────────────
+
+function ViewConditionImagesButton({
+  assignmentId,
+  imageType,
+}: {
+  assignmentId: string;
+  imageType: 'assigned' | 'returned';
+}) {
+  const [images, setImages] = useState<ConditionImageItem[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const handleClick = async () => {
+    if (images) {
+      // Already fetched — open lightbox directly.
+      setLightboxIndex(0);
+      setLightboxOpen(true);
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await getAssignmentConditionImages(assignmentId);
+      const imgs = imageType === 'assigned' ? result.assigned : result.returned;
+      setImages(imgs);
+      if (imgs.length > 0) {
+        setLightboxIndex(0);
+        setLightboxOpen(true);
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        className="mt-2 flex items-center gap-1.5 rounded-control border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
+      >
+        {loading ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+          <ImageIcon className="w-3 h-3" />
+        )}
+        View Images
+      </button>
+      {lightboxOpen && images && images.length > 0 && (
+        <ImageLightbox
+          images={images.map((img) => ({ id: img.id, url: img.url }))}
+          index={lightboxIndex}
+          onIndexChange={setLightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+          title={imageType === 'assigned' ? 'Condition at Assignment' : 'Condition at Return'}
+        />
+      )}
+    </>
   );
 }
 
@@ -127,6 +202,14 @@ function HistoryEventRow({ entry, isLast }: { entry: AssetHistoryEntry; isLast: 
 
   const isUpdated = entry.eventType === 'updated';
   const isStatusChanged = entry.eventType === 'status_changed';
+
+  // OAMS-257: Extract assignmentId from changes for assigned/returned events.
+  const isAssigned = entry.eventType === 'assigned';
+  const isReturned = entry.eventType === 'returned';
+  const assignmentId =
+    (isAssigned || isReturned)
+      ? (entry.changes as AssetHistoryAssignedChange | AssetHistoryReturnedChange | null)?.assignmentId
+      : undefined;
 
   return (
     <div className="flex gap-4">
@@ -157,6 +240,14 @@ function HistoryEventRow({ entry, isLast }: { entry: AssetHistoryEntry; isLast: 
         )}
         {isStatusChanged && entry.changes && !Array.isArray(entry.changes) && (
           <StatusChangeDetail changes={entry.changes as AssetHistoryStatusChange} />
+        )}
+
+        {/* OAMS-257: View condition images for assigned/returned events */}
+        {assignmentId && (
+          <ViewConditionImagesButton
+            assignmentId={assignmentId}
+            imageType={isAssigned ? 'assigned' : 'returned'}
+          />
         )}
       </div>
     </div>

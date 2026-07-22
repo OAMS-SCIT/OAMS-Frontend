@@ -4,7 +4,7 @@ import { ReactNode, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, Tag, Users, ClipboardList, UserCog, LogOut,
-  Bell, Search, ChevronDown, Monitor, History, User,
+  Bell, Search, ChevronDown, Monitor, User,
 } from 'lucide-react';
 import { AppRole } from '@/types';
 import { useAuth } from '@/providers/auth-provider';
@@ -27,9 +27,9 @@ const adminNavItems = [
   { path: '/admin/designations', label: 'Designation Mgmt', icon: UserCog },
 ];
 
+// Asset and history views return once the employee-scoped endpoints exist.
 const employeeNavItems = [
-  { path: '/employee/dashboard', label: 'My Assets', icon: Monitor },
-  { path: '/employee/history', label: 'My History', icon: History },
+  { path: '/employee/dashboard', label: 'Home', icon: LayoutDashboard },
 ];
 
 export function AppLayout({ children, role, onLogout }: LayoutProps) {
@@ -97,7 +97,10 @@ export function AppLayout({ children, role, onLogout }: LayoutProps) {
             </div>
           </button>
           <button
-            onClick={() => (onLogout ? onLogout() : router.push('/login'))}
+            // Falls back to the real logout, never a bare redirect: navigating
+            // to /login without clearing the token leaves the session intact
+            // and RequireAuth sends the user straight back in.
+            onClick={() => (onLogout ?? logout)()}
             className="w-full flex items-center gap-3 px-5 py-3 transition-colors text-2sm text-white/45 hover:bg-white/5 hover:text-white/70"
           >
             <LogOut className="w-4 h-4" />
@@ -186,8 +189,7 @@ function BreadcrumbDisplay({ pathname, role }: { pathname: string; role: AppRole
     '/admin/users': ['User Management'],
     '/admin/designations': ['Designation Management'],
     '/admin/profile': ['Personal Profile'],
-    '/employee/dashboard': ['My Assets'],
-    '/employee/history': ['My Asset History'],
+    '/employee/dashboard': ['Home'],
     '/employee/profile': ['My Profile'],
   };
   const base = pathname.startsWith('/admin/inventory/')

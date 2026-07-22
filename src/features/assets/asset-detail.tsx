@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor, ZoomIn, RefreshCw } from 'lucide-react';
-import type { AssetDetail as AssetDetailType, AssetHistoryEntry, AssetUpgrade, Assignment, AssignmentHistoryItem } from '@/types';
-import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment, getAssetAssignments, getAssetHistory } from '@/lib/api';
+import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor, ZoomIn, RefreshCw, ImageIcon, Loader2 } from 'lucide-react';
+import type { AssetDetail as AssetDetailType, AssetHistoryEntry, AssetUpgrade, Assignment, AssignmentHistoryItem, ConditionImageItem } from '@/types';
+import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment, getAssetAssignments, getAssetHistory, getAssignmentConditionImages } from '@/lib/api';
 import { AssetHistoryTimeline } from './AssetHistoryTimeline';
+import { CostSummaryTab } from './CostSummaryTab';
 import { StatusBadge, ConditionBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -29,6 +30,214 @@ function InfoRow({ label, value, mono, style }: {
   );
 }
 
+// ── OAMS-262: Assignment history row with lazy-loaded condition image lightbox ─
+
+function AssignmentHistoryRow({
+  row,
+  index,
+}: {
+  row: AssignmentHistoryItem;
+  index: number;
+}) {
+  // State for assign-side lightbox
+  const [assignImages, setAssignImages] = useState<ConditionImageItem[] | null>(
+    row.assignConditionImages?.length > 0 ? row.assignConditionImages : null,
+  );
+  const [assignLightbox, setAssignLightbox] = useState(false);
+  const [assignLoading, setAssignLoading] = useState(false);
+
+  // State for return-side lightbox
+  const [returnImages, setReturnImages] = useState<ConditionImageItem[] | null>(
+    row.returnConditionImages?.length > 0 ? row.returnConditionImages : null,
+  );
+  const [returnLightbox, setReturnLightbox] = useState(false);
+  const [returnLoading, setReturnLoading] = useState(false);
+
+  const openImages = async (side: 'assigned' | 'returned') => {
+    const alreadyLoaded = side === 'assigned' ? assignImages : returnImages;
+    if (alreadyLoaded) {
+      side === 'assigned' ? setAssignLightbox(true) : setReturnLightbox(true);
+      return;
+    }
+    side === 'assigned' ? setAssignLoading(true) : setReturnLoading(true);
+    try {
+      const result = await getAssignmentConditionImages(row.id);
+      const imgs = side === 'assigned' ? result.assigned : result.returned;
+      if (side === 'assigned') {
+        setAssignImages(imgs);
+        if (imgs.length > 0) setAssignLightbox(true);
+      } else {
+        setReturnImages(imgs);
+        if (imgs.length > 0) setReturnLightbox(true);
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      side === 'assigned' ? setAssignLoading(false) : setReturnLoading(false);
+    }
+  };
+
+  const isActive = row.returnedAt === null;
+  const hasAssignImages = (row.assignConditionImages?.length ?? 0) > 0;
+  const hasReturnImages = (row.returnConditionImages?.length ?? 0) > 0;
+
+  return (
+    <>
+      <tr
+        className={`border-b border-border/60 border-l-[3px] ${
+          isActive ? 'border-l-primary' : 'border-l-transparent'
+        } ${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}
+      >
+        {/* Assignee */}
+        <td className="px-5 py-3.5">
+          <div className="flex items-center gap-2.5">
+            <Avatar user={row.assignee} size={30} />
+            <div>
+              <div className="text-2sm text-foreground font-semibold">
+                {row.assignee.firstName} {row.assignee.lastName}
+              </div>
+              <div className="text-xs text-muted-foreground/80">
+                {row.assignee.designation?.name ?? '—'}
+              </div>
+            </div>
+          </div>
+        </td>
+
+        {/* Assigned Date */}
+        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap nums">
+          {row.assignmentDate}
+        </td>
+
+        {/* Expected Return */}
+        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap nums">
+          {row.expectedReturnDate ?? '—'}
+        </td>
+
+        {/* Actual Return */}
+        <td className="px-5 py-3.5 whitespace-nowrap">
+          {row.returnDate ? (
+            <span className="text-2sm text-muted-foreground nums">{row.returnDate}</span>
+          ) : (
+            <span className="inline-flex items-center font-medium rounded-full text-2xs px-2.5 py-[3px] bg-info-surface text-info-foreground">
+              Currently Assigned
+            </span>
+          )}
+        </td>
+
+        {/* Condition at Assignment + View Images */}
+        <td className="px-5 py-3.5">
+          {row.conditionAtAssignment ? (
+            <ConditionBadge condition={row.conditionAtAssignment} />
+          ) : (
+            <span className="text-2sm text-muted-foreground/80">—</span>
+          )}
+          {hasAssignImages && (
+            <button
+              onClick={() => openImages('assigned')}
+              disabled={assignLoading}
+              className="mt-1 flex items-center gap-1 text-2xs text-primary hover:underline disabled:opacity-60"
+            >
+              {assignLoading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <ImageIcon className="w-2.5 h-2.5" />}
+              View Images
+            </button>
+          )}
+        </td>
+
+        {/* Condition at Return + View Images */}
+        <td className="px-5 py-3.5">
+          {row.conditionAtReturn ? (
+            <ConditionBadge condition={row.conditionAtReturn} />
+          ) : (
+            <span className="text-2sm text-muted-foreground/80">—</span>
+          )}
+          {hasReturnImages && (
+            <button
+              onClick={() => openImages('returned')}
+              disabled={returnLoading}
+              className="mt-1 flex items-center gap-1 text-2xs text-primary hover:underline disabled:opacity-60"
+            >
+              {returnLoading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <ImageIcon className="w-2.5 h-2.5" />}
+              View Images
+            </button>
+          )}
+        </td>
+
+        {/* Notes */}
+        <td className="px-5 py-3.5 align-top">
+          <NoteCell note={row.notes} />
+        </td>
+
+        {/* Assigned By */}
+        <td className="px-5 py-3.5 text-2sm text-muted-foreground align-top break-words">
+          {row.assignedBy ? `${row.assignedBy.firstName} ${row.assignedBy.lastName}` : '—'}
+        </td>
+      </tr>
+
+      {/* Lightboxes rendered outside the table */}
+      {assignLightbox && assignImages && assignImages.length > 0 && (
+        <ImageLightbox
+          images={assignImages}
+          index={0}
+          onIndexChange={() => {}}
+          onClose={() => setAssignLightbox(false)}
+          title="Condition at Assignment"
+        />
+      )}
+      {returnLightbox && returnImages && returnImages.length > 0 && (
+        <ImageLightbox
+          images={returnImages}
+          index={0}
+          onIndexChange={() => {}}
+          onClose={() => setReturnLightbox(false)}
+          title="Condition at Return"
+        />
+      )}
+    </>
+    );
+}
+
+const HISTORY_COLUMNS = [
+  { label: 'Assignee', width: '18%' },
+  { label: 'Assigned', width: '10%' },
+  { label: 'Expected', width: '10%' },
+  { label: 'Returned', width: '13%' },
+  { label: 'Cond. (assign)', width: '11%' },
+  { label: 'Cond. (return)', width: '11%' },
+  { label: 'Notes', width: '15%' },
+  { label: 'Assigned by', width: '12%' },
+] as const;
+
+function NoteCell({ note }: { note: string | null }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!note) {
+    return <span className="text-2sm text-muted-foreground/80">—</span>;
+  }
+
+  const isLong = note.length > 120;
+
+  return (
+    <div className="min-w-0 max-w-[280px]">
+      <p
+        className={`text-2sm text-muted-foreground break-words [overflow-wrap:anywhere] ${
+          !expanded && isLong ? 'line-clamp-3' : ''
+        }`}
+      >
+        {note}
+      </p>
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="mt-1 text-xs font-medium text-primary transition-opacity hover:opacity-80"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function AssetDetail() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -37,7 +246,8 @@ export function AssetDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'history' | 'asset_log' | 'upgrades'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'asset_log' | 'upgrades' | 'cost'>('history');
+  const [costVersion, setCostVersion] = useState(0);
 
   // Which image is shown large in the hero (index into the sorted images).
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -417,12 +627,13 @@ export function AssetDetail() {
         {/* Tab Bar */}
         <div className="flex items-center border-b border-border px-6">
           {[
-            { key: 'history', label: 'Assignment History' },
+            { key: 'history',  label: 'Assignment History' },
             { key: 'asset_log', label: 'History Log' },
             { key: 'upgrades', label: `Upgrade Log${upgradesTotal > 0 ? ` (${upgradesTotal})` : ''}` },
+            { key: 'cost',     label: 'Cost Summary' },
           ].map((tab) => (
             <button key={tab.key}
-              onClick={() => setActiveTab(tab.key as 'history' | 'asset_log' | 'upgrades')}
+              onClick={() => setActiveTab(tab.key as 'history' | 'asset_log' | 'upgrades' | 'cost')}
               className={`relative mr-6 py-4 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === tab.key
                   ? 'text-primary border-primary'
@@ -455,67 +666,20 @@ export function AssetDetail() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1120px]">
+              <table className="w-full table-fixed min-w-[920px]">
                 <thead>
                   <tr className="bg-muted/60 border-b border-border">
-                    {['Assignee', 'Assigned Date', 'Expected Return', 'Actual Return', 'Condition (Assign)', 'Condition (Return)', 'Notes', 'Assigned By'].map((h) => (
-                      <th key={h} className="text-left px-5 py-3 micro-label whitespace-nowrap">
-                        {h}
+                    {HISTORY_COLUMNS.map(({ label, width }) => (
+                      <th key={label} className="text-left px-5 py-3 micro-label align-top" style={{ width }}>
+                        {label}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {history.map((row, i) => {
-                    const isActive = row.returnedAt === null;
-                    return (
-                      <tr key={row.id}
-                        className={`border-b border-border/60 border-l-[3px] ${
-                          isActive ? 'border-l-primary' : 'border-l-transparent'
-                        } ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2.5">
-                            <Avatar user={row.assignee} size={30} />
-                            <div>
-                              <div className="text-2sm text-foreground font-semibold">
-                                {row.assignee.firstName} {row.assignee.lastName}
-                              </div>
-                              <div className="text-xs text-muted-foreground/80">
-                                {row.assignee.designation?.name ?? '—'}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap nums">{row.assignmentDate}</td>
-                        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap nums">{row.expectedReturnDate ?? '—'}</td>
-                        <td className="px-5 py-3.5 whitespace-nowrap">
-                          {row.returnDate ? (
-                            <span className="text-2sm text-muted-foreground nums">{row.returnDate}</span>
-                          ) : (
-                            <span className="inline-flex items-center font-medium rounded-full text-2xs px-2.5 py-[3px] bg-info-surface text-info-foreground">
-                              Currently Assigned
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          {row.conditionAtAssignment
-                            ? <ConditionBadge condition={row.conditionAtAssignment} />
-                            : <span className="text-2sm text-muted-foreground/80">—</span>}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          {row.conditionAtReturn
-                            ? <ConditionBadge condition={row.conditionAtReturn} />
-                            : <span className="text-2sm text-muted-foreground/80">—</span>}
-                        </td>
-                        <td className="px-5 py-3.5 text-2sm text-muted-foreground max-w-[220px] whitespace-normal">
-                          {row.notes ?? '—'}
-                        </td>
-                        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap">
-                          {row.assignedBy ? `${row.assignedBy.firstName} ${row.assignedBy.lastName}` : '—'}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {history.map((row, i) => (
+                    <AssignmentHistoryRow key={row.id} row={row} index={i} />
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -529,6 +693,11 @@ export function AssetDetail() {
             isLoading={assetLogLoading}
             error={assetLogError}
           />
+        )}
+
+        {/* Cost Summary Tab (OAMS-263/265) */}
+        {activeTab === 'cost' && (
+          <CostSummaryTab assetId={asset.id} version={costVersion} />
         )}
 
         {/* Upgrade Log Tab */}

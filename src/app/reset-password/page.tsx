@@ -5,21 +5,22 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ResetPasswordPage } from '@/features/auth/reset-password-page';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, resetPasswordWithToken } from '@/lib/api';
+import { landingPathFor } from '@/lib/routes';
 
 function ResetPasswordRoutePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      router.replace('/admin/dashboard');
+    if (status === 'authenticated' && user) {
+      router.replace(landingPathFor(user));
     }
-  }, [status, router]);
+  }, [status, user, router]);
 
   const handleSubmit = async (newPassword: string) => {
     setError(null);

@@ -313,7 +313,7 @@ export interface AssetUpgrade {
   specAfter: string;
   cost: number;
   vendorName: string;
-  notes: string | null;
+  invoiceUrl: string | null;
   loggedBy: { id: string; firstName: string; lastName: string } | null;
   createdAt: string;
   updatedAt: string;
@@ -326,7 +326,7 @@ export interface CreateUpgradePayload {
   specAfter: string;
   cost: number;
   vendorName: string;
-  notes?: string;
+  invoiceUrl?: string;
 }
 
 export interface UpdateUpgradePayload extends Partial<CreateUpgradePayload> {}
@@ -366,10 +366,17 @@ export interface ActiveAssignmentListItem {
   isOverdue: boolean;
 }
 
+/** A condition image captured at assignment or return time (OAMS-257/262). */
+export interface ConditionImageItem {
+  id: string;
+  url: string;
+}
+
 /**
  * A row in an asset's assignment history (GET /api/assets/:id/assignments).
  * Includes returned assignments and carries everything the history tab shows:
- * the assignee's designation, who assigned it, and both condition snapshots.
+ * the assignee's designation, who assigned it, both condition snapshots, and
+ * condition images captured at assignment and return time (OAMS-257/262).
  */
 export interface AssignmentHistoryItem {
   id: string;
@@ -390,6 +397,10 @@ export interface AssignmentHistoryItem {
   notes: string | null;
   /** Closed flag: null = still the active assignment (drives the row accent). */
   returnedAt: string | null;
+  /** Condition images captured when the asset was assigned (OAMS-257/262). */
+  assignConditionImages: ConditionImageItem[];
+  /** Condition images captured when the asset was returned (OAMS-257/262). */
+  returnConditionImages: ConditionImageItem[];
 }
 
 /**
@@ -469,6 +480,8 @@ export interface UpdateUserPayload {
   contactNumber?: string;
   designationId?: string;
   role?: UserRole;
+  /** Only accepted before the user's first login; omitted otherwise. */
+  email?: string;
 }
 
 // POST /api/users request body
@@ -593,11 +606,15 @@ export interface AssetHistoryStatusChange {
 export interface AssetHistoryAssignedChange {
   assignedTo: string;
   assignedToId: string;
+  /** Present for events logged after OAMS-257 — used to fetch condition images. */
+  assignmentId?: string;
 }
 
 export interface AssetHistoryReturnedChange {
   returnedFrom: string;
   returnedFromId: string;
+  /** Present for events logged after OAMS-257 — used to fetch return condition images. */
+  assignmentId?: string;
 }
 
 export interface AssetHistoryEntry {
@@ -616,4 +633,31 @@ export interface AssetHistoryEntry {
       | Record<string, unknown>
       | null;
   createdAt: string;
+}
+
+// ── Cost Summary (OAMS-263/265) ────────────────────────────────────────────
+
+export interface CostBreakdownItem {
+  id: string;
+  category: string;
+  date: string;
+  description: string;
+  vendor: string | null;
+  cost: number;
+  reference: string | null;
+}
+
+export interface AssetCostSummary {
+  assetId: string;
+  purchaseCost: number;
+  upgradeCost: number;
+  totalCost: number;
+  breakdown: CostBreakdownItem[];
+}
+
+// ── Condition Images (OAMS-257/262) ───────────────────────────────────────
+
+export interface AssignmentConditionImages {
+  assigned: ConditionImageItem[];
+  returned: ConditionImageItem[];
 }

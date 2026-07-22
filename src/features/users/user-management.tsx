@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Plus, Search, MoreHorizontal, Eye, Pencil, UserX, Trash2, Info, RefreshCw, X } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Eye, Pencil, UserX, Trash2, Info, RefreshCw, X, KeyRound } from 'lucide-react';
 import type { DesignationManageItem, UserListItem, UserRole, UserStatus } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { Select } from '@/components/ui/Select';
 import { PortalMenu } from '@/components/ui/PortalMenu';
 import { OverlayPortal } from '@/components/overlays/OverlayPortal';
@@ -21,6 +22,7 @@ import {
   deleteUser,
   getDesignationsManage,
   getUsers,
+  resendCredentials,
   updateDesignation,
   updateDesignationStatus,
   updateUserStatus,
@@ -120,6 +122,7 @@ export function UserManagement() {
   const [editTarget, setEditTarget] = useState<UserListItem | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<UserListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserListItem | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
   const [userPage, setUserPage] = useState(1);
 
   const [users, setUsers] = useState<UserListItem[]>([]);
@@ -144,6 +147,23 @@ export function UserManagement() {
 
   const userTotalPages = Math.max(1, Math.ceil(userTotal / PER_PAGE));
   const dTotalPages = Math.max(1, Math.ceil(dTotal / PER_PAGE));
+  const hasActiveUserFilters = Boolean(userSearch || filterRole || filterStatus);
+  const hasActiveDesignationFilters = Boolean(dSearch || dFilterStatus);
+
+  const clearUserFilters = () => {
+    setUserSearch('');
+    setUserDebouncedSearch('');
+    setFilterRole('');
+    setFilterStatus('');
+    setUserPage(1);
+  };
+
+  const clearDesignationFilters = () => {
+    setDSearch('');
+    setDDebouncedSearch('');
+    setDFilterStatus('');
+    setDPage(1);
+  };
 
   // ── Debounce: users ──
   useEffect(() => {
@@ -238,6 +258,20 @@ export function UserManagement() {
     }
   };
 
+  const handleResendCredentials = async (user: UserListItem) => {
+    setOpenMenu(null);
+    if (resendingId) return;
+    setResendingId(user.id);
+    try {
+      await resendCredentials(user.id);
+      toast.success(`New temporary credentials emailed to ${user.email}.`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to resend credentials.');
+    } finally {
+      setResendingId(null);
+    }
+  };
+
   // ── Designation actions ──
   const handleCreateDesignation = async (name: string) => {
     try {
@@ -325,7 +359,7 @@ export function UserManagement() {
           <div className="flex items-start gap-3 rounded-lg p-4 mb-5 bg-info-surface border border-info/30">
             <Info className="w-4 h-4 mt-0.5 shrink-0 text-info" />
             <p className="text-2sm text-info-foreground">
-              Only Admin-role users can log into the system. Employee accounts are used for asset tracking only.
+              Both Admin and Employee accounts can sign in. Employees see only their own profile; admin tools stay restricted to the Admin role.
             </p>
           </div>
 
@@ -350,6 +384,7 @@ export function UserManagement() {
                 { value: 'Active', label: 'Active' },
                 { value: 'Inactive', label: 'Inactive' },
               ]} />
+            <ClearFiltersButton onClear={clearUserFilters} disabled={!hasActiveUserFilters} />
           </div>
 
           <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">
@@ -446,6 +481,13 @@ export function UserManagement() {
                                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-2sm text-foreground hover:bg-muted transition-colors">
                                 <Pencil className="w-3.5 h-3.5" /> Edit
                               </button>
+                              {user.isFirstLogin && (
+                                <button onClick={() => handleResendCredentials(user)}
+                                  disabled={resendingId === user.id}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-2sm text-foreground hover:bg-muted transition-colors disabled:opacity-50">
+                                  <KeyRound className="w-3.5 h-3.5" /> {resendingId === user.id ? 'Sending…' : 'Resend Credentials'}
+                                </button>
+                              )}
                               {(() => {
                                 const isSelf = currentUser?.id === user.id;
                                 const label = user.status === 'Active' ? 'Deactivate' : 'Activate';
@@ -518,6 +560,7 @@ export function UserManagement() {
                 { value: 'Active', label: 'Active' },
                 { value: 'Inactive', label: 'Inactive' },
               ]} />
+            <ClearFiltersButton onClear={clearDesignationFilters} disabled={!hasActiveDesignationFilters} />
           </div>
 
           <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">

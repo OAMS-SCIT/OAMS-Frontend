@@ -12,7 +12,7 @@ export default function AdminPortalLayout({
   const { logout } = useAuth();
 
   return (
-    <RequireAuth>
+    <RequireAuth role="Admin">
       <AppLayout role="admin" onLogout={logout}>
         {children}
       </AppLayout>
