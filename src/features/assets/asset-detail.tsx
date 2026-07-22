@@ -30,6 +30,48 @@ function InfoRow({ label, value, mono, style }: {
   );
 }
 
+const HISTORY_COLUMNS = [
+  { label: 'Assignee', width: '18%' },
+  { label: 'Assigned Date', width: '10%' },
+  { label: 'Expected Return', width: '10%' },
+  { label: 'Actual Return', width: '12%' },
+  { label: 'Condition (Assign)', width: '10%' },
+  { label: 'Condition (Return)', width: '10%' },
+  { label: 'Notes', width: '22%' },
+  { label: 'Assigned By', width: '8%' },
+] as const;
+
+function NoteCell({ note }: { note: string | null }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!note) {
+    return <span className="text-2sm text-muted-foreground/80">—</span>;
+  }
+
+  const isLong = note.length > 120;
+
+  return (
+    <div className="min-w-0 max-w-[280px]">
+      <p
+        className={`text-2sm text-muted-foreground break-words [overflow-wrap:anywhere] ${
+          !expanded && isLong ? 'line-clamp-3' : ''
+        }`}
+      >
+        {note}
+      </p>
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="mt-1 text-xs font-medium text-primary transition-opacity hover:opacity-80"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── OAMS-262: Assignment history row with lazy-loaded condition image lightbox ─
 
 function AssignmentHistoryRow({
@@ -163,13 +205,15 @@ function AssignmentHistoryRow({
         </td>
 
         {/* Notes */}
-        <td className="px-5 py-3.5 text-2sm text-muted-foreground max-w-[220px] whitespace-normal">
-          {row.notes ?? '—'}
+        <td className="px-5 py-3.5 align-top">
+          <NoteCell note={row.notes} />
         </td>
 
         {/* Assigned By */}
-        <td className="px-5 py-3.5 text-2sm text-muted-foreground whitespace-nowrap">
-          {row.assignedBy ? `${row.assignedBy.firstName} ${row.assignedBy.lastName}` : '—'}
+        <td className="px-5 py-3.5 text-2sm text-muted-foreground align-top">
+          <span className="block truncate" title={row.assignedBy ? `${row.assignedBy.firstName} ${row.assignedBy.lastName}` : undefined}>
+            {row.assignedBy ? `${row.assignedBy.firstName} ${row.assignedBy.lastName}` : '—'}
+          </span>
         </td>
       </tr>
 
@@ -532,7 +576,7 @@ export function AssetDetail() {
         {/* Core Specs */}
         <div className="rounded-2xl p-5 bg-card border border-border shadow-card">
           <h3 className="font-semibold mb-3 text-sm tracking-[-0.01em] text-foreground">Core Specifications</h3>
-          <InfoRow label="Brand" value={asset.brand} />
+          <InfoRow label="Brand" value={asset.brand.name} />
           <InfoRow label="Model" value={asset.model} />
           <InfoRow label="Serial Number" value={asset.serialNumber} mono />
           <InfoRow label="Category" value={asset.category.name} />
@@ -624,12 +668,12 @@ export function AssetDetail() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1120px]">
+              <table className="w-full table-fixed min-w-[1120px]">
                 <thead>
                   <tr className="bg-muted/60 border-b border-border">
-                    {['Assignee', 'Assigned Date', 'Expected Return', 'Actual Return', 'Condition (Assign)', 'Condition (Return)', 'Notes', 'Assigned By'].map((h) => (
-                      <th key={h} className="text-left px-5 py-3 micro-label whitespace-nowrap">
-                        {h}
+                    {HISTORY_COLUMNS.map(({ label, width }) => (
+                      <th key={label} className="text-left px-5 py-3 micro-label whitespace-nowrap align-top" style={{ width }}>
+                        {label}
                       </th>
                     ))}
                   </tr>
