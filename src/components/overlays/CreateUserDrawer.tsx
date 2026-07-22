@@ -287,7 +287,7 @@ export function CreateUserDrawer({ onClose, onSave }: Props) {
 
             <div className="flex items-start gap-3 rounded-lg p-3 bg-info-surface border border-info/30">
               <Info className="w-4 h-4 mt-0.5 shrink-0 text-info" />
-              <p className="text-xs text-info-foreground">Only Admin role users will have login access. Employee accounts are for asset tracking only.</p>
+              <p className="text-xs text-info-foreground">Both roles can sign in. Admins get the full management portal; Employees get their own profile only.</p>
             </div>
 
             {/* Status */}

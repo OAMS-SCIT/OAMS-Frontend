@@ -1,25 +1,21 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/app-layout';
-import { useApp } from '@/providers/app-provider';
+import { RequireAuth } from '@/components/auth/require-auth';
+import { useAuth } from '@/providers/auth-provider';
 
 export default function EmployeePortalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const { logout } = useApp();
-
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
-  };
+  const { logout } = useAuth();
 
   return (
-    <AppLayout role="employee" onLogout={handleLogout}>
-      {children}
-    </AppLayout>
+    <RequireAuth role="Employee">
+      <AppLayout role="employee" onLogout={logout}>
+        {children}
+      </AppLayout>
+    </RequireAuth>
   );
 }

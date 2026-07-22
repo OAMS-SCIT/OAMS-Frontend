@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Pencil, Plus, RefreshCw, Mail, Phone } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowLeft, Pencil, Plus, RefreshCw, Mail, Phone, KeyRound } from 'lucide-react';
 import type { EmployeeAssignmentItem, UserListItem } from '@/types';
-import { getEmployeeAssignments, getUser } from '@/lib/api';
+import { ApiError, getEmployeeAssignments, getUser, resendCredentials } from '@/lib/api';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -41,6 +42,7 @@ export function EmployeeProfileView() {
 
   const [showEdit, setShowEdit] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const loadUser = useCallback(async () => {
     setUserLoading(true);
@@ -74,6 +76,19 @@ export function EmployeeProfileView() {
   useEffect(() => { loadAssignments(); }, [loadAssignments]);
 
   const goToAsset = (assetId: string) => router.push(`/admin/inventory/${assetId}`);
+
+  const handleResendCredentials = async () => {
+    if (!user || resending) return;
+    setResending(true);
+    try {
+      await resendCredentials(user.id);
+      toast.success(`New temporary credentials emailed to ${user.email}.`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to resend credentials.');
+    } finally {
+      setResending(false);
+    }
+  };
 
   if (userLoading) {
     return (
@@ -120,10 +135,18 @@ export function EmployeeProfileView() {
               <div className="mt-2"><StatusBadge status={user.role} /></div>
             </div>
           </div>
-          <button onClick={() => setShowEdit(true)}
-            className="shrink-0 flex items-center gap-2 rounded-control border border-border px-4 py-2.5 text-sm font-semibold text-foreground/80 transition-colors hover:bg-muted">
-            <Pencil className="w-4 h-4" /> Edit User
-          </button>
+          <div className="shrink-0 flex items-center gap-2">
+            {user.isFirstLogin && (
+              <button onClick={handleResendCredentials} disabled={resending}
+                className="flex items-center gap-2 rounded-control border border-border px-4 py-2.5 text-sm font-semibold text-foreground/80 transition-colors hover:bg-muted disabled:opacity-60">
+                <KeyRound className="w-4 h-4" /> {resending ? 'Sending…' : 'Resend Credentials'}
+              </button>
+            )}
+            <button onClick={() => setShowEdit(true)}
+              className="flex items-center gap-2 rounded-control border border-border px-4 py-2.5 text-sm font-semibold text-foreground/80 transition-colors hover:bg-muted">
+              <Pencil className="w-4 h-4" /> Edit User
+            </button>
+          </div>
         </div>
 
         <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
