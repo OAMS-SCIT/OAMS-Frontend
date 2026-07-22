@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ExternalLink, ChevronDown } from 'lucide-react';
+import { ExternalLink, ChevronDown, Download } from 'lucide-react';
 import type { AssetCostSummary, CostBreakdownItem } from '@/types';
 import { getAssetCostSummary } from '@/lib/api';
 import { ApiError } from '@/lib/api';
@@ -127,15 +127,26 @@ function BreakdownTable({ rows }: { rows: CostBreakdownItem[] }) {
                   </td>
                   <td className="px-4 py-3">
                     {row.reference ? (
-                      <a
-                        href={row.reference}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-2sm text-primary hover:underline"
-                      >
-                        <ExternalLink className="w-3 h-3 shrink-0" />
-                        <span className="truncate max-w-[140px]">{row.reference}</span>
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={row.reference}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="View"
+                          className="flex items-center gap-1 text-2sm text-primary hover:underline"
+                        >
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                          <span>View</span>
+                        </a>
+                        <a
+                          href={row.reference}
+                          download
+                          title="Download"
+                          className="flex items-center text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
                     ) : (
                       <span className="text-2sm text-muted-foreground/80">—</span>
                     )}

@@ -505,6 +505,18 @@ export function deleteUpgrade(id: string): Promise<{ message: string }> {
   });
 }
 
+export function uploadUpgradeInvoice(
+  upgradeId: string,
+  file: File,
+): Promise<AssetUpgrade> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<AssetUpgrade>(`/upgrades/${upgradeId}/invoice`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
 // ── Assignments ─────────────────────────────────────────────────────────────
 
 export interface GetAssignmentsParams {

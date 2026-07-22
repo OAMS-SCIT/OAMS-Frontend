@@ -305,7 +305,7 @@ export interface AssetUpgrade {
   specAfter: string;
   cost: number;
   vendorName: string;
-  notes: string | null;
+  invoiceUrl: string | null;
   loggedBy: { id: string; firstName: string; lastName: string } | null;
   createdAt: string;
   updatedAt: string;
@@ -318,7 +318,7 @@ export interface CreateUpgradePayload {
   specAfter: string;
   cost: number;
   vendorName: string;
-  notes?: string;
+  invoiceUrl?: string;
 }
 
 export interface UpdateUpgradePayload extends Partial<CreateUpgradePayload> {}

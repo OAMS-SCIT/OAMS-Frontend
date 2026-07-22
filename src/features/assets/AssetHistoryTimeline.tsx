@@ -111,15 +111,20 @@ function StatusChangeDetail({ changes }: { changes: AssetHistoryStatusChange }) 
 
 function Timestamp({ date }: { date: string }) {
   const d = new Date(date);
-  const relative = formatDistanceToNow(d, { addSuffix: true });
   const absolute = format(d, "dd MMM yyyy 'at' HH:mm");
+
+  // If the event is from today show relative time; otherwise show the exact date.
+  const isToday = format(d, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+  const display = isToday
+    ? formatDistanceToNow(d, { addSuffix: true })
+    : format(d, 'dd MMM yyyy');
 
   return (
     <span
       title={absolute}
       className="text-2xs text-muted-foreground/80 cursor-default whitespace-nowrap"
     >
-      {relative}
+      {display}
     </span>
   );
 }
