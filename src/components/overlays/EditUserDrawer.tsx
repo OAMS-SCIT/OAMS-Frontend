@@ -17,10 +17,13 @@ interface Props {
 interface FormState {
   firstName: string;
   lastName: string;
+  email: string;
   contactNumber: string;
   designationId: string;
   role: UserRole;
 }
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function isValidSriLankanContactNumber(value: string) {
   const compact = value.replace(/\s+/g, '');
@@ -32,9 +35,14 @@ function sanitizeContactNumberInput(value: string) {
 }
 
 export function EditUserDrawer({ user, onClose, onSave }: Props) {
+  // Email is only correctable before the user's first login — it exists to fix
+  // a typo that stopped the welcome email arriving. Afterwards it is identity.
+  const emailEditable = user.isFirstLogin;
+
   const [form, setForm] = useState<FormState>({
     firstName: user.firstName,
     lastName: user.lastName,
+    email: user.email,
     contactNumber: user.contactNumber ?? '',
     designationId: user.designation?.id ?? '',
     role: user.role,
@@ -98,6 +106,9 @@ export function EditUserDrawer({ user, onClose, onSave }: Props) {
     const e: Record<string, string> = {};
     if (!form.firstName.trim()) e.firstName = 'First name is required';
     if (!form.lastName.trim()) e.lastName = 'Last name is required';
+    if (emailEditable && !EMAIL_RE.test(form.email.trim())) {
+      e.email = 'Valid email is required';
+    }
     if (form.contactNumber.trim() && !isValidSriLankanContactNumber(form.contactNumber.trim())) {
       e.contactNumber = 'Contact number must be a valid Sri Lankan number (e.g. +94 77 000 0000)';
     }
@@ -116,13 +127,17 @@ export function EditUserDrawer({ user, onClose, onSave }: Props) {
         contactNumber: form.contactNumber.trim(),
         designationId: form.designationId,
         role: form.role,
+        // Only sent while editable — the backend freezes it after first login.
+        ...(emailEditable ? { email: form.email.trim() } : {}),
       });
       toast.success(`${form.firstName} ${form.lastName} updated successfully.`);
       onSave();
       onClose();
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 404) {
+        if (err.status === 409) {
+          setErrors(prev => ({ ...prev, email: 'This email is already in use' }));
+        } else if (err.status === 404) {
           setErrors(prev => ({ ...prev, designationId: 'Selected designation no longer exists' }));
         } else {
           setErrors(prev => ({ ...prev, _form: err.message }));
@@ -169,14 +184,29 @@ export function EditUserDrawer({ user, onClose, onSave }: Props) {
             </FormField>
           </div>
 
-          {/* Email — read-only */}
-          <FormField label="Email Address">
-            <div className="fi fi-readonly flex items-center justify-between">
-              <span>{user.email}</span>
-              <Lock className="w-4 h-4 text-muted-foreground/60" />
-            </div>
-            <p className="text-2xs text-muted-foreground/80 mt-1">Email cannot be changed here.</p>
-          </FormField>
+          {/* Email — editable only before the user's first login */}
+          {emailEditable ? (
+            <FormField label="Email Address" required error={errors.email}>
+              <input
+                type="email"
+                value={form.email}
+                onChange={e => set('email', e.target.value)}
+                className="fi"
+                placeholder="email@company.com"
+              />
+              <p className="text-2xs text-muted-foreground/80 mt-1">
+                This user hasn&apos;t logged in yet — fix a mistyped address here, then resend their credentials.
+              </p>
+            </FormField>
+          ) : (
+            <FormField label="Email Address">
+              <div className="fi fi-readonly flex items-center justify-between">
+                <span>{user.email}</span>
+                <Lock className="w-4 h-4 text-muted-foreground/60" />
+              </div>
+              <p className="text-2xs text-muted-foreground/80 mt-1">Email cannot be changed once the user has logged in.</p>
+            </FormField>
+          )}
 
           <FormField label="Contact Number" error={errors.contactNumber}>
             <input

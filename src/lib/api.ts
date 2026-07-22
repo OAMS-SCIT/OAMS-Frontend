@@ -262,6 +262,17 @@ export function deleteUser(id: string): Promise<{ message: string }> {
   });
 }
 
+/**
+ * Re-issue temporary credentials for a user who has not yet logged in — the
+ * recovery path when the welcome email went to a mistyped address. Rejected
+ * with 400 once the user has set their own password.
+ */
+export function resendCredentials(id: string): Promise<{ tempPassword: string }> {
+  return request<{ tempPassword: string }>(`/users/${id}/resend-credentials`, {
+    method: 'POST',
+  });
+}
+
 // ── Designations ──────────────────────────────────────────────────────────
 
 export function getDesignations(): Promise<DesignationListItem[]> {

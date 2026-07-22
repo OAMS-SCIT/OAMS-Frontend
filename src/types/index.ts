@@ -469,6 +469,8 @@ export interface UpdateUserPayload {
   contactNumber?: string;
   designationId?: string;
   role?: UserRole;
+  /** Only accepted before the user's first login; omitted otherwise. */
+  email?: string;
 }
 
 // POST /api/users request body
