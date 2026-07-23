@@ -208,6 +208,12 @@ export interface BrandListItem {
   name: string;
 }
 
+/** Returned by GET /api/vendors — shared vendor dropdown (Asset Registration, upgrades, etc.). */
+export interface VendorListItem {
+  id: string;
+  name: string;
+}
+
 /** Returned in GET /api/assets list. */
 export interface AssetListItem {
   id: string;
@@ -254,7 +260,13 @@ export interface AssetDetail {
   location: string | null;
   purchaseDate: string;
   purchasePrice: number;
-  vendorName: string | null;
+  /** Linked vendor record when set. Optional while the API migrates off flat vendorName. */
+  vendor?: { id: string; name: string } | null;
+  /**
+   * Flat vendor name from older API responses. Prefer `vendor.name` when present.
+   * Kept so edit/detail still render during the vendor-entity migration.
+   */
+  vendorName?: string | null;
   purchaseOrderRef: string | null;
   warrantyStartDate: string | null;
   warrantyExpiryDate: string | null;
@@ -288,6 +300,8 @@ export interface CreateAssetPayload {
   location?: string;
   purchaseDate: string;
   purchasePrice: number;
+  /** Provide vendorId for an existing vendor, OR vendorName to resolve-or-create. */
+  vendorId?: string;
   vendorName?: string;
   purchaseOrderRef?: string;
   warrantyStartDate?: string;
@@ -325,7 +339,9 @@ export interface CreateUpgradePayload {
   specBefore?: string;
   specAfter: string;
   cost: number;
-  vendorName: string;
+  /** Provide vendorId for an existing vendor, OR vendorName to resolve-or-create. */
+  vendorId?: string;
+  vendorName?: string;
   invoiceUrl?: string;
 }
 

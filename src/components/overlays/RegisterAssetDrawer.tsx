@@ -7,6 +7,7 @@ import { useDrawerAnimation } from './useDrawerAnimation';
 import { ImageUploadZone, type UploadedImage } from '@/components/ui/ImageUploadZone';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { BrandCombobox, type BrandComboboxHandle } from '@/components/ui/BrandCombobox';
+import { VendorCombobox, type VendorComboboxHandle } from '@/components/ui/VendorCombobox';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { toast } from 'sonner';
 import {
@@ -17,6 +18,7 @@ import {
   getBrands,
   getCategories,
   getCategory,
+  getVendors,
   updateAsset,
   uploadAssetImages,
 } from '@/lib/api';
@@ -28,6 +30,7 @@ import type {
   AttributeValuePayload,
   BrandListItem,
   CategoryListItem,
+  VendorListItem,
 } from '@/types';
 
 interface Props {
@@ -55,6 +58,9 @@ interface FormState {
   categoryId: string;
   purchaseDate: string;
   purchasePrice: string;
+  /** Existing-vendor id; mutually exclusive with vendorName. */
+  vendorId: string;
+  /** New-vendor name (created on save); mutually exclusive with vendorId. */
   vendorName: string;
   purchaseOrderRef: string;
   warrantyStartDate: string;
@@ -66,7 +72,7 @@ interface FormState {
 
 const EMPTY_FORM: FormState = {
   name: '', description: '', brandId: '', brandName: '', model: '', serialNumber: '',
-  categoryId: '', purchaseDate: '', purchasePrice: '', vendorName: '',
+  categoryId: '', purchaseDate: '', purchasePrice: '', vendorId: '', vendorName: '',
   purchaseOrderRef: '', warrantyStartDate: '', warrantyExpiryDate: '',
   warrantyProvider: '', condition: 'New', location: '',
 };
@@ -82,7 +88,9 @@ function assetDetailToForm(a: AssetDetail): FormState {
     categoryId: a.category.id,
     purchaseDate: a.purchaseDate ?? '',
     purchasePrice: a.purchasePrice != null ? String(a.purchasePrice) : '',
-    vendorName: a.vendorName ?? '',
+    vendorId: a.vendor?.id ?? '',
+    // Legacy flat name only when no linked vendor record yet.
+    vendorName: a.vendor ? '' : (a.vendorName ?? ''),
     purchaseOrderRef: a.purchaseOrderRef ?? '',
     warrantyStartDate: a.warrantyStartDate ?? '',
     warrantyExpiryDate: a.warrantyExpiryDate ?? '',
@@ -101,7 +109,9 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
 
   const [categories, setCategories] = useState<CategoryListItem[]>([]);
   const [brands, setBrands] = useState<BrandListItem[]>([]);
+  const [vendors, setVendors] = useState<VendorListItem[]>([]);
   const brandRef = useRef<BrandComboboxHandle>(null);
+  const vendorRef = useRef<VendorComboboxHandle>(null);
   const [categoryAttrs, setCategoryAttrs] = useState<AttributeDetail[]>([]);
 
   const [loadingInit, setLoadingInit] = useState(true);
@@ -119,16 +129,33 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   useEffect(() => {
     const init = async () => {
       try {
-        const [catResult, brandResult] = await Promise.all([
+        const [catResult, brandResult, vendorResult] = await Promise.all([
           getCategories({ status: 'Active', limit: 100 }),
           getBrands(),
+          getVendors().catch(() => {
+            toast.error('Failed to load vendors.');
+            return [] as VendorListItem[];
+          }),
         ]);
         setCategories(catResult.data);
         setBrands(brandResult);
+        setVendors(vendorResult);
 
         if (assetId) {
           const asset = await getAsset(assetId);
-          setForm(assetDetailToForm(asset));
+          const nextForm = assetDetailToForm(asset);
+          // If the API still returns a flat vendorName without a linked record,
+          // resolve it against the vendor list so edit mode selects the existing id.
+          if (!nextForm.vendorId && nextForm.vendorName) {
+            const match = vendorResult.find(
+              (v) => v.name.trim().toLowerCase() === nextForm.vendorName.trim().toLowerCase(),
+            );
+            if (match) {
+              nextForm.vendorId = match.id;
+              nextForm.vendorName = '';
+            }
+          }
+          setForm(nextForm);
           setExistingImages(asset.images ?? []);
           // Pre-load attributes for the asset's category
           const detail = await getCategory(asset.category.id);
@@ -191,6 +218,21 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   };
   const clearBrand = () => setForm((f) => ({ ...f, brandId: '', brandName: '' }));
 
+  // Vendor is one-of: an existing id OR a new name (created on save).
+  const selectExistingVendor = (id: string) => {
+    setForm((f) => ({ ...f, vendorId: id, vendorName: '' }));
+    setErrors((e) => ({ ...e, vendor: '' }));
+  };
+  const selectNewVendor = (name: string) => {
+    setForm((f) => ({ ...f, vendorId: '', vendorName: name }));
+    setErrors((e) => ({ ...e, vendor: '' }));
+  };
+  const clearVendor = () => setForm((f) => ({ ...f, vendorId: '', vendorName: '' }));
+  const onVendorDuplicate = (existing: VendorListItem) => {
+    toast.error('This vendor already exists. Select the existing record from the list.');
+    selectExistingVendor(existing.id);
+  };
+
   const setAttr = (attributeId: string, value: string) => {
     setAttrValues((prev) => ({ ...prev, [attributeId]: value }));
     setErrors((e) => ({ ...e, [`attr_${attributeId}`]: '' }));
@@ -244,6 +286,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         ? { brandId: form.brandId || undefined, brandName: form.brandName || undefined }
         : brandRef.current?.commitTyped() ?? {};
 
+    const vendor: { vendorId?: string; vendorName?: string } =
+      form.vendorId || form.vendorName
+        ? { vendorId: form.vendorId || undefined, vendorName: form.vendorName || undefined }
+        : vendorRef.current?.commitTyped() ?? {};
+
     if (!validate(brand)) {
       toast.error('Please fix the highlighted fields before saving.');
       return;
@@ -268,7 +315,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           location: form.location.trim() || undefined,
           purchaseDate: form.purchaseDate,
           purchasePrice: parseFloat(form.purchasePrice),
-          vendorName: form.vendorName.trim() || undefined,
+          vendorId: vendor.vendorId,
+          vendorName: vendor.vendorName,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
           warrantyStartDate: form.warrantyStartDate || undefined,
           warrantyExpiryDate: form.warrantyExpiryDate || undefined,
@@ -305,7 +353,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           location: form.location.trim() || undefined,
           purchaseDate: form.purchaseDate,
           purchasePrice: parseFloat(form.purchasePrice),
-          vendorName: form.vendorName.trim() || undefined,
+          vendorId: vendor.vendorId,
+          vendorName: vendor.vendorName,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
           warrantyStartDate: form.warrantyStartDate || undefined,
           warrantyExpiryDate: form.warrantyExpiryDate || undefined,
@@ -330,12 +379,23 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
       if (brand.brandName && !brands.some((b) => b.id === saved.brand.id)) {
         toast.success('Brand added successfully');
       }
+      if (vendor.vendorName && saved.vendor && !vendors.some((v) => v.id === saved.vendor!.id)) {
+        toast.success('Vendor added successfully');
+      }
       // Staged previews are object URLs — revoke them now that they're saved.
       uploadedImages.forEach((i) => URL.revokeObjectURL(i.previewUrl));
       onSaved(saved);
       onClose();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Failed to save asset.');
+      const message = err instanceof ApiError ? err.message : 'Failed to save asset.';
+      // Backend duplicate-vendor guard (case-insensitive) surfaces here.
+      if (err instanceof ApiError && err.status === 409 && /vendor/i.test(err.message)) {
+        toast.error(err.message.includes('already exists')
+          ? 'This vendor already exists. Select the existing record from the list.'
+          : message);
+      } else {
+        toast.error(message);
+      }
     } finally {
       setSaving(false);
     }
@@ -497,9 +557,18 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                   </div>
                 </FormField>
               </div>
-              <FormField label="Vendor / Supplier Name">
-                <input type="text" value={form.vendorName} onChange={(e) => set('vendorName', e.target.value)}
-                  className="form-input" placeholder="Vendor or supplier name" />
+              <FormField label="Vendor / Supplier Name" error={errors.vendor}>
+                <VendorCombobox
+                  ref={vendorRef}
+                  vendors={vendors}
+                  vendorId={form.vendorId}
+                  vendorName={form.vendorName}
+                  onSelectExisting={selectExistingVendor}
+                  onSelectNew={selectNewVendor}
+                  onClear={clearVendor}
+                  onDuplicate={onVendorDuplicate}
+                  error={errors.vendor}
+                />
               </FormField>
               <FormField label="Purchase Order Reference (Optional)">
                 <input type="text" value={form.purchaseOrderRef} onChange={(e) => set('purchaseOrderRef', e.target.value)}

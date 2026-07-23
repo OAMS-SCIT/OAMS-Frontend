@@ -10,6 +10,7 @@ import type {
   AssetStatus,
   AssetUpgrade,
   BrandListItem,
+  VendorListItem,
   AuthUser,
   ConditionImageItem,
   CreateAssignmentPayload,
@@ -432,6 +433,18 @@ export function getBrands(): Promise<BrandListItem[]> {
 /** Create a brand. Throws ApiError(409) "This brand already exists" on a dup. */
 export function createBrand(name: string): Promise<BrandListItem> {
   return request<BrandListItem>('/brands', { method: 'POST', body: { name } });
+}
+
+// ── Vendors ───────────────────────────────────────────────────────────────
+
+/** All vendors, sorted A–Z, for shared vendor dropdowns. */
+export function getVendors(): Promise<VendorListItem[]> {
+  return request<VendorListItem[]>('/vendors');
+}
+
+/** Create a vendor. Throws ApiError(409) "This vendor already exists" on a dup. */
+export function createVendor(name: string): Promise<VendorListItem> {
+  return request<VendorListItem>('/vendors', { method: 'POST', body: { name } });
 }
 
 export function getAsset(id: string): Promise<AssetDetail> {
