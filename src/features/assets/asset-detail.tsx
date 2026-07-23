@@ -595,7 +595,7 @@ export function AssetDetail() {
           <h3 className="font-semibold mb-3 text-sm tracking-[-0.01em] text-foreground">Financial & Warranty</h3>
           <InfoRow label="Purchase Date" value={asset.purchaseDate} />
           <InfoRow label="Purchase Price" value={asset.purchasePrice ? `$${Number(asset.purchasePrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : undefined} />
-          <InfoRow label="Vendor / Supplier" value={asset.vendorName} />
+          <InfoRow label="Vendor / Supplier" value={asset.vendor?.name ?? asset.vendorName} />
           <InfoRow label="Purchase Order Ref." value={asset.purchaseOrderRef} />
           <InfoRow label="Warranty Start" value={asset.warrantyStartDate} />
           <InfoRow label="Warranty Expiry" value={

@@ -5,10 +5,11 @@ import { X, Paperclip, FileText, ImageIcon, XCircle } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { toast } from 'sonner';
-import { ApiError, createUpgrade, updateUpgrade, uploadUpgradeInvoice } from '@/lib/api';
-import type { AssetUpgrade, CreateUpgradePayload, UpgradeType } from '@/types';
+import { ApiError, createUpgrade, getVendors, updateUpgrade, uploadUpgradeInvoice } from '@/lib/api';
+import type { AssetUpgrade, CreateUpgradePayload, UpgradeType, VendorListItem } from '@/types';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { VendorCombobox, type VendorComboboxHandle } from '@/components/ui/VendorCombobox';
 
 interface Props {
   assetId: string;
@@ -28,6 +29,7 @@ const EMPTY = {
   specBefore: '',
   specAfter: '',
   cost: '',
+  vendorId: '',
   vendorName: '',
 };
 
@@ -44,6 +46,8 @@ export function AddUpgradeDrawer({
   const [form, setForm] = useState({ ...EMPTY });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [vendors, setVendors] = useState<VendorListItem[]>([]);
+  const vendorRef = useRef<VendorComboboxHandle>(null);
 
   // Invoice file state
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
@@ -52,17 +56,31 @@ export function AddUpgradeDrawer({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (existing) {
-      setForm({
-        upgradeDate: existing.upgradeDate,
-        upgradeType: existing.upgradeType,
-        specBefore: existing.specBefore ?? '',
-        specAfter: existing.specAfter,
-        cost: String(existing.cost),
-        vendorName: existing.vendorName,
+    let cancelled = false;
+    getVendors()
+      .then((list) => {
+        if (cancelled) return;
+        setVendors(list);
+        if (existing) {
+          const match = list.find(
+            (v) => v.name.trim().toLowerCase() === existing.vendorName.trim().toLowerCase(),
+          );
+          setForm({
+            upgradeDate: existing.upgradeDate,
+            upgradeType: existing.upgradeType,
+            specBefore: existing.specBefore ?? '',
+            specAfter: existing.specAfter,
+            cost: String(existing.cost),
+            vendorId: match?.id ?? '',
+            vendorName: match ? '' : existing.vendorName,
+          });
+          setExistingInvoiceUrl(existing.invoiceUrl ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('Failed to load vendors.');
       });
-      setExistingInvoiceUrl(existing.invoiceUrl ?? null);
-    }
+    return () => { cancelled = true; };
   }, [existing]);
 
   const set = (k: keyof typeof EMPTY, v: string) => {
@@ -70,19 +88,38 @@ export function AddUpgradeDrawer({
     setErrors((e) => ({ ...e, [k]: '' }));
   };
 
-  const validate = (): boolean => {
+  const selectExistingVendor = (id: string) => {
+    setForm((f) => ({ ...f, vendorId: id, vendorName: '' }));
+    setErrors((e) => ({ ...e, vendor: '' }));
+  };
+  const selectNewVendor = (name: string) => {
+    setForm((f) => ({ ...f, vendorId: '', vendorName: name }));
+    setErrors((e) => ({ ...e, vendor: '' }));
+  };
+  const clearVendor = () => setForm((f) => ({ ...f, vendorId: '', vendorName: '' }));
+  const onVendorDuplicate = (existingVendor: VendorListItem) => {
+    toast.error('This vendor already exists. Select the existing record from the list.');
+    selectExistingVendor(existingVendor.id);
+  };
+
+  const validate = (vendor: { vendorId?: string; vendorName?: string }): boolean => {
     const e: Record<string, string> = {};
     if (!form.upgradeDate) e.upgradeDate = 'Date is required';
     if (!form.upgradeType) e.upgradeType = 'Upgrade type is required';
     if (!form.specAfter.trim()) e.specAfter = 'Specification after is required';
     if (!form.cost || parseFloat(form.cost) <= 0) e.cost = 'Cost must be greater than 0';
-    if (!form.vendorName.trim()) e.vendorName = 'Vendor name is required';
+    if (!vendor.vendorId && !vendor.vendorName) e.vendor = 'Vendor name is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleSave = async () => {
-    if (!validate()) return;
+    const vendor: { vendorId?: string; vendorName?: string } =
+      form.vendorId || form.vendorName
+        ? { vendorId: form.vendorId || undefined, vendorName: form.vendorName || undefined }
+        : vendorRef.current?.commitTyped() ?? {};
+
+    if (!validate(vendor)) return;
     setSaving(true);
 
     const payload: CreateUpgradePayload = {
@@ -91,7 +128,8 @@ export function AddUpgradeDrawer({
       specBefore: form.specBefore.trim() || undefined,
       specAfter: form.specAfter.trim(),
       cost: parseFloat(form.cost),
-      vendorName: form.vendorName.trim(),
+      vendorId: vendor.vendorId,
+      vendorName: vendor.vendorName,
     };
 
     try {
@@ -106,10 +144,23 @@ export function AddUpgradeDrawer({
       }
 
       toast.success(isEdit ? 'Upgrade entry updated.' : 'Upgrade entry added.');
+      if (
+        vendor.vendorName &&
+        !vendors.some((v) => v.name.trim().toLowerCase() === vendor.vendorName!.trim().toLowerCase())
+      ) {
+        toast.success('Vendor added successfully');
+      }
       onSaved(saved);
       onClose();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Failed to save upgrade entry.');
+      const message = err instanceof ApiError ? err.message : 'Failed to save upgrade entry.';
+      if (err instanceof ApiError && err.status === 409 && /vendor/i.test(err.message)) {
+        toast.error(err.message.includes('already exists')
+          ? 'This vendor already exists. Select the existing record from the list.'
+          : message);
+      } else {
+        toast.error(message);
+      }
     } finally {
       setSaving(false);
     }
@@ -187,10 +238,19 @@ export function AddUpgradeDrawer({
                       placeholder="0.00" min="0.01" step="0.01" />
                   </div>
                 </Field>
-                <Field label="Vendor / Provider" required error={errors.vendorName}>
-                  <input type="text" value={form.vendorName}
-                    onChange={(e) => set('vendorName', e.target.value)}
-                    className="upg-input" placeholder="e.g. Kingston Technology" />
+                <Field label="Vendor / Provider" required error={errors.vendor}>
+                  <VendorCombobox
+                    ref={vendorRef}
+                    vendors={vendors}
+                    vendorId={form.vendorId}
+                    vendorName={form.vendorName}
+                    onSelectExisting={selectExistingVendor}
+                    onSelectNew={selectNewVendor}
+                    onClear={clearVendor}
+                    onDuplicate={onVendorDuplicate}
+                    error={errors.vendor}
+                    placeholder="Search or add a vendor…"
+                  />
                 </Field>
               </div>
 
