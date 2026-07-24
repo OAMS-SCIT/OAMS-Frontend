@@ -4,7 +4,7 @@ import { ReactNode, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, Tag, Users, ClipboardList, UserCog, LogOut,
-  Bell, Search, ChevronDown, Monitor, User,
+  Bell, Search, ChevronDown, Monitor, User, Wrench,
 } from 'lucide-react';
 import { AppRole } from '@/types';
 import { useAuth } from '@/providers/auth-provider';
@@ -21,6 +21,7 @@ interface LayoutProps {
 const adminNavItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/inventory', label: 'Asset Inventory', icon: Package },
+  { path: '/admin/under-repair', label: 'Under Repair', icon: Wrench },
   { path: '/admin/categories', label: 'Asset Categories', icon: Tag },
   { path: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
   { path: '/admin/users', label: 'User Management', icon: Users },
@@ -184,6 +185,7 @@ function BreadcrumbDisplay({ pathname, role }: { pathname: string; role: AppRole
   const segments: Record<string, string[]> = {
     '/admin/dashboard': ['Dashboard'],
     '/admin/inventory': ['Asset Inventory'],
+    '/admin/under-repair': ['Under Repair'],
     '/admin/categories': ['Asset Categories'],
     '/admin/assignments': ['Active Assignments'],
     '/admin/users': ['User Management'],

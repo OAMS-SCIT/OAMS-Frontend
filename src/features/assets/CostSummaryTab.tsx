@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, ChevronDown, Download } from 'lucide-react';
 import type { AssetCostSummary, CostBreakdownItem } from '@/types';
 import { getAssetCostSummary } from '@/lib/api';
@@ -16,12 +16,13 @@ function fmt(n: number) {
 
 function SummaryCards({ data }: { data: AssetCostSummary }) {
   const cards = [
-    { label: 'Purchase Cost',  value: data.purchaseCost, color: 'text-info-foreground',    bg: 'bg-info-surface' },
-    { label: 'Upgrade Cost',   value: data.upgradeCost,  color: 'text-warning-foreground', bg: 'bg-warning-surface' },
-    { label: 'Total Cost',     value: data.totalCost,    color: 'text-foreground',          bg: 'bg-muted' },
+    { label: 'Purchase Cost',  value: data.purchaseCost,     color: 'text-info-foreground',      bg: 'bg-info-surface' },
+    { label: 'Upgrade Cost',   value: data.upgradeCost,      color: 'text-warning-foreground',   bg: 'bg-warning-surface' },
+    { label: 'Repair Cost',    value: data.repairCost ?? 0,  color: 'text-secondary-foreground', bg: 'bg-secondary' },
+    { label: 'Total Cost',     value: data.totalCost,        color: 'text-foreground',           bg: 'bg-muted' },
   ];
   return (
-    <div className="grid grid-cols-3 gap-4 p-6 pb-0">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-6 pb-0">
       {cards.map((c) => (
         <div key={c.label} className={`rounded-xl p-4 ${c.bg} border border-border/60`}>
           <div className="micro-label mb-1">{c.label}</div>
@@ -34,7 +35,7 @@ function SummaryCards({ data }: { data: AssetCostSummary }) {
 
 // ── Breakdown Table ───────────────────────────────────────────────────────────
 
-const CATEGORIES = ['All', 'Purchase', 'Upgrade'] as const;
+const CATEGORIES = ['All', 'Purchase', 'Upgrade', 'Repair'] as const;
 
 function BreakdownTable({ rows }: { rows: CostBreakdownItem[] }) {
   const [filter, setFilter] = useState<string>('All');
@@ -107,7 +108,9 @@ function BreakdownTable({ rows }: { rows: CostBreakdownItem[] }) {
                       className={`rounded-full px-2.5 py-0.5 font-medium text-2xs ${
                         row.category === 'Purchase'
                           ? 'bg-info-surface text-info-foreground'
-                          : 'bg-warning-surface text-warning-foreground'
+                          : row.category === 'Repair'
+                            ? 'bg-secondary text-secondary-foreground'
+                            : 'bg-warning-surface text-warning-foreground'
                       }`}
                     >
                       {row.category}
@@ -173,20 +176,23 @@ export function CostSummaryTab({ assetId, version = 0 }: CostSummaryTabProps) {
   const [data, setData] = useState<AssetCostSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Dedupe the fetch per (assetId, version) so React StrictMode's dev
+  // double-invoke doesn't fire the request twice; also ignores stale responses.
+  const requestedKey = useRef<string>('');
 
   useEffect(() => {
-    let cancelled = false;
-    Promise.resolve()
-      .then(() => {
-        if (!cancelled) { setLoading(true); setError(null); }
-        return getAssetCostSummary(assetId);
-      })
-      .then((d) => { if (!cancelled) setData(d); })
+    const key = `${assetId}:${version}`;
+    if (requestedKey.current === key) return;
+    requestedKey.current = key;
+
+    setLoading(true);
+    setError(null);
+    getAssetCostSummary(assetId)
+      .then((d) => { if (requestedKey.current === key) setData(d); })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Failed to load cost summary.');
+        if (requestedKey.current === key) setError(err instanceof ApiError ? err.message : 'Failed to load cost summary.');
       })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .finally(() => { if (requestedKey.current === key) setLoading(false); });
   }, [assetId, version]);
 
   if (loading) {
