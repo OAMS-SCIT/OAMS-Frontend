@@ -302,6 +302,147 @@ export interface UpdateAssetStatusPayload {
   status: ManualAssetStatus;
 }
 
+// ── Vendors ───────────────────────────────────────────────────────────────
+
+/** A service vendor that can perform asset repairs. Returned by GET /api/vendors/:id, POST /api/vendors. */
+export interface Vendor {
+  id: string;
+  name: string;
+  contactPerson: string | null;
+  /** Phone number or email — a single free-text contact field. */
+  contact: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A row in the vendor picker / GET /api/vendors list. */
+export interface VendorListItem {
+  id: string;
+  name: string;
+  contactPerson: string | null;
+  contact: string | null;
+}
+
+export interface CreateVendorPayload {
+  name: string;
+  contactPerson?: string;
+  contact?: string;
+}
+
+// ── Repairs ───────────────────────────────────────────────────────────────
+
+export type RepairStatus = 'Open' | 'Completed' | 'Cancelled';
+
+/** A repair record, persisted in its own table. Returned by the repair endpoints. */
+export interface RepairRecord {
+  id: string;
+  assetId: string;
+  vendor: VendorListItem;
+  reason: string;
+  status: RepairStatus;
+  outcome?: RepairOutcome | null;
+  sentAt: string;
+  returnDate?: string | null;
+  returnNotes?: string | null;
+  invoiceUrl?: string | null;
+  warrantyDocUrl?: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A row in the Under Repair list (GET /api/repairs) — open repair joined with asset + vendor. */
+export interface RepairListItem {
+  id: string;
+  reason: string;
+  status: RepairStatus;
+  sentAt: string;
+  vendor: VendorListItem;
+  asset: {
+    id: string;
+    displayId: string;
+    name: string;
+    serialNumber: string;
+  };
+}
+
+/** Body for POST /api/assets/:id/repairs — sends the asset to repair. */
+export interface SendToRepairPayload {
+  vendorId: string;
+  reason: string;
+}
+
+/** Body for PATCH /api/assets/:id/repairs/:repairId — edit an in-progress repair. */
+export interface UpdateRepairPayload {
+  vendorId?: string;
+  reason?: string;
+}
+
+// ── Return from repair (STORY 3) ───────────────────────────────────────────
+
+export type RepairOutcome = 'Repaired' | 'Return without Repair' | 'Not Repairable';
+export type RepairCostItemType = 'Replace' | 'Upgrade' | 'Repair' | 'Service Charge' | 'Other';
+export type AssignmentAction = 'handback' | 'keep_in_store';
+
+/** A repair cost line item (Step 1 of the Repaired flow). */
+export interface RepairCostItemInput {
+  itemName: string;
+  itemType: RepairCostItemType;
+  cost: number;
+  hasWarranty?: boolean;
+  warrantyStartDate?: string;
+  warrantyExpiryDate?: string;
+}
+
+/** Body for POST .../repairs/:repairId/complete (Repaired / Return as Is). */
+export interface CompleteRepairPayload {
+  outcome: RepairOutcome;
+  returnDate: string;
+  costItems?: RepairCostItemInput[];
+  reason?: string;
+  customAttributes?: AttributeValuePayload[];
+  assignmentAction: AssignmentAction;
+}
+
+/** Body for POST .../repairs/:repairId/reroute (Return without Repair → different vendor). */
+export interface RerouteRepairPayload {
+  reason: string;
+  vendorId: string;
+  newReason: string;
+}
+
+/** Body for POST .../repairs/:repairId/retire (Not Repairable). */
+export interface RetireRepairPayload {
+  reason: string;
+}
+
+/** A warranty row (GET /api/assets/:id/warranties). */
+export interface WarrantyItem {
+  id: string;
+  source: 'Purchase' | 'Repair';
+  itemName: string;
+  itemType: string | null;
+  vendor: string | null;
+  startDate: string | null;
+  expiryDate: string | null;
+  active: boolean;
+}
+
+export interface AssetWarranties {
+  assetId: string;
+  warranties: WarrantyItem[];
+}
+
+/** A row in the admin Pending Handbacks list (GET /api/assignments/pending-handback). */
+export type AssignmentType = 'General' | 'Handback';
+export type AssignmentConfirmationStatus = 'Pending' | 'Accepted' | 'Rejected';
+
+/** Body for PATCH /api/assignments/:id/feedback — employee Accept/Reject. */
+export interface AssignmentFeedbackPayload {
+  status: Extract<AssignmentConfirmationStatus, 'Accepted' | 'Rejected'>;
+  note?: string;
+}
+
 // ── Upgrades ──────────────────────────────────────────────────────────────
 
 export interface AssetUpgrade {
@@ -364,6 +505,9 @@ export interface ActiveAssignmentListItem {
   expectedReturnDate: string | null;
   /** True when the assignment is active and its expected return date has passed. */
   isOverdue: boolean;
+  assignmentType: AssignmentType;
+  confirmationStatus: AssignmentConfirmationStatus;
+  confirmationNote: string | null;
 }
 
 /** A condition image captured at assignment or return time (OAMS-257/262). */
@@ -651,6 +795,7 @@ export interface AssetCostSummary {
   assetId: string;
   purchaseCost: number;
   upgradeCost: number;
+  repairCost?: number;
   totalCost: number;
   breakdown: CostBreakdownItem[];
 }
