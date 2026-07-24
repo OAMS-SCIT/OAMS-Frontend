@@ -416,6 +416,8 @@ export interface GetAssetsParams {
   search?: string;
   categoryId?: string;
   status?: AssetStatus | '';
+  /** Statuses to exclude (e.g. picker for Send to Repair excludes Under Repair/Retired/Lost). */
+  excludeStatus?: AssetStatus[];
   brandId?: string;
   sortBy?: 'name' | 'purchaseDate' | 'warrantyExpiryDate' | 'createdAt';
   sortOrder?: 'ASC' | 'DESC';
@@ -430,6 +432,7 @@ export function getAssets(
     search: params.search,
     categoryId: params.categoryId,
     status: params.status || undefined,
+    excludeStatus: params.excludeStatus?.length ? params.excludeStatus.join(',') : undefined,
     brandId: params.brandId,
     sortBy: params.sortBy,
     sortOrder: params.sortOrder,
