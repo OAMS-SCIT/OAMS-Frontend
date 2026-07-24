@@ -100,11 +100,16 @@ export function Dashboard() {
     { label: 'Retired Assets', value: retired, icon: Archive, accent: 'text-neutral', bg: 'bg-neutral-surface', bar: 'bg-neutral' },
   ];
 
-  const categoryData = data.categoryBreakdown.map((cat) => ({
-    name: cat.categoryName,
-    count: cat.assetCount,
-    percentage: total ? Math.round((cat.assetCount / total) * 100) : 0,
-  }));
+  // Dashboard shows only the top categories by asset count; full list lives on Categories.
+  const CATEGORY_BREAKDOWN_LIMIT = 6;
+  const categoryData = data.categoryBreakdown
+    .slice(0, CATEGORY_BREAKDOWN_LIMIT)
+    .map((cat) => ({
+      name: cat.categoryName,
+      count: cat.assetCount,
+      percentage: total ? Math.round((cat.assetCount / total) * 100) : 0,
+    }));
+  const hiddenCategoryCount = Math.max(0, data.categoryBreakdown.length - CATEGORY_BREAKDOWN_LIMIT);
 
   const statusData = [
     { name: 'Available', count: available, fill: 'var(--success)' },
@@ -155,7 +160,7 @@ export function Dashboard() {
 
       {/* Charts */}
       <div className="grid grid-cols-[3fr_2fr] gap-5 mb-6">
-        <div className="rounded-2xl p-6 bg-card border border-border shadow-card flex flex-col h-[280px]">
+        <div className="rounded-2xl p-6 bg-card border border-border shadow-card flex flex-col h-[280px] overflow-hidden">
           <div className="flex items-center justify-between mb-4 shrink-0">
             <h2 className="font-semibold text-base tracking-[-0.01em] text-foreground">Asset Category Breakdown</h2>
             <button onClick={() => router.push('/admin/categories')} className="flex items-center gap-1 text-2sm text-primary transition-opacity hover:opacity-80">
@@ -165,7 +170,7 @@ export function Dashboard() {
           {categoryData.length === 0 ? (
             <p className="text-2sm text-muted-foreground/80">No assets registered yet.</p>
           ) : (
-            <div className="flex items-start gap-6 flex-1 min-h-0">
+            <div className="flex items-start gap-6 flex-1 min-h-0 overflow-hidden">
               <div className="w-[160px] h-[160px] shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -176,19 +181,29 @@ export function Dashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1">
-                {categoryData.map((cat, i) => (
-                  <div key={cat.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="rounded-full shrink-0 w-2.5 h-2.5" style={{ background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }} />
-                      <span className="text-2sm text-foreground/80 truncate">{cat.name}</span>
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                <div className="space-y-2 overflow-hidden">
+                  {categoryData.map((cat, i) => (
+                    <div key={cat.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="rounded-full shrink-0 w-2.5 h-2.5" style={{ background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }} />
+                        <span className="text-2sm text-foreground/80 truncate">{cat.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 ml-2">
+                        <span className="font-semibold text-2sm text-foreground nums">{cat.count}</span>
+                        <span className="text-xs text-muted-foreground/80 min-w-8 nums">{cat.percentage}%</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0 ml-2">
-                      <span className="font-semibold text-2sm text-foreground nums">{cat.count}</span>
-                      <span className="text-xs text-muted-foreground/80 min-w-8 nums">{cat.percentage}%</span>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                {hiddenCategoryCount > 0 && (
+                  <button
+                    onClick={() => router.push('/admin/categories')}
+                    className="mt-1.5 text-left text-xs text-muted-foreground hover:text-primary transition-colors shrink-0"
+                  >
+                    +{hiddenCategoryCount} more {hiddenCategoryCount === 1 ? 'category' : 'categories'}
+                  </button>
+                )}
               </div>
             </div>
           )}
