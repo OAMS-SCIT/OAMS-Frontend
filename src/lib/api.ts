@@ -651,6 +651,32 @@ export function uploadAssetImages(
   });
 }
 
+/** Upload/replace the purchase-order document for an asset (JPEG/PNG/PDF, ≤10 MB). */
+export function uploadAssetPurchaseOrder(
+  assetId: string,
+  file: File,
+): Promise<AssetDetail> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<AssetDetail>(`/assets/${assetId}/purchase-order`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+/** Upload/replace the purchase invoice document for an asset (JPEG/PNG/PDF, ≤10 MB). */
+export function uploadAssetInvoice(
+  assetId: string,
+  file: File,
+): Promise<AssetDetail> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<AssetDetail>(`/assets/${assetId}/invoice`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
 /** Delete a single asset image. Returns the updated detail. */
 export function deleteAssetImage(
   assetId: string,

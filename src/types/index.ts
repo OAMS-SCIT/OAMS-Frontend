@@ -256,6 +256,16 @@ export interface AssetDetail {
   purchasePrice: number;
   vendorName: string | null;
   purchaseOrderRef: string | null;
+  /** Cloud storage URL for the purchase-order document, when uploaded. */
+  purchaseOrderUrl?: string | null;
+  /** Original file name of the purchase-order document, when available. */
+  purchaseOrderFileName?: string | null;
+  /** Optional invoice reference number (independent of the invoice file). */
+  invoiceRef?: string | null;
+  /** Cloud storage URL for the purchase invoice document, when uploaded. */
+  invoiceUrl?: string | null;
+  /** Original file name of the purchase invoice document, when available. */
+  invoiceFileName?: string | null;
   warrantyStartDate: string | null;
   warrantyExpiryDate: string | null;
   warrantyProvider: string | null;
@@ -290,6 +300,7 @@ export interface CreateAssetPayload {
   purchasePrice: number;
   vendorName?: string;
   purchaseOrderRef?: string;
+  invoiceRef?: string;
   warrantyStartDate?: string;
   warrantyExpiryDate?: string;
   warrantyProvider?: string;
