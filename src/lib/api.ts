@@ -29,16 +29,29 @@ import type {
   ManualAssetStatus,
   PaginatedResult,
   ProfileUser,
+  RepairRecord,
+  RepairListItem,
+  CompleteRepairPayload,
+  RerouteRepairPayload,
+  RetireRepairPayload,
+  AssetWarranties,
+  AssignmentType,
+  AssignmentFeedbackPayload,
   ResetPasswordPayload,
   ReturnAssignmentPayload,
+  SendToRepairPayload,
   UpdateAssetPayload,
   UpdateCategoryPayload,
   UpdateProfilePayload,
+  UpdateRepairPayload,
   UpdateUpgradePayload,
   UpdateUserPayload,
   UserListItem,
   UserRole,
   UserStatus,
+  Vendor,
+  VendorListItem,
+  CreateVendorPayload,
 } from '@/types';
 
 export const API_BASE_URL =
@@ -133,7 +146,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (response.status === 204) {
     return undefined as T;
   }
-  return response.json() as Promise<T>;
+  // Some endpoints return `null` (e.g. GET /assignments/active for an unassigned
+  // asset), which the server may send as an empty body. response.json() throws on
+  // an empty body, so read the text first and treat "" as null.
+  const text = await response.text();
+  return (text ? JSON.parse(text) : null) as T;
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────
@@ -434,6 +451,35 @@ export function createBrand(name: string): Promise<BrandListItem> {
   return request<BrandListItem>('/brands', { method: 'POST', body: { name } });
 }
 
+// ── Vendors ───────────────────────────────────────────────────────────────
+
+export interface GetVendorsParams {
+  search?: string;
+  sortBy?: 'name' | 'createdAt';
+  sortOrder?: 'ASC' | 'DESC';
+  page?: number;
+  limit?: number;
+}
+
+/** Paginated, searchable vendor list — feeds the Send to Repair vendor picker. */
+export function getVendors(
+  params: GetVendorsParams = {},
+): Promise<PaginatedResult<VendorListItem>> {
+  const query: Record<string, string | number | undefined> = {
+    search: params.search,
+    sortBy: params.sortBy,
+    sortOrder: params.sortOrder,
+    page: params.page,
+    limit: params.limit,
+  };
+  return request<PaginatedResult<VendorListItem>>('/vendors', { query });
+}
+
+/** Create a new service vendor. */
+export function createVendor(payload: CreateVendorPayload): Promise<Vendor> {
+  return request<Vendor>('/vendors', { method: 'POST', body: payload });
+}
+
 export function getAsset(id: string): Promise<AssetDetail> {
   return request<AssetDetail>(`/assets/${id}`);
 }
@@ -462,6 +508,125 @@ export function updateAssetStatus(
   return request<AssetDetail>(`/assets/${id}/status`, {
     method: 'PATCH',
     body: { status },
+  });
+}
+
+// ── Repairs ───────────────────────────────────────────────────────────────
+
+export interface GetRepairsParams {
+  search?: string;
+  sortOrder?: 'ASC' | 'DESC';
+  page?: number;
+  limit?: number;
+}
+
+/** Paginated list of assets currently under repair (open repairs) with asset + vendor. */
+export function getRepairs(
+  params: GetRepairsParams = {},
+): Promise<PaginatedResult<RepairListItem>> {
+  const query: Record<string, string | number | undefined> = {
+    search: params.search,
+    sortOrder: params.sortOrder,
+    page: params.page,
+    limit: params.limit,
+  };
+  return request<PaginatedResult<RepairListItem>>('/repairs', { query });
+}
+
+/**
+ * Send an asset to repair: creates a repair record against the given vendor and
+ * moves the asset to "Under Repair". Returns the refreshed asset detail.
+ */
+export function sendToRepair(
+  assetId: string,
+  payload: SendToRepairPayload,
+): Promise<AssetDetail> {
+  return request<AssetDetail>(`/assets/${assetId}/repairs`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/** The asset's active (open) repair record, or null if none — used to prefill the edit form. */
+export function getCurrentRepair(assetId: string): Promise<RepairRecord | null> {
+  return request<RepairRecord | null>(`/assets/${assetId}/repairs/current`);
+}
+
+/** Update the vendor/reason of an in-progress repair. Does not change asset status. */
+export function updateRepair(
+  assetId: string,
+  repairId: string,
+  payload: UpdateRepairPayload,
+): Promise<RepairRecord> {
+  return request<RepairRecord>(`/assets/${assetId}/repairs/${repairId}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+// ── Return from repair (STORY 3) ────────────────────────────────────────────
+
+/** Complete a repair: outcome Repaired or Return without Repair (Return as Is). */
+export function completeRepairReturn(
+  assetId: string,
+  repairId: string,
+  payload: CompleteRepairPayload,
+): Promise<AssetDetail> {
+  return request<AssetDetail>(`/assets/${assetId}/repairs/${repairId}/complete`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/** Return without repair → route the asset to a different vendor (stays Under Repair). */
+export function rerouteRepair(
+  assetId: string,
+  repairId: string,
+  payload: RerouteRepairPayload,
+): Promise<AssetDetail> {
+  return request<AssetDetail>(`/assets/${assetId}/repairs/${repairId}/reroute`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/** Not repairable → retire the asset and unassign it. */
+export function retireFromRepair(
+  assetId: string,
+  repairId: string,
+  payload: RetireRepairPayload,
+): Promise<AssetDetail> {
+  return request<AssetDetail>(`/assets/${assetId}/repairs/${repairId}/retire`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/** Upload/replace the return invoice for a repair (JPEG/PNG/PDF). */
+export function uploadRepairInvoice(
+  assetId: string,
+  repairId: string,
+  file: File,
+): Promise<RepairRecord> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<RepairRecord>(`/assets/${assetId}/repairs/${repairId}/invoice`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+/** Upload/replace the warranty document for a repair (JPEG/PNG/PDF). */
+export function uploadRepairWarrantyDoc(
+  assetId: string,
+  repairId: string,
+  file: File,
+): Promise<RepairRecord> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<RepairRecord>(`/assets/${assetId}/repairs/${repairId}/warranty-doc`, {
+    method: 'POST',
+    body: formData,
   });
 }
 
@@ -555,6 +720,7 @@ export interface GetAssignmentsParams {
   overdue?: boolean;
   assignmentDateFrom?: string;
   assignmentDateTo?: string;
+  assignmentType?: AssignmentType;
   sortBy?: 'assignmentDate' | 'expectedReturnDate' | 'createdAt';
   sortOrder?: 'ASC' | 'DESC';
   page?: number;
@@ -571,6 +737,7 @@ export function getAssignments(
     overdue: params.overdue,
     assignmentDateFrom: params.assignmentDateFrom,
     assignmentDateTo: params.assignmentDateTo,
+    assignmentType: params.assignmentType,
     sortBy: params.sortBy,
     sortOrder: params.sortOrder,
     page: params.page,
@@ -641,6 +808,23 @@ export function getAssetHistory(
 
 export function getAssetCostSummary(assetId: string): Promise<AssetCostSummary> {
   return request<AssetCostSummary>(`/assets/${assetId}/cost-summary`);
+}
+
+/** All warranties for an asset: base purchase warranty + repair-item warranties. */
+export function getAssetWarranties(assetId: string): Promise<AssetWarranties> {
+  return request<AssetWarranties>(`/assets/${assetId}/warranties`);
+}
+
+/** Assignments awaiting handback confirmation after a repair return (admin). */
+/** Records the employee's Accept/Reject feedback on an assignment (admin stand-in). */
+export function submitAssignmentFeedback(
+  assignmentId: string,
+  payload: AssignmentFeedbackPayload,
+): Promise<ActiveAssignmentListItem> {
+  return request<ActiveAssignmentListItem>(`/assignments/${assignmentId}/feedback`, {
+    method: 'PATCH',
+    body: payload,
+  });
 }
 
 // ── Condition Images (OAMS-257/262) ───────────────────────────────────────

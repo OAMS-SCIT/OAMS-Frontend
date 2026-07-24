@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor, ZoomIn, RefreshCw, ImageIcon, Loader2 } from 'lucide-react';
+import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor, ZoomIn, RefreshCw, Wrench, ImageIcon, Loader2 } from 'lucide-react';
 import type { AssetDetail as AssetDetailType, AssetHistoryEntry, AssetUpgrade, Assignment, AssignmentHistoryItem, ConditionImageItem } from '@/types';
 import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment, getAssetAssignments, getAssetHistory, getAssignmentConditionImages } from '@/lib/api';
 import { AssetHistoryTimeline } from './AssetHistoryTimeline';
 import { CostSummaryTab } from './CostSummaryTab';
+import { WarrantiesTab } from './WarrantiesTab';
 import { StatusBadge, ConditionBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -17,6 +18,8 @@ import { AssignAssetDrawer } from '@/components/overlays/AssignAssetDrawer';
 import { ReturnAssetDrawer } from '@/components/overlays/ReturnAssetDrawer';
 import { AddUpgradeDrawer } from '@/components/overlays/AddUpgradeDrawer';
 import { ChangeStatusDrawer } from '@/components/overlays/ChangeStatusDrawer';
+import { SendToRepairDrawer } from '@/components/overlays/SendToRepairDrawer';
+import { ReturnFromRepairDrawer } from '@/components/overlays/ReturnFromRepairDrawer';
 import { ImageLightbox } from '@/components/overlays/ImageLightbox';
 
 function InfoRow({ label, value, mono, style }: {
@@ -246,7 +249,7 @@ export function AssetDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'history' | 'asset_log' | 'upgrades' | 'cost'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'asset_log' | 'upgrades' | 'cost' | 'warranties'>('history');
   const [costVersion, setCostVersion] = useState(0);
 
   // Which image is shown large in the hero (index into the sorted images).
@@ -272,6 +275,8 @@ export function AssetDetail() {
   const [showAssign, setShowAssign] = useState(false);
   const [showReturn, setShowReturn] = useState(false);
   const [showChangeStatus, setShowChangeStatus] = useState(false);
+  const [showSendToRepair, setShowSendToRepair] = useState(false);
+  const [showReturnFromRepair, setShowReturnFromRepair] = useState(false);
   const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
   const [returnSaving, setReturnSaving] = useState(false);
   const [showAddUpgrade, setShowAddUpgrade] = useState(false);
@@ -556,6 +561,18 @@ export function AssetDetail() {
                   <RotateCcw className="w-4 h-4" /> Process Return
                 </button>
               )}
+              {asset.status !== 'Under Repair' && (
+                <button onClick={() => setShowSendToRepair(true)}
+                  className="flex items-center gap-2 rounded-control border border-border px-4 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
+                  <Wrench className="w-4 h-4" /> Send to Repair
+                </button>
+              )}
+              {asset.status === 'Under Repair' && (
+                <button onClick={() => setShowReturnFromRepair(true)}
+                  className="flex items-center gap-2 rounded-control px-4 py-2.5 text-sm font-medium bg-warning text-white shadow-[0_2px_12px_rgba(245,158,11,0.3)] transition-all hover:opacity-90 active:scale-[0.98]">
+                  <Wrench className="w-4 h-4" /> Return from Repair
+                </button>
+              )}
               <button onClick={() => setShowChangeStatus(true)}
                 className="flex items-center gap-2 rounded-control border border-border px-4 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted">
                 <RefreshCw className="w-4 h-4" /> Change Status
@@ -631,9 +648,10 @@ export function AssetDetail() {
             { key: 'asset_log', label: 'History Log' },
             { key: 'upgrades', label: `Upgrade Log${upgradesTotal > 0 ? ` (${upgradesTotal})` : ''}` },
             { key: 'cost',     label: 'Cost Summary' },
+            { key: 'warranties', label: 'Warranties' },
           ].map((tab) => (
             <button key={tab.key}
-              onClick={() => setActiveTab(tab.key as 'history' | 'asset_log' | 'upgrades' | 'cost')}
+              onClick={() => setActiveTab(tab.key as 'history' | 'asset_log' | 'upgrades' | 'cost' | 'warranties')}
               className={`relative mr-6 py-4 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === tab.key
                   ? 'text-primary border-primary'
@@ -698,6 +716,10 @@ export function AssetDetail() {
         {/* Cost Summary Tab (OAMS-263/265) */}
         {activeTab === 'cost' && (
           <CostSummaryTab assetId={asset.id} version={costVersion} />
+        )}
+
+        {activeTab === 'warranties' && (
+          <WarrantiesTab assetId={asset.id} version={costVersion} />
         )}
 
         {/* Upgrade Log Tab */}
@@ -816,6 +838,20 @@ export function AssetDetail() {
           asset={asset}
           onClose={() => setShowChangeStatus(false)}
           onSaved={(updated) => { setAsset(updated); setShowChangeStatus(false); refreshAssetLog(); }}
+        />
+      )}
+      {showSendToRepair && (
+        <SendToRepairDrawer
+          asset={asset}
+          onClose={() => setShowSendToRepair(false)}
+          onSaved={(updated) => { if (updated) setAsset(updated); setShowSendToRepair(false); refreshAssetLog(); }}
+        />
+      )}
+      {showReturnFromRepair && (
+        <ReturnFromRepairDrawer
+          assetId={asset.id}
+          onClose={() => setShowReturnFromRepair(false)}
+          onDone={() => { setShowReturnFromRepair(false); refreshAsset(); refreshHistory(); refreshAssetLog(); }}
         />
       )}
       {showAddUpgrade && (
