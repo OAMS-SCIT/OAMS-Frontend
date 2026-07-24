@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { ImageUploadZone, type UploadedImage } from '@/components/ui/ImageUploadZone';
+import { DocumentPickerField } from '@/components/ui/DocumentPickerField';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { BrandCombobox, type BrandComboboxHandle } from '@/components/ui/BrandCombobox';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -19,6 +20,8 @@ import {
   getCategory,
   updateAsset,
   uploadAssetImages,
+  uploadAssetInvoice,
+  uploadAssetPurchaseOrder,
 } from '@/lib/api';
 import type {
   AssetCondition,
@@ -57,6 +60,7 @@ interface FormState {
   purchasePrice: string;
   vendorName: string;
   purchaseOrderRef: string;
+  invoiceRef: string;
   warrantyStartDate: string;
   warrantyExpiryDate: string;
   warrantyProvider: string;
@@ -67,7 +71,7 @@ interface FormState {
 const EMPTY_FORM: FormState = {
   name: '', description: '', brandId: '', brandName: '', model: '', serialNumber: '',
   categoryId: '', purchaseDate: '', purchasePrice: '', vendorName: '',
-  purchaseOrderRef: '', warrantyStartDate: '', warrantyExpiryDate: '',
+  purchaseOrderRef: '', invoiceRef: '', warrantyStartDate: '', warrantyExpiryDate: '',
   warrantyProvider: '', condition: 'New', location: '',
 };
 
@@ -84,6 +88,7 @@ function assetDetailToForm(a: AssetDetail): FormState {
     purchasePrice: a.purchasePrice != null ? String(a.purchasePrice) : '',
     vendorName: a.vendorName ?? '',
     purchaseOrderRef: a.purchaseOrderRef ?? '',
+    invoiceRef: a.invoiceRef ?? '',
     warrantyStartDate: a.warrantyStartDate ?? '',
     warrantyExpiryDate: a.warrantyExpiryDate ?? '',
     warrantyProvider: a.warrantyProvider ?? '',
@@ -115,6 +120,15 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const [existingImages, setExistingImages] = useState<AssetImageItem[]>([]);
   const [removedImageIds, setRemovedImageIds] = useState<string[]>([]);
 
+  // Optional procurement documents — staged locally, uploaded after the asset
+  // JSON save (same two-step pattern as images / upgrade invoices).
+  const [purchaseOrderFile, setPurchaseOrderFile] = useState<File | null>(null);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [existingPurchaseOrderUrl, setExistingPurchaseOrderUrl] = useState<string | null>(null);
+  const [existingPurchaseOrderFileName, setExistingPurchaseOrderFileName] = useState<string | null>(null);
+  const [existingInvoiceUrl, setExistingInvoiceUrl] = useState<string | null>(null);
+  const [existingInvoiceFileName, setExistingInvoiceFileName] = useState<string | null>(null);
+
   // Load categories list + (edit) existing asset on mount
   useEffect(() => {
     const init = async () => {
@@ -130,6 +144,10 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           const asset = await getAsset(assetId);
           setForm(assetDetailToForm(asset));
           setExistingImages(asset.images ?? []);
+          setExistingPurchaseOrderUrl(asset.purchaseOrderUrl ?? null);
+          setExistingPurchaseOrderFileName(asset.purchaseOrderFileName ?? null);
+          setExistingInvoiceUrl(asset.invoiceUrl ?? null);
+          setExistingInvoiceFileName(asset.invoiceFileName ?? null);
           // Pre-load attributes for the asset's category
           const detail = await getCategory(asset.category.id);
           setCategoryAttrs(detail.attributes);
@@ -270,6 +288,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           purchasePrice: parseFloat(form.purchasePrice),
           vendorName: form.vendorName.trim() || undefined,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
+          invoiceRef: form.invoiceRef.trim() || undefined,
           warrantyStartDate: form.warrantyStartDate || undefined,
           warrantyExpiryDate: form.warrantyExpiryDate || undefined,
           warrantyProvider: form.warrantyProvider.trim() || undefined,
@@ -291,6 +310,16 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         } catch {
           toast.error('Asset details saved, but updating images failed. Try again from Edit.');
         }
+        try {
+          if (purchaseOrderFile) {
+            saved = await uploadAssetPurchaseOrder(assetId!, purchaseOrderFile);
+          }
+          if (invoiceFile) {
+            saved = await uploadAssetInvoice(assetId!, invoiceFile);
+          }
+        } catch {
+          toast.error('Asset details saved, but document upload failed. Try again from Edit.');
+        }
         toast.success('Asset updated successfully.');
       } else {
         saved = await createAsset({
@@ -307,6 +336,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           purchasePrice: parseFloat(form.purchasePrice),
           vendorName: form.vendorName.trim() || undefined,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
+          invoiceRef: form.invoiceRef.trim() || undefined,
           warrantyStartDate: form.warrantyStartDate || undefined,
           warrantyExpiryDate: form.warrantyExpiryDate || undefined,
           warrantyProvider: form.warrantyProvider.trim() || undefined,
@@ -321,6 +351,18 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             );
           } catch {
             toast.error('Asset created, but image upload failed. Add images via Edit.');
+          }
+        }
+        if (purchaseOrderFile || invoiceFile) {
+          try {
+            if (purchaseOrderFile) {
+              saved = await uploadAssetPurchaseOrder(saved.id, purchaseOrderFile);
+            }
+            if (invoiceFile) {
+              saved = await uploadAssetInvoice(saved.id, invoiceFile);
+            }
+          } catch {
+            toast.error('Asset created, but document upload failed. Add documents via Edit.');
           }
         }
         toast.success('Asset registered successfully.');
@@ -505,6 +547,24 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 <input type="text" value={form.purchaseOrderRef} onChange={(e) => set('purchaseOrderRef', e.target.value)}
                   className="form-input" placeholder="e.g. PO-2024-001" />
               </FormField>
+              <DocumentPickerField
+                label="Purchase Order Document"
+                file={purchaseOrderFile}
+                onPick={setPurchaseOrderFile}
+                existingUrl={existingPurchaseOrderUrl}
+                existingFileName={existingPurchaseOrderFileName}
+              />
+              <FormField label="Invoice Reference (Optional)">
+                <input type="text" value={form.invoiceRef} onChange={(e) => set('invoiceRef', e.target.value)}
+                  className="form-input" placeholder="e.g. INV-2024-001" />
+              </FormField>
+              <DocumentPickerField
+                label="Invoice Document"
+                file={invoiceFile}
+                onPick={setInvoiceFile}
+                existingUrl={existingInvoiceUrl}
+                existingFileName={existingInvoiceFileName}
+              />
             </FormSection>
 
             {/* Section 4 - Warranty */}
