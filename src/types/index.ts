@@ -254,7 +254,7 @@ export interface AssetDetail {
   location: string | null;
   purchaseDate: string;
   purchasePrice: number;
-  vendorName: string | null;
+  vendor: VendorListItem | null;
   purchaseOrderRef: string | null;
   /** Cloud storage URL for the purchase-order document, when uploaded. */
   purchaseOrderUrl?: string | null;
@@ -298,7 +298,7 @@ export interface CreateAssetPayload {
   location?: string;
   purchaseDate: string;
   purchasePrice: number;
-  vendorName?: string;
+  vendorId?: string;
   purchaseOrderRef?: string;
   invoiceRef?: string;
   warrantyStartDate?: string;

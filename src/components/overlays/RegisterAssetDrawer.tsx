@@ -9,6 +9,7 @@ import { DocumentPickerField } from '@/components/ui/DocumentPickerField';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { BrandCombobox, type BrandComboboxHandle } from '@/components/ui/BrandCombobox';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { VendorSelect } from '@/components/ui/VendorSelect';
 import { toast } from 'sonner';
 import {
   ApiError,
@@ -31,6 +32,7 @@ import type {
   AttributeValuePayload,
   BrandListItem,
   CategoryListItem,
+  VendorListItem,
 } from '@/types';
 
 interface Props {
@@ -58,7 +60,6 @@ interface FormState {
   categoryId: string;
   purchaseDate: string;
   purchasePrice: string;
-  vendorName: string;
   purchaseOrderRef: string;
   invoiceRef: string;
   warrantyStartDate: string;
@@ -70,7 +71,7 @@ interface FormState {
 
 const EMPTY_FORM: FormState = {
   name: '', description: '', brandId: '', brandName: '', model: '', serialNumber: '',
-  categoryId: '', purchaseDate: '', purchasePrice: '', vendorName: '',
+  categoryId: '', purchaseDate: '', purchasePrice: '',
   purchaseOrderRef: '', invoiceRef: '', warrantyStartDate: '', warrantyExpiryDate: '',
   warrantyProvider: '', condition: 'New', location: '',
 };
@@ -86,7 +87,6 @@ function assetDetailToForm(a: AssetDetail): FormState {
     categoryId: a.category.id,
     purchaseDate: a.purchaseDate ?? '',
     purchasePrice: a.purchasePrice != null ? String(a.purchasePrice) : '',
-    vendorName: a.vendorName ?? '',
     purchaseOrderRef: a.purchaseOrderRef ?? '',
     invoiceRef: a.invoiceRef ?? '',
     warrantyStartDate: a.warrantyStartDate ?? '',
@@ -101,6 +101,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const isEdit = !!assetId;
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [selectedVendor, setSelectedVendor] = useState<VendorListItem | null>(null);
   const [attrValues, setAttrValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -143,6 +144,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         if (assetId) {
           const asset = await getAsset(assetId);
           setForm(assetDetailToForm(asset));
+          setSelectedVendor(asset.vendor);
           setExistingImages(asset.images ?? []);
           setExistingPurchaseOrderUrl(asset.purchaseOrderUrl ?? null);
           setExistingPurchaseOrderFileName(asset.purchaseOrderFileName ?? null);
@@ -286,7 +288,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           location: form.location.trim() || undefined,
           purchaseDate: form.purchaseDate,
           purchasePrice: parseFloat(form.purchasePrice),
-          vendorName: form.vendorName.trim() || undefined,
+          vendorId: selectedVendor?.id || undefined,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
           invoiceRef: form.invoiceRef.trim() || undefined,
           warrantyStartDate: form.warrantyStartDate || undefined,
@@ -334,7 +336,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           location: form.location.trim() || undefined,
           purchaseDate: form.purchaseDate,
           purchasePrice: parseFloat(form.purchasePrice),
-          vendorName: form.vendorName.trim() || undefined,
+          vendorId: selectedVendor?.id || undefined,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
           invoiceRef: form.invoiceRef.trim() || undefined,
           warrantyStartDate: form.warrantyStartDate || undefined,
@@ -539,9 +541,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                   </div>
                 </FormField>
               </div>
-              <FormField label="Vendor / Supplier Name">
-                <input type="text" value={form.vendorName} onChange={(e) => set('vendorName', e.target.value)}
-                  className="form-input" placeholder="Vendor or supplier name" />
+              <FormField label="Vendor / Supplier">
+                <VendorSelect value={selectedVendor} onChange={setSelectedVendor} />
               </FormField>
               <FormField label="Purchase Order Reference (Optional)">
                 <input type="text" value={form.purchaseOrderRef} onChange={(e) => set('purchaseOrderRef', e.target.value)}
