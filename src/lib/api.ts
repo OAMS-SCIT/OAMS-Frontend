@@ -416,6 +416,8 @@ export interface GetAssetsParams {
   search?: string;
   categoryId?: string;
   status?: AssetStatus | '';
+  /** Statuses to exclude (e.g. picker for Send to Repair excludes Under Repair/Retired/Lost). */
+  excludeStatus?: AssetStatus[];
   brandId?: string;
   sortBy?: 'name' | 'purchaseDate' | 'warrantyExpiryDate' | 'createdAt';
   sortOrder?: 'ASC' | 'DESC';
@@ -430,6 +432,7 @@ export function getAssets(
     search: params.search,
     categoryId: params.categoryId,
     status: params.status || undefined,
+    excludeStatus: params.excludeStatus?.length ? params.excludeStatus.join(',') : undefined,
     brandId: params.brandId,
     sortBy: params.sortBy,
     sortOrder: params.sortOrder,
@@ -648,6 +651,57 @@ export function uploadAssetImages(
   return request<AssetDetail>(`/assets/${assetId}/images`, {
     method: 'POST',
     body: formData,
+  });
+}
+
+/** Upload/replace the purchase-order document for an asset (JPEG/PNG/PDF, ≤10 MB). */
+export function uploadAssetPurchaseOrder(
+  assetId: string,
+  file: File,
+): Promise<AssetDetail> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<AssetDetail>(`/assets/${assetId}/purchase-order`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+/** Upload/replace the purchase invoice document for an asset (JPEG/PNG/PDF, ≤10 MB). */
+export function uploadAssetInvoice(
+  assetId: string,
+  file: File,
+): Promise<AssetDetail> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<AssetDetail>(`/assets/${assetId}/invoice`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+/** Upload one or more warranty documents for an asset (JPEG/PNG/PDF, ≤10 MB each). */
+export function uploadAssetWarrantyDocs(
+  assetId: string,
+  files: File[],
+): Promise<AssetDetail> {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  return request<AssetDetail>(`/assets/${assetId}/warranty-docs`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+/** Delete a single warranty document. Returns the updated detail. */
+export function deleteAssetWarrantyDoc(
+  assetId: string,
+  docId: string,
+): Promise<AssetDetail> {
+  return request<AssetDetail>(`/assets/${assetId}/warranty-docs/${docId}`, {
+    method: 'DELETE',
   });
 }
 

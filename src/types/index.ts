@@ -239,6 +239,13 @@ export interface AssetImageItem {
   sortOrder: number;
 }
 
+/** One warranty document attached to an asset. */
+export interface AssetWarrantyDocumentItem {
+  id: string;
+  url: string;
+  fileName: string;
+}
+
 /** Returned by GET /api/assets/:id, POST /api/assets, PATCH /api/assets/:id. */
 export interface AssetDetail {
   id: string;
@@ -254,11 +261,23 @@ export interface AssetDetail {
   location: string | null;
   purchaseDate: string;
   purchasePrice: number;
-  vendorName: string | null;
+  vendor: VendorListItem | null;
   purchaseOrderRef: string | null;
+  /** Cloud storage URL for the purchase-order document, when uploaded. */
+  purchaseOrderUrl?: string | null;
+  /** Original file name of the purchase-order document, when available. */
+  purchaseOrderFileName?: string | null;
+  /** Optional invoice reference number (independent of the invoice file). */
+  invoiceRef?: string | null;
+  /** Cloud storage URL for the purchase invoice document, when uploaded. */
+  invoiceUrl?: string | null;
+  /** Original file name of the purchase invoice document, when available. */
+  invoiceFileName?: string | null;
   warrantyStartDate: string | null;
   warrantyExpiryDate: string | null;
   warrantyProvider: string | null;
+  /** Optional warranty documents uploaded against this asset. */
+  warrantyDocuments?: AssetWarrantyDocumentItem[];
   customAttributes: AssetCustomAttributeValue[];
   images: AssetImageItem[];
   assignmentHistoryCount: number;
@@ -288,8 +307,9 @@ export interface CreateAssetPayload {
   location?: string;
   purchaseDate: string;
   purchasePrice: number;
-  vendorName?: string;
+  vendorId?: string;
   purchaseOrderRef?: string;
+  invoiceRef?: string;
   warrantyStartDate?: string;
   warrantyExpiryDate?: string;
   warrantyProvider?: string;

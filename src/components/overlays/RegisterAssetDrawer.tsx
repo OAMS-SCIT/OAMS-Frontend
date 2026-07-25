@@ -5,29 +5,42 @@ import { X } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { ImageUploadZone, type UploadedImage } from '@/components/ui/ImageUploadZone';
+import { DocumentPickerField } from '@/components/ui/DocumentPickerField';
+import {
+  MultiDocumentPickerField,
+  type StagedDocument,
+} from '@/components/ui/MultiDocumentPickerField';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { BrandCombobox, type BrandComboboxHandle } from '@/components/ui/BrandCombobox';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { VendorSelect } from '@/components/ui/VendorSelect';
+import { addMonths, format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import {
   ApiError,
   createAsset,
   deleteAssetImage,
+  deleteAssetWarrantyDoc,
   getAsset,
   getBrands,
   getCategories,
   getCategory,
   updateAsset,
   uploadAssetImages,
+  uploadAssetInvoice,
+  uploadAssetPurchaseOrder,
+  uploadAssetWarrantyDocs,
 } from '@/lib/api';
 import type {
   AssetCondition,
   AssetDetail,
   AssetImageItem,
+  AssetWarrantyDocumentItem,
   AttributeDetail,
   AttributeValuePayload,
   BrandListItem,
   CategoryListItem,
+  VendorListItem,
 } from '@/types';
 
 interface Props {
@@ -42,6 +55,17 @@ interface Props {
 }
 
 const CONDITIONS: AssetCondition[] = ['New', 'Good', 'Fair', 'Poor'];
+const WARRANTY_PRESETS = [6, 12, 24];
+
+/** start (yyyy-MM-dd) + N months → expiry (yyyy-MM-dd); '' when either is missing/invalid. */
+function expiryFromMonths(start: string, months: number): string {
+  if (!start || !months || months <= 0) return '';
+  try {
+    return format(addMonths(parseISO(start), months), 'yyyy-MM-dd');
+  } catch {
+    return '';
+  }
+}
 
 interface FormState {
   name: string;
@@ -55,8 +79,8 @@ interface FormState {
   categoryId: string;
   purchaseDate: string;
   purchasePrice: string;
-  vendorName: string;
   purchaseOrderRef: string;
+  invoiceRef: string;
   warrantyStartDate: string;
   warrantyExpiryDate: string;
   warrantyProvider: string;
@@ -66,8 +90,8 @@ interface FormState {
 
 const EMPTY_FORM: FormState = {
   name: '', description: '', brandId: '', brandName: '', model: '', serialNumber: '',
-  categoryId: '', purchaseDate: '', purchasePrice: '', vendorName: '',
-  purchaseOrderRef: '', warrantyStartDate: '', warrantyExpiryDate: '',
+  categoryId: '', purchaseDate: '', purchasePrice: '',
+  purchaseOrderRef: '', invoiceRef: '', warrantyStartDate: '', warrantyExpiryDate: '',
   warrantyProvider: '', condition: 'New', location: '',
 };
 
@@ -82,8 +106,8 @@ function assetDetailToForm(a: AssetDetail): FormState {
     categoryId: a.category.id,
     purchaseDate: a.purchaseDate ?? '',
     purchasePrice: a.purchasePrice != null ? String(a.purchasePrice) : '',
-    vendorName: a.vendorName ?? '',
     purchaseOrderRef: a.purchaseOrderRef ?? '',
+    invoiceRef: a.invoiceRef ?? '',
     warrantyStartDate: a.warrantyStartDate ?? '',
     warrantyExpiryDate: a.warrantyExpiryDate ?? '',
     warrantyProvider: a.warrantyProvider ?? '',
@@ -96,6 +120,9 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const isEdit = !!assetId;
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [selectedVendor, setSelectedVendor] = useState<VendorListItem | null>(null);
+  // UI-only helper: number of months → auto-fills the warranty expiry. Not persisted.
+  const [warrantyMonths, setWarrantyMonths] = useState('');
   const [attrValues, setAttrValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -115,6 +142,20 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const [existingImages, setExistingImages] = useState<AssetImageItem[]>([]);
   const [removedImageIds, setRemovedImageIds] = useState<string[]>([]);
 
+  // Optional procurement documents — staged locally, uploaded after the asset
+  // JSON save (same two-step pattern as images / upgrade invoices).
+  const [purchaseOrderFile, setPurchaseOrderFile] = useState<File | null>(null);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [existingPurchaseOrderUrl, setExistingPurchaseOrderUrl] = useState<string | null>(null);
+  const [existingPurchaseOrderFileName, setExistingPurchaseOrderFileName] = useState<string | null>(null);
+  const [existingInvoiceUrl, setExistingInvoiceUrl] = useState<string | null>(null);
+  const [existingInvoiceFileName, setExistingInvoiceFileName] = useState<string | null>(null);
+
+  // Optional warranty documents — multi-file, staged like images.
+  const [warrantyFiles, setWarrantyFiles] = useState<StagedDocument[]>([]);
+  const [existingWarrantyDocs, setExistingWarrantyDocs] = useState<AssetWarrantyDocumentItem[]>([]);
+  const [removedWarrantyDocIds, setRemovedWarrantyDocIds] = useState<string[]>([]);
+
   // Load categories list + (edit) existing asset on mount
   useEffect(() => {
     const init = async () => {
@@ -129,7 +170,13 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         if (assetId) {
           const asset = await getAsset(assetId);
           setForm(assetDetailToForm(asset));
+          setSelectedVendor(asset.vendor);
           setExistingImages(asset.images ?? []);
+          setExistingPurchaseOrderUrl(asset.purchaseOrderUrl ?? null);
+          setExistingPurchaseOrderFileName(asset.purchaseOrderFileName ?? null);
+          setExistingInvoiceUrl(asset.invoiceUrl ?? null);
+          setExistingInvoiceFileName(asset.invoiceFileName ?? null);
+          setExistingWarrantyDocs(asset.warrantyDocuments ?? []);
           // Pre-load attributes for the asset's category
           const detail = await getCategory(asset.category.id);
           setCategoryAttrs(detail.attributes);
@@ -268,8 +315,9 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           location: form.location.trim() || undefined,
           purchaseDate: form.purchaseDate,
           purchasePrice: parseFloat(form.purchasePrice),
-          vendorName: form.vendorName.trim() || undefined,
+          vendorId: selectedVendor?.id || undefined,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
+          invoiceRef: form.invoiceRef.trim() || undefined,
           warrantyStartDate: form.warrantyStartDate || undefined,
           warrantyExpiryDate: form.warrantyExpiryDate || undefined,
           warrantyProvider: form.warrantyProvider.trim() || undefined,
@@ -291,6 +339,25 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         } catch {
           toast.error('Asset details saved, but updating images failed. Try again from Edit.');
         }
+        try {
+          if (purchaseOrderFile) {
+            saved = await uploadAssetPurchaseOrder(assetId!, purchaseOrderFile);
+          }
+          if (invoiceFile) {
+            saved = await uploadAssetInvoice(assetId!, invoiceFile);
+          }
+          for (const docId of removedWarrantyDocIds) {
+            saved = await deleteAssetWarrantyDoc(assetId!, docId);
+          }
+          if (warrantyFiles.length > 0) {
+            saved = await uploadAssetWarrantyDocs(
+              assetId!,
+              warrantyFiles.map((f) => f.file),
+            );
+          }
+        } catch {
+          toast.error('Asset details saved, but document upload failed. Try again from Edit.');
+        }
         toast.success('Asset updated successfully.');
       } else {
         saved = await createAsset({
@@ -305,8 +372,9 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           location: form.location.trim() || undefined,
           purchaseDate: form.purchaseDate,
           purchasePrice: parseFloat(form.purchasePrice),
-          vendorName: form.vendorName.trim() || undefined,
+          vendorId: selectedVendor?.id || undefined,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
+          invoiceRef: form.invoiceRef.trim() || undefined,
           warrantyStartDate: form.warrantyStartDate || undefined,
           warrantyExpiryDate: form.warrantyExpiryDate || undefined,
           warrantyProvider: form.warrantyProvider.trim() || undefined,
@@ -321,6 +389,24 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             );
           } catch {
             toast.error('Asset created, but image upload failed. Add images via Edit.');
+          }
+        }
+        if (purchaseOrderFile || invoiceFile || warrantyFiles.length > 0) {
+          try {
+            if (purchaseOrderFile) {
+              saved = await uploadAssetPurchaseOrder(saved.id, purchaseOrderFile);
+            }
+            if (invoiceFile) {
+              saved = await uploadAssetInvoice(saved.id, invoiceFile);
+            }
+            if (warrantyFiles.length > 0) {
+              saved = await uploadAssetWarrantyDocs(
+                saved.id,
+                warrantyFiles.map((f) => f.file),
+              );
+            }
+          } catch {
+            toast.error('Asset created, but document upload failed. Add documents via Edit.');
           }
         }
         toast.success('Asset registered successfully.');
@@ -349,6 +435,10 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   // setUploadedImages (same as register) and uploaded on save too.
   const handleRemoveExistingImage = (imageId: string) => {
     setRemovedImageIds((ids) => [...ids, imageId]);
+  };
+
+  const handleRemoveExistingWarrantyDoc = (docId: string) => {
+    setRemovedWarrantyDocIds((ids) => [...ids, docId]);
   };
 
   // ── Render helpers ────────────────────────────────────────────────────────
@@ -497,30 +587,107 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                   </div>
                 </FormField>
               </div>
-              <FormField label="Vendor / Supplier Name">
-                <input type="text" value={form.vendorName} onChange={(e) => set('vendorName', e.target.value)}
-                  className="form-input" placeholder="Vendor or supplier name" />
+              <FormField label="Vendor / Supplier">
+                <VendorSelect value={selectedVendor} onChange={setSelectedVendor} />
               </FormField>
               <FormField label="Purchase Order Reference (Optional)">
                 <input type="text" value={form.purchaseOrderRef} onChange={(e) => set('purchaseOrderRef', e.target.value)}
                   className="form-input" placeholder="e.g. PO-2024-001" />
               </FormField>
+              <DocumentPickerField
+                label="Purchase Order Document"
+                file={purchaseOrderFile}
+                onPick={setPurchaseOrderFile}
+                existingUrl={existingPurchaseOrderUrl}
+                existingFileName={existingPurchaseOrderFileName}
+              />
+              <FormField label="Invoice Reference (Optional)">
+                <input type="text" value={form.invoiceRef} onChange={(e) => set('invoiceRef', e.target.value)}
+                  className="form-input" placeholder="e.g. INV-2024-001" />
+              </FormField>
+              <DocumentPickerField
+                label="Invoice Document"
+                file={invoiceFile}
+                onPick={setInvoiceFile}
+                existingUrl={existingInvoiceUrl}
+                existingFileName={existingInvoiceFileName}
+              />
             </FormSection>
 
             {/* Section 4 - Warranty */}
             <FormSection title="Warranty">
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Warranty Start Date">
-                  <DatePicker value={form.warrantyStartDate} onChange={(v) => set('warrantyStartDate', v)} ariaLabel="Warranty Start Date" className="w-full" />
+                  <DatePicker
+                    value={form.warrantyStartDate}
+                    onChange={(v) => {
+                      set('warrantyStartDate', v);
+                      const ex = expiryFromMonths(v, parseInt(warrantyMonths, 10));
+                      if (ex) set('warrantyExpiryDate', ex);
+                    }}
+                    ariaLabel="Warranty Start Date"
+                    className="w-full"
+                  />
                 </FormField>
                 <FormField label="Warranty Expiry Date" error={errors.warrantyExpiryDate}>
                   <DatePicker value={form.warrantyExpiryDate} onChange={(v) => set('warrantyExpiryDate', v)} ariaLabel="Warranty Expiry Date" className="w-full" />
                 </FormField>
               </div>
+              {/* Period helper — auto-fills the expiry from start + months */}
+              <div className="flex items-center gap-2 flex-wrap -mt-1">
+                <span className="text-2xs text-muted-foreground">Period:</span>
+                {WARRANTY_PRESETS.map((m) => {
+                  const apply = () => {
+                    setWarrantyMonths(String(m));
+                    const ex = expiryFromMonths(form.warrantyStartDate, m);
+                    if (ex) set('warrantyExpiryDate', ex);
+                  };
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={apply}
+                      disabled={!form.warrantyStartDate}
+                      className={`rounded-control border px-2.5 py-1 text-2xs transition-colors disabled:opacity-40 ${
+                        warrantyMonths === String(m)
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-border text-foreground/70 hover:bg-muted'
+                      }`}
+                    >
+                      {m} mo
+                    </button>
+                  );
+                })}
+                <input
+                  type="number"
+                  min="0"
+                  value={warrantyMonths ?? ''}
+                  onChange={(e) => {
+                    setWarrantyMonths(e.target.value);
+                    const ex = expiryFromMonths(form.warrantyStartDate, parseInt(e.target.value, 10));
+                    if (ex) set('warrantyExpiryDate', ex);
+                  }}
+                  disabled={!form.warrantyStartDate}
+                  placeholder="months"
+                  className="w-20 rounded-control border border-input bg-input-background px-2 py-1 text-2xs text-foreground placeholder:text-muted-foreground/60 outline-none transition-colors focus:border-primary disabled:opacity-40"
+                />
+                <span className="text-2xs text-muted-foreground/70">
+                  {form.warrantyStartDate ? 'auto-fills expiry' : 'set a start date first'}
+                </span>
+              </div>
               <FormField label="Warranty Provider / Contact (Optional)">
                 <input type="text" value={form.warrantyProvider} onChange={(e) => set('warrantyProvider', e.target.value)}
                   className="form-input" placeholder="Provider name or contact info" />
               </FormField>
+              <MultiDocumentPickerField
+                label="Warranty Documents"
+                files={warrantyFiles}
+                onChange={setWarrantyFiles}
+                existing={existingWarrantyDocs
+                  .filter((d) => !removedWarrantyDocIds.includes(d.id))
+                  .map((d) => ({ id: d.id, url: d.url, fileName: d.fileName }))}
+                onRemoveExisting={isEdit ? handleRemoveExistingWarrantyDoc : undefined}
+              />
             </FormSection>
 
             {/* Section 5 - Physical */}

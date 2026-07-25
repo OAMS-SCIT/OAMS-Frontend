@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor, ZoomIn, RefreshCw, Wrench, ImageIcon, Loader2 } from 'lucide-react';
+import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor, ZoomIn, RefreshCw, Wrench, ImageIcon, Loader2, ExternalLink, Download } from 'lucide-react';
 import type { AssetDetail as AssetDetailType, AssetHistoryEntry, AssetUpgrade, Assignment, AssignmentHistoryItem, ConditionImageItem } from '@/types';
 import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment, getAssetAssignments, getAssetHistory, getAssignmentConditionImages } from '@/lib/api';
 import { AssetHistoryTimeline } from './AssetHistoryTimeline';
@@ -21,6 +21,49 @@ import { ChangeStatusDrawer } from '@/components/overlays/ChangeStatusDrawer';
 import { SendToRepairDrawer } from '@/components/overlays/SendToRepairDrawer';
 import { ReturnFromRepairDrawer } from '@/components/overlays/ReturnFromRepairDrawer';
 import { ImageLightbox } from '@/components/overlays/ImageLightbox';
+
+function fileNameFromUrl(url: string): string {
+  try {
+    const name = decodeURIComponent(new URL(url).pathname.split('/').pop() || '');
+    return name || 'Document';
+  } catch {
+    return 'Document';
+  }
+}
+
+function DocumentActions({
+  url,
+  fileName,
+}: {
+  url: string;
+  fileName?: string | null;
+}) {
+  const name = fileName?.trim() || fileNameFromUrl(url);
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <span className="text-2sm text-foreground/80 truncate" title={name}>{name}</span>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="View"
+        className="flex items-center gap-1 text-2sm text-primary hover:underline shrink-0"
+      >
+        <ExternalLink className="w-3 h-3" />
+        <span>View</span>
+      </a>
+      <a
+        href={url}
+        download={name}
+        title="Download"
+        className="flex items-center gap-1 text-2sm text-muted-foreground transition-colors hover:text-foreground shrink-0"
+      >
+        <Download className="w-3.5 h-3.5" />
+        <span>Download</span>
+      </a>
+    </div>
+  );
+}
 
 function InfoRow({ label, value, mono, style }: {
   label: string; value: React.ReactNode; mono?: boolean; style?: React.CSSProperties;
@@ -612,8 +655,35 @@ export function AssetDetail() {
           <h3 className="font-semibold mb-3 text-sm tracking-[-0.01em] text-foreground">Financial & Warranty</h3>
           <InfoRow label="Purchase Date" value={asset.purchaseDate} />
           <InfoRow label="Purchase Price" value={asset.purchasePrice ? `$${Number(asset.purchasePrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : undefined} />
-          <InfoRow label="Vendor / Supplier" value={asset.vendorName} />
+          <InfoRow label="Vendor / Supplier" value={asset.vendor?.name} />
           <InfoRow label="Purchase Order Ref." value={asset.purchaseOrderRef} />
+          <InfoRow
+            label="Purchase Order Document"
+            value={
+              asset.purchaseOrderUrl
+                ? (
+                  <DocumentActions
+                    url={asset.purchaseOrderUrl}
+                    fileName={asset.purchaseOrderFileName}
+                  />
+                )
+                : undefined
+            }
+          />
+          <InfoRow label="Invoice Ref." value={asset.invoiceRef} />
+          <InfoRow
+            label="Invoice Document"
+            value={
+              asset.invoiceUrl
+                ? (
+                  <DocumentActions
+                    url={asset.invoiceUrl}
+                    fileName={asset.invoiceFileName}
+                  />
+                )
+                : undefined
+            }
+          />
           <InfoRow label="Warranty Start" value={asset.warrantyStartDate} />
           <InfoRow label="Warranty Expiry" value={
             asset.warrantyExpiryDate ? (
@@ -625,6 +695,24 @@ export function AssetDetail() {
             ) : undefined
           } />
           <InfoRow label="Warranty Provider" value={asset.warrantyProvider} />
+          <InfoRow
+            label="Warranty Documents"
+            value={
+              (asset.warrantyDocuments?.length ?? 0) > 0 ? (
+                <div className="space-y-2">
+                  {asset.warrantyDocuments!.map((doc) => (
+                    <DocumentActions
+                      key={doc.id}
+                      url={doc.url}
+                      fileName={doc.fileName}
+                    />
+                  ))}
+                </div>
+              ) : (
+                'No warranty document uploaded'
+              )
+            }
+          />
         </div>
 
         {/* Physical Details */}
