@@ -680,6 +680,31 @@ export function uploadAssetInvoice(
   });
 }
 
+/** Upload one or more warranty documents for an asset (JPEG/PNG/PDF, ≤10 MB each). */
+export function uploadAssetWarrantyDocs(
+  assetId: string,
+  files: File[],
+): Promise<AssetDetail> {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  return request<AssetDetail>(`/assets/${assetId}/warranty-docs`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+/** Delete a single warranty document. Returns the updated detail. */
+export function deleteAssetWarrantyDoc(
+  assetId: string,
+  docId: string,
+): Promise<AssetDetail> {
+  return request<AssetDetail>(`/assets/${assetId}/warranty-docs/${docId}`, {
+    method: 'DELETE',
+  });
+}
+
 /** Delete a single asset image. Returns the updated detail. */
 export function deleteAssetImage(
   assetId: string,

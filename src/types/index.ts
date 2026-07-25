@@ -239,6 +239,13 @@ export interface AssetImageItem {
   sortOrder: number;
 }
 
+/** One warranty document attached to an asset. */
+export interface AssetWarrantyDocumentItem {
+  id: string;
+  url: string;
+  fileName: string;
+}
+
 /** Returned by GET /api/assets/:id, POST /api/assets, PATCH /api/assets/:id. */
 export interface AssetDetail {
   id: string;
@@ -269,6 +276,8 @@ export interface AssetDetail {
   warrantyStartDate: string | null;
   warrantyExpiryDate: string | null;
   warrantyProvider: string | null;
+  /** Optional warranty documents uploaded against this asset. */
+  warrantyDocuments?: AssetWarrantyDocumentItem[];
   customAttributes: AssetCustomAttributeValue[];
   images: AssetImageItem[];
   assignmentHistoryCount: number;

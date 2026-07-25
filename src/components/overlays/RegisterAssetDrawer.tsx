@@ -6,6 +6,10 @@ import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { ImageUploadZone, type UploadedImage } from '@/components/ui/ImageUploadZone';
 import { DocumentPickerField } from '@/components/ui/DocumentPickerField';
+import {
+  MultiDocumentPickerField,
+  type StagedDocument,
+} from '@/components/ui/MultiDocumentPickerField';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { BrandCombobox, type BrandComboboxHandle } from '@/components/ui/BrandCombobox';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -16,6 +20,7 @@ import {
   ApiError,
   createAsset,
   deleteAssetImage,
+  deleteAssetWarrantyDoc,
   getAsset,
   getBrands,
   getCategories,
@@ -24,11 +29,13 @@ import {
   uploadAssetImages,
   uploadAssetInvoice,
   uploadAssetPurchaseOrder,
+  uploadAssetWarrantyDocs,
 } from '@/lib/api';
 import type {
   AssetCondition,
   AssetDetail,
   AssetImageItem,
+  AssetWarrantyDocumentItem,
   AttributeDetail,
   AttributeValuePayload,
   BrandListItem,
@@ -144,6 +151,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const [existingInvoiceUrl, setExistingInvoiceUrl] = useState<string | null>(null);
   const [existingInvoiceFileName, setExistingInvoiceFileName] = useState<string | null>(null);
 
+  // Optional warranty documents — multi-file, staged like images.
+  const [warrantyFiles, setWarrantyFiles] = useState<StagedDocument[]>([]);
+  const [existingWarrantyDocs, setExistingWarrantyDocs] = useState<AssetWarrantyDocumentItem[]>([]);
+  const [removedWarrantyDocIds, setRemovedWarrantyDocIds] = useState<string[]>([]);
+
   // Load categories list + (edit) existing asset on mount
   useEffect(() => {
     const init = async () => {
@@ -164,6 +176,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           setExistingPurchaseOrderFileName(asset.purchaseOrderFileName ?? null);
           setExistingInvoiceUrl(asset.invoiceUrl ?? null);
           setExistingInvoiceFileName(asset.invoiceFileName ?? null);
+          setExistingWarrantyDocs(asset.warrantyDocuments ?? []);
           // Pre-load attributes for the asset's category
           const detail = await getCategory(asset.category.id);
           setCategoryAttrs(detail.attributes);
@@ -333,6 +346,15 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           if (invoiceFile) {
             saved = await uploadAssetInvoice(assetId!, invoiceFile);
           }
+          for (const docId of removedWarrantyDocIds) {
+            saved = await deleteAssetWarrantyDoc(assetId!, docId);
+          }
+          if (warrantyFiles.length > 0) {
+            saved = await uploadAssetWarrantyDocs(
+              assetId!,
+              warrantyFiles.map((f) => f.file),
+            );
+          }
         } catch {
           toast.error('Asset details saved, but document upload failed. Try again from Edit.');
         }
@@ -369,13 +391,19 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             toast.error('Asset created, but image upload failed. Add images via Edit.');
           }
         }
-        if (purchaseOrderFile || invoiceFile) {
+        if (purchaseOrderFile || invoiceFile || warrantyFiles.length > 0) {
           try {
             if (purchaseOrderFile) {
               saved = await uploadAssetPurchaseOrder(saved.id, purchaseOrderFile);
             }
             if (invoiceFile) {
               saved = await uploadAssetInvoice(saved.id, invoiceFile);
+            }
+            if (warrantyFiles.length > 0) {
+              saved = await uploadAssetWarrantyDocs(
+                saved.id,
+                warrantyFiles.map((f) => f.file),
+              );
             }
           } catch {
             toast.error('Asset created, but document upload failed. Add documents via Edit.');
@@ -407,6 +435,10 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   // setUploadedImages (same as register) and uploaded on save too.
   const handleRemoveExistingImage = (imageId: string) => {
     setRemovedImageIds((ids) => [...ids, imageId]);
+  };
+
+  const handleRemoveExistingWarrantyDoc = (docId: string) => {
+    setRemovedWarrantyDocIds((ids) => [...ids, docId]);
   };
 
   // ── Render helpers ────────────────────────────────────────────────────────
@@ -647,6 +679,15 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 <input type="text" value={form.warrantyProvider} onChange={(e) => set('warrantyProvider', e.target.value)}
                   className="form-input" placeholder="Provider name or contact info" />
               </FormField>
+              <MultiDocumentPickerField
+                label="Warranty Documents"
+                files={warrantyFiles}
+                onChange={setWarrantyFiles}
+                existing={existingWarrantyDocs
+                  .filter((d) => !removedWarrantyDocIds.includes(d.id))
+                  .map((d) => ({ id: d.id, url: d.url, fileName: d.fileName }))}
+                onRemoveExisting={isEdit ? handleRemoveExistingWarrantyDoc : undefined}
+              />
             </FormSection>
 
             {/* Section 5 - Physical */}

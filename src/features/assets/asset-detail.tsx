@@ -695,6 +695,24 @@ export function AssetDetail() {
             ) : undefined
           } />
           <InfoRow label="Warranty Provider" value={asset.warrantyProvider} />
+          <InfoRow
+            label="Warranty Documents"
+            value={
+              (asset.warrantyDocuments?.length ?? 0) > 0 ? (
+                <div className="space-y-2">
+                  {asset.warrantyDocuments!.map((doc) => (
+                    <DocumentActions
+                      key={doc.id}
+                      url={doc.url}
+                      fileName={doc.fileName}
+                    />
+                  ))}
+                </div>
+              ) : (
+                'No warranty document uploaded'
+              )
+            }
+          />
         </div>
 
         {/* Physical Details */}
