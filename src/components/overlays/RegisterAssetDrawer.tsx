@@ -10,6 +10,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { BrandCombobox, type BrandComboboxHandle } from '@/components/ui/BrandCombobox';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { VendorSelect } from '@/components/ui/VendorSelect';
+import { addMonths, format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import {
   ApiError,
@@ -47,6 +48,17 @@ interface Props {
 }
 
 const CONDITIONS: AssetCondition[] = ['New', 'Good', 'Fair', 'Poor'];
+const WARRANTY_PRESETS = [6, 12, 24];
+
+/** start (yyyy-MM-dd) + N months → expiry (yyyy-MM-dd); '' when either is missing/invalid. */
+function expiryFromMonths(start: string, months: number): string {
+  if (!start || !months || months <= 0) return '';
+  try {
+    return format(addMonths(parseISO(start), months), 'yyyy-MM-dd');
+  } catch {
+    return '';
+  }
+}
 
 interface FormState {
   name: string;
@@ -102,6 +114,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [selectedVendor, setSelectedVendor] = useState<VendorListItem | null>(null);
+  // UI-only helper: number of months → auto-fills the warranty expiry. Not persisted.
+  const [warrantyMonths, setWarrantyMonths] = useState('');
   const [attrValues, setAttrValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -572,11 +586,62 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
             <FormSection title="Warranty">
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Warranty Start Date">
-                  <DatePicker value={form.warrantyStartDate} onChange={(v) => set('warrantyStartDate', v)} ariaLabel="Warranty Start Date" className="w-full" />
+                  <DatePicker
+                    value={form.warrantyStartDate}
+                    onChange={(v) => {
+                      set('warrantyStartDate', v);
+                      const ex = expiryFromMonths(v, parseInt(warrantyMonths, 10));
+                      if (ex) set('warrantyExpiryDate', ex);
+                    }}
+                    ariaLabel="Warranty Start Date"
+                    className="w-full"
+                  />
                 </FormField>
                 <FormField label="Warranty Expiry Date" error={errors.warrantyExpiryDate}>
                   <DatePicker value={form.warrantyExpiryDate} onChange={(v) => set('warrantyExpiryDate', v)} ariaLabel="Warranty Expiry Date" className="w-full" />
                 </FormField>
+              </div>
+              {/* Period helper — auto-fills the expiry from start + months */}
+              <div className="flex items-center gap-2 flex-wrap -mt-1">
+                <span className="text-2xs text-muted-foreground">Period:</span>
+                {WARRANTY_PRESETS.map((m) => {
+                  const apply = () => {
+                    setWarrantyMonths(String(m));
+                    const ex = expiryFromMonths(form.warrantyStartDate, m);
+                    if (ex) set('warrantyExpiryDate', ex);
+                  };
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={apply}
+                      disabled={!form.warrantyStartDate}
+                      className={`rounded-control border px-2.5 py-1 text-2xs transition-colors disabled:opacity-40 ${
+                        warrantyMonths === String(m)
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-border text-foreground/70 hover:bg-muted'
+                      }`}
+                    >
+                      {m} mo
+                    </button>
+                  );
+                })}
+                <input
+                  type="number"
+                  min="0"
+                  value={warrantyMonths ?? ''}
+                  onChange={(e) => {
+                    setWarrantyMonths(e.target.value);
+                    const ex = expiryFromMonths(form.warrantyStartDate, parseInt(e.target.value, 10));
+                    if (ex) set('warrantyExpiryDate', ex);
+                  }}
+                  disabled={!form.warrantyStartDate}
+                  placeholder="months"
+                  className="w-20 rounded-control border border-input bg-input-background px-2 py-1 text-2xs text-foreground placeholder:text-muted-foreground/60 outline-none transition-colors focus:border-primary disabled:opacity-40"
+                />
+                <span className="text-2xs text-muted-foreground/70">
+                  {form.warrantyStartDate ? 'auto-fills expiry' : 'set a start date first'}
+                </span>
               </div>
               <FormField label="Warranty Provider / Contact (Optional)">
                 <input type="text" value={form.warrantyProvider} onChange={(e) => set('warrantyProvider', e.target.value)}
