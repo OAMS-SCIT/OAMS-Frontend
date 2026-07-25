@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Pencil, ArrowRight, RefreshCw, X } from 'lucide-react';
+import { Search, Pencil, ArrowRight, RefreshCw, X, Wrench } from 'lucide-react';
 import type { RepairListItem } from '@/types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
@@ -35,6 +35,7 @@ export function UnderRepairList() {
   // ── UI state ────────────────────────────────────────────────────────────
   const [editRepair, setEditRepair] = useState<RepairListItem | null>(null);
   const [returnRepair, setReturnRepair] = useState<RepairListItem | null>(null);
+  const [showSendToRepair, setShowSendToRepair] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const hasActiveFilters = Boolean(search);
@@ -79,9 +80,17 @@ export function UnderRepairList() {
   return (
     <div className="motion-safe:animate-fade-rise">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="font-bold text-2xl tracking-[-0.02em] text-foreground">Under Repair</h1>
-        <p className="text-2sm text-muted-foreground mt-1">Assets currently sent out to a service vendor for repair.</p>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="font-bold text-2xl tracking-[-0.02em] text-foreground">Under Repair</h1>
+          <p className="text-2sm text-muted-foreground mt-1">Assets currently sent out to a service vendor for repair.</p>
+        </div>
+        <button
+          onClick={() => setShowSendToRepair(true)}
+          className="flex items-center gap-2 rounded-control px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(29,78,216,0.25)] transition-all hover:opacity-90 active:scale-[0.98] shrink-0"
+        >
+          <Wrench className="w-4 h-4" /> Send to Repair
+        </button>
       </div>
 
       {/* Filter Bar */}
@@ -240,6 +249,14 @@ export function UnderRepairList() {
           assetId={returnRepair.asset.id}
           onClose={() => setReturnRepair(null)}
           onDone={() => { setReturnRepair(null); load(); }}
+        />
+      )}
+
+      {/* Send an asset to repair (asset picked in the form) */}
+      {showSendToRepair && (
+        <SendToRepairDrawer
+          onClose={() => setShowSendToRepair(false)}
+          onSaved={() => { setShowSendToRepair(false); load(); }}
         />
       )}
     </div>
