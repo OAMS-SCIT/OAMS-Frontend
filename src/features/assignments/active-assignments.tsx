@@ -210,7 +210,7 @@ export function ActiveAssignments() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by assignee or asset name…"
+            placeholder="Search by assignee, asset name, or serial number…"
             className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
           />
         </div>
@@ -272,7 +272,15 @@ export function ActiveAssignments() {
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded-lg bg-card border border-border shadow-card">
-          <EmptyState icon="assignments" title="No active assignments" subtitle="No assets are currently assigned matching your filters." />
+          {debouncedSearch ? (
+            <EmptyState
+              icon="assignments"
+              title="No matching assignments found"
+              subtitle="No active assignment matches that assignee, asset name, or serial number. Try a different search or clear your filters."
+            />
+          ) : (
+            <EmptyState icon="assignments" title="No active assignments" subtitle="No assets are currently assigned matching your filters." />
+          )}
         </div>
       ) : (
         <div className="space-y-3">
