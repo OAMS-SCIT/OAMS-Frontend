@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { ReturnAssetDrawer } from '@/components/overlays/ReturnAssetDrawer';
 import { OverlayPortal } from '@/components/overlays/OverlayPortal';
-import { ApiError, getAssignments, getCategories, returnAssignment, submitAssignmentFeedback } from '@/lib/api';
+import { ApiError, getAssignments, getCategories, returnAssignment, submitAssignmentFeedback, uploadConditionImages } from '@/lib/api';
 
 const PER_PAGE = 10;
 
@@ -125,15 +125,27 @@ export function ActiveAssignments() {
     returnDate: string,
     condition: AssetCondition,
     notes?: string,
+    images?: File[],
   ) => {
     if (!returnRow) return;
+    // Capture before clearing the row below — the upload needs the assignment id.
+    const assignmentId = returnRow.id;
     setReturnSaving(true);
     try {
-      await returnAssignment(returnRow.id, {
+      await returnAssignment(assignmentId, {
         returnDate,
         conditionAtReturn: condition,
         returnNotes: notes,
       });
+      // Return-time condition images (OAMS-256). The return is already committed
+      // and cannot be undone, so a failed upload degrades to a warning.
+      if (images && images.length > 0) {
+        try {
+          await uploadConditionImages(assignmentId, images, 'returned');
+        } catch {
+          toast.error('Return processed, but the condition images could not be uploaded.');
+        }
+      }
       toast.success(`"${returnRow.asset.name}" returned. Now Available.`);
       setReturnRow(null);
       load();
