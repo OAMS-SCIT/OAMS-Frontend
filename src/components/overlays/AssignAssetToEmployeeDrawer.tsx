@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, Search, ChevronDown } from 'lucide-react';
+import { X, Search, ChevronDown, ImageIcon } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { toast } from 'sonner';
-import { ApiError, createAssignment, getAsset, getAssets } from '@/lib/api';
+import { ApiError, createAssignment, getAsset, getAssets, uploadConditionImages } from '@/lib/api';
 import type { AssetCustomAttributeValue, AssetListItem } from '@/types';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { StatusBadge, ConditionBadge } from '@/components/ui/StatusBadge';
+import { ImageUploadZone } from '@/components/ui/ImageUploadZone';
+import type { UploadedImage } from '@/components/ui/ImageUploadZone';
 
 // Only the employee fields this panel needs to display.
 interface EmployeeLike {
@@ -46,6 +48,9 @@ export function AssignAssetToEmployeeDrawer({ employee, onClose, onAssigned }: P
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  // Optional condition photos, staged in the form and flushed on confirm.
+  const [conditionImages, setConditionImages] = useState<UploadedImage[]>([]);
 
   // Custom attributes are fetched on demand (they aren't in the list payload),
   // only when the admin expands the specs section for the selected asset.
@@ -138,14 +143,29 @@ export function AssignAssetToEmployeeDrawer({ employee, onClose, onAssigned }: P
     if (!validate()) return;
     setSaving(true);
     try {
-      await createAssignment({
+      const assignment = await createAssignment({
         assetId: selectedAssetId,
         assigneeId: employee.id,
         assignmentDate,
         expectedReturnDate: expectedReturn || undefined,
         notes: notes.trim() || undefined,
       });
+      // Flush the staged condition photos. The assignment is already committed
+      // and there is no undo endpoint, so a failed upload only warns.
+      if (conditionImages.length > 0) {
+        try {
+          await uploadConditionImages(
+            assignment.id,
+            conditionImages.map((img) => img.file),
+            'assigned',
+          );
+        } catch {
+          toast.error('Asset assigned, but the condition photos could not be uploaded.');
+        }
+      }
       toast.success(`Asset assigned to ${employee.firstName} ${employee.lastName}.`);
+      // Staged previews are object URLs — revoke them now that they're saved.
+      conditionImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
       onAssigned();
       onClose();
     } catch (err) {
@@ -314,6 +334,19 @@ export function AssignAssetToEmployeeDrawer({ employee, onClose, onAssigned }: P
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
               placeholder="Add any handover notes, accessories included, etc."
               className="w-full rounded-control border border-input bg-input-background text-2sm text-foreground px-3 py-2 placeholder:text-muted-foreground/60 resize-none transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring" />
+          </div>
+
+          {/* Condition photos at assignment (OAMS-213) */}
+          <div>
+            <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-foreground/80">
+              <ImageIcon className="w-3.5 h-3.5" />
+              Condition Photos at Assignment <span className="text-muted-foreground/70">(Optional)</span>
+            </label>
+            <ImageUploadZone
+              images={conditionImages}
+              onChange={setConditionImages}
+              uploading={saving}
+            />
           </div>
         </div>
 
