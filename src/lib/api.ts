@@ -518,6 +518,9 @@ export function updateAssetStatus(
 
 export interface GetRepairsParams {
   search?: string;
+  categoryId?: string;
+  sentDateFrom?: string;
+  sentDateTo?: string;
   sortOrder?: 'ASC' | 'DESC';
   page?: number;
   limit?: number;
@@ -529,6 +532,9 @@ export function getRepairs(
 ): Promise<PaginatedResult<RepairListItem>> {
   const query: Record<string, string | number | undefined> = {
     search: params.search,
+    categoryId: params.categoryId,
+    sentDateFrom: params.sentDateFrom,
+    sentDateTo: params.sentDateTo,
     sortOrder: params.sortOrder,
     page: params.page,
     limit: params.limit,
