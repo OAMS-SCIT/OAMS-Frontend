@@ -1,7 +1,7 @@
 'use client';
 
-import { EmployeeWelcome } from '@/features/employees/employee-welcome';
+import { EmployeeDashboard } from '@/features/employees/employee-dashboard';
 
 export default function EmployeeDashboardPage() {
-  return <EmployeeWelcome />;
+  return <EmployeeDashboard />;
 }

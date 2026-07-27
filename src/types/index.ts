@@ -568,9 +568,11 @@ export interface AssignmentHistoryItem {
 }
 
 /**
- * A row in an employee's assignment list (GET /api/assignments/employee/:id).
- * Powers the single Assigned Assets table on the Employee Full Profile view,
- * which shows active and returned records together.
+ * A row in an employee's assignment list. Served by two endpoints with an
+ * identical shape: GET /api/assignments/employee/:id (admin, powers the
+ * Assigned Assets table on the Employee Full Profile view) and
+ * GET /api/assignments/me (the signed-in user's own, powers the Employee
+ * Dashboard). Both mix active and returned records.
  *
  * Note this endpoint exposes the closed state as the boolean `isReturned` —
  * unlike Assignment / AssignmentHistoryItem, which carry a `returnedAt`
@@ -582,10 +584,15 @@ export interface EmployeeAssignmentItem {
     id: string;
     displayId: string;
     name: string;
+    serialNumber: string;
     category: { id: string; name: string } | null;
     status: AssetStatus;
   };
   assignmentDate: string;
+  /** When the asset is due back; null when the assignment is open-ended. */
+  expectedReturnDate: string | null;
+  /** Condition snapshot taken when the asset was handed over. */
+  conditionAtAssignment: AssetCondition | null;
   /** Actual return (handover) date; null while the asset is still assigned. */
   returnDate: string | null;
   /**
