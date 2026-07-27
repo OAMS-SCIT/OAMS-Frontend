@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Search, Eye, RefreshCw, AlertTriangle, RotateCcw, Check, X } from 'lucide-react';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
-import type { ActiveAssignmentListItem, AssetCondition, CategoryListItem, AssignmentType, AssignmentConfirmationStatus } from '@/types';
+import type { ActiveAssignmentListItem, AssetCondition, CategoryListItem, AssignmentConfirmationStatus } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
@@ -15,11 +15,6 @@ import { OverlayPortal } from '@/components/overlays/OverlayPortal';
 import { ApiError, getAssignments, getCategories, returnAssignment, submitAssignmentFeedback, uploadConditionImages } from '@/lib/api';
 
 const PER_PAGE = 10;
-
-const TABS: { value: AssignmentType; label: string }[] = [
-  { value: 'General', label: 'General' },
-  { value: 'Handback', label: 'Handbacks' },
-];
 
 function ConfirmationBadge({ status }: { status: AssignmentConfirmationStatus }) {
   const style =
@@ -50,9 +45,6 @@ export function ActiveAssignments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryListItem[]>([]);
-
-  // ── Tab (handover type) ──────────────────────────────────────────────────
-  const [tab, setTab] = useState<AssignmentType>('General');
 
   // ── Process Return drawer state ──────────────────────────────────────────
   const [returnRow, setReturnRow] = useState<ActiveAssignmentListItem | null>(null);
@@ -102,7 +94,6 @@ export function ActiveAssignments() {
         assignmentDateFrom: dateFrom || undefined,
         assignmentDateTo: dateTo || undefined,
         overdue: overdueOnly || undefined,
-        assignmentType: tab,
         page,
         limit: PER_PAGE,
       });
@@ -115,7 +106,7 @@ export function ActiveAssignments() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, filterCategory, dateFrom, dateTo, overdueOnly, tab, page]);
+  }, [debouncedSearch, filterCategory, dateFrom, dateTo, overdueOnly, page]);
 
   useEffect(() => {
     load();
@@ -195,23 +186,6 @@ export function ActiveAssignments() {
             {total} {total === 1 ? 'asset' : 'assets'} currently assigned
           </p>
         </div>
-      </div>
-
-      {/* Tabs — General vs Handback assignments */}
-      <div className="flex items-center gap-1 border-b border-border mb-4">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => { setTab(t.value); setPage(1); }}
-            className={`relative px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === t.value
-                ? 'text-primary border-primary'
-                : 'text-muted-foreground border-transparent hover:text-foreground'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
       </div>
 
       {/* Filter bar */}
@@ -309,6 +283,13 @@ export function ActiveAssignments() {
                     <span className="text-2sm text-muted-foreground"> · {row.asset.displayId}</span>
                   </button>
                   <div className="flex items-center gap-2 mt-1.5">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-2xs ${
+                      row.assignmentType === 'Handback'
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-muted text-muted-foreground'
+                    }`}>
+                      {row.assignmentType === 'Handback' ? 'Handback' : 'General'}
+                    </span>
                     {row.isOverdue && (
                       <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-medium text-2xs bg-warning-surface text-warning-foreground">
                         <AlertTriangle className="w-3 h-3" /> Overdue
