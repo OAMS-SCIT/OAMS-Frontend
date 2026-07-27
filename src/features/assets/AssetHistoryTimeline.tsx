@@ -20,6 +20,7 @@ import type {
   AssetHistoryReturnedChange,
   ConditionImageItem,
 } from '@/types';
+import { toast } from 'sonner';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ImageLightbox } from '@/components/overlays/ImageLightbox';
 import { getAssignmentConditionImages } from '@/lib/api';
@@ -143,9 +144,23 @@ function ViewConditionImagesButton({
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  // Photos are optional, so an event may legitimately have none. Say so rather
+  // than leaving the click doing nothing at all.
+  const noneCaptured = () =>
+    toast.info(
+      imageType === 'assigned'
+        ? 'No condition photos were captured when this asset was assigned.'
+        : 'No condition photos were captured when this asset was returned.',
+    );
+
   const handleClick = async () => {
     if (images) {
-      // Already fetched — open lightbox directly.
+      // Already fetched — open lightbox directly. Note an empty array is
+      // truthy, so the emptiness check has to happen here too.
+      if (images.length === 0) {
+        noneCaptured();
+        return;
+      }
       setLightboxIndex(0);
       setLightboxOpen(true);
       return;
@@ -158,9 +173,11 @@ function ViewConditionImagesButton({
       if (imgs.length > 0) {
         setLightboxIndex(0);
         setLightboxOpen(true);
+      } else {
+        noneCaptured();
       }
     } catch {
-      // silently ignore
+      toast.error('Could not load the condition photos.');
     } finally {
       setLoading(false);
     }
