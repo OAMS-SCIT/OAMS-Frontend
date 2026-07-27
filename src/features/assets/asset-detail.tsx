@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ChevronRight, Pencil, UserPlus, Plus, Trash2, RotateCcw, Monitor, ZoomIn, RefreshCw, Wrench, ImageIcon, Loader2, ExternalLink, Download } from 'lucide-react';
 import type { AssetDetail as AssetDetailType, AssetHistoryEntry, AssetUpgrade, Assignment, AssignmentHistoryItem, ConditionImageItem } from '@/types';
-import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment, getAssetAssignments, getAssetHistory, getAssignmentConditionImages } from '@/lib/api';
+import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, returnAssignment, getAssetAssignments, getAssetHistory, getAssignmentConditionImages, uploadConditionImages } from '@/lib/api';
 import { AssetHistoryTimeline } from './AssetHistoryTimeline';
 import { CostSummaryTab } from './CostSummaryTab';
 import { WarrantiesTab } from './WarrantiesTab';
@@ -412,15 +412,27 @@ export function AssetDetail() {
     returnDate: string,
     condition: AssetDetailType['condition'],
     notes?: string,
+    images?: File[],
   ) => {
     if (!activeAssignment) return;
+    const assignmentId = activeAssignment.id;
     setReturnSaving(true);
     try {
-      await returnAssignment(activeAssignment.id, {
+      await returnAssignment(assignmentId, {
         returnDate,
         conditionAtReturn: condition,
         returnNotes: notes,
       });
+      // Return-time condition images (OAMS-256). Uploaded before the refreshes
+      // below so the history tab reloads with them already attached. The return
+      // is already committed and cannot be undone, so a failure only warns.
+      if (images && images.length > 0) {
+        try {
+          await uploadConditionImages(assignmentId, images, 'returned');
+        } catch {
+          toast.error('Return processed, but the condition images could not be uploaded.');
+        }
+      }
       toast.success(`"${asset?.name}" returned. Now Available.`);
       setShowReturn(false);
       refreshAsset();

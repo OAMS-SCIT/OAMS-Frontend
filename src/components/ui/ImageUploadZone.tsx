@@ -7,6 +7,11 @@ import { toast } from 'sonner';
 const ACCEPTED = ['image/jpeg', 'image/jpg', 'image/png'];
 const ACCEPTED_EXT = '.jpg, .jpeg, .png';
 const MAX_FILES = 5;
+// Keep in step with the backend multer limit in
+// OAMS-Backend/src/assets/asset-image.storage.ts — every endpoint this zone
+// feeds uses `assetImageStorage`, so a mismatch means a silent upload failure.
+const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_LABEL = '2 MB';
 
 export interface UploadedImage {
   /** Unique key for React list rendering */
@@ -56,11 +61,16 @@ export function ImageUploadZone({
     }
 
     const valid: UploadedImage[] = [];
-    const rejected: string[] = [];
+    const rejectedType: string[] = [];
+    const rejectedSize: string[] = [];
 
     for (const file of arr.slice(0, remaining)) {
       if (!ACCEPTED.includes(file.type)) {
-        rejected.push(file.name);
+        rejectedType.push(file.name);
+        continue;
+      }
+      if (file.size > MAX_BYTES) {
+        rejectedSize.push(file.name);
         continue;
       }
       valid.push({
@@ -70,8 +80,12 @@ export function ImageUploadZone({
       });
     }
 
-    if (rejected.length > 0) {
-      toast.error(`Rejected (unsupported format): ${rejected.join(', ')}. Only JPG and PNG are allowed.`);
+    if (rejectedType.length > 0) {
+      toast.error(`Rejected (unsupported format): ${rejectedType.join(', ')}. Only JPG and PNG are allowed.`);
+    }
+
+    if (rejectedSize.length > 0) {
+      toast.error(`Rejected (too large): ${rejectedSize.join(', ')}. Each image must be ${MAX_LABEL} or smaller.`);
     }
 
     if (valid.length > 0) {
@@ -116,7 +130,7 @@ export function ImageUploadZone({
           {uploading ? 'Uploading…' : 'Drag images here or click to browse'}
         </div>
         <div className="text-xs text-muted-foreground/80">
-          {ACCEPTED_EXT} · Max {MAX_FILES} images · {total}/{MAX_FILES} added
+          {ACCEPTED_EXT} · Max {MAX_FILES} images · Up to {MAX_LABEL} each · {total}/{MAX_FILES} added
         </div>
         <input
           ref={inputRef}
