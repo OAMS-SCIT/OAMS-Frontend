@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { ImageIcon, X } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import type { AssetCondition } from '@/types';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { ImageUploadZone } from '@/components/ui/ImageUploadZone';
+import type { UploadedImage } from '@/components/ui/ImageUploadZone';
 
 interface Props {
   /** RETURN INFORMATION summary. */
@@ -22,6 +24,11 @@ interface Props {
     returnDate: string,
     condition: AssetCondition,
     notes?: string,
+    /**
+     * Condition photos staged in the form (OAMS-256). The caller uploads them
+     * against the assignment once the return itself has been persisted.
+     */
+    images?: File[],
   ) => void | Promise<void>;
   /** Disables the footer button while the caller's confirm is in flight. */
   saving?: boolean;
@@ -42,6 +49,7 @@ export function ReturnAssetDrawer({
   const [returnDate, setReturnDate] = useState(today());
   const [condition, setCondition] = useState<AssetCondition>('Good');
   const [notes, setNotes] = useState('');
+  const [conditionImages, setConditionImages] = useState<UploadedImage[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleConfirm = () => {
@@ -54,7 +62,12 @@ export function ReturnAssetDrawer({
       setErrors(e);
       return;
     }
-    void onConfirm(returnDate, condition, notes.trim() || undefined);
+    void onConfirm(
+      returnDate,
+      condition,
+      notes.trim() || undefined,
+      conditionImages.map((img) => img.file),
+    );
   };
 
   const { closing, requestClose } = useDrawerAnimation(onClose);
@@ -130,6 +143,19 @@ export function ReturnAssetDrawer({
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
               placeholder="Any notes about the return condition..."
               className="w-full rounded-control border border-input bg-input-background text-2sm text-foreground px-3 py-2 placeholder:text-muted-foreground/60 resize-none transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring" />
+          </div>
+
+          {/* Condition images at return (OAMS-256) */}
+          <div>
+            <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-foreground/80">
+              <ImageIcon className="w-3.5 h-3.5" />
+              Condition Photos at Return <span className="text-muted-foreground/70">(Optional)</span>
+            </label>
+            <ImageUploadZone
+              images={conditionImages}
+              onChange={setConditionImages}
+              uploading={saving}
+            />
           </div>
         </div>
 

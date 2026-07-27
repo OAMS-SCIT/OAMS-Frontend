@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { ReturnAssetDrawer } from '@/components/overlays/ReturnAssetDrawer';
 import { OverlayPortal } from '@/components/overlays/OverlayPortal';
-import { ApiError, getAssignments, getCategories, returnAssignment, submitAssignmentFeedback } from '@/lib/api';
+import { ApiError, getAssignments, getCategories, returnAssignment, submitAssignmentFeedback, uploadConditionImages } from '@/lib/api';
 
 const PER_PAGE = 10;
 
@@ -125,15 +125,27 @@ export function ActiveAssignments() {
     returnDate: string,
     condition: AssetCondition,
     notes?: string,
+    images?: File[],
   ) => {
     if (!returnRow) return;
+    // Capture before clearing the row below — the upload needs the assignment id.
+    const assignmentId = returnRow.id;
     setReturnSaving(true);
     try {
-      await returnAssignment(returnRow.id, {
+      await returnAssignment(assignmentId, {
         returnDate,
         conditionAtReturn: condition,
         returnNotes: notes,
       });
+      // Return-time condition images (OAMS-256). The return is already committed
+      // and cannot be undone, so a failed upload degrades to a warning.
+      if (images && images.length > 0) {
+        try {
+          await uploadConditionImages(assignmentId, images, 'returned');
+        } catch {
+          toast.error('Return processed, but the condition images could not be uploaded.');
+        }
+      }
       toast.success(`"${returnRow.asset.name}" returned. Now Available.`);
       setReturnRow(null);
       load();
@@ -210,7 +222,7 @@ export function ActiveAssignments() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by assignee or asset name…"
+            placeholder="Search by assignee, asset name, or serial number…"
             className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
           />
         </div>
@@ -272,7 +284,15 @@ export function ActiveAssignments() {
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded-lg bg-card border border-border shadow-card">
-          <EmptyState icon="assignments" title="No active assignments" subtitle="No assets are currently assigned matching your filters." />
+          {debouncedSearch ? (
+            <EmptyState
+              icon="assignments"
+              title="No matching assignments found"
+              subtitle="No active assignment matches that assignee, asset name, or serial number. Try a different search or clear your filters."
+            />
+          ) : (
+            <EmptyState icon="assignments" title="No active assignments" subtitle="No assets are currently assigned matching your filters." />
+          )}
         </div>
       ) : (
         <div className="space-y-3">
