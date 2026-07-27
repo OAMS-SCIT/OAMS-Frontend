@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Pencil, ArrowRight, RefreshCw, X, Wrench } from 'lucide-react';
-import type { RepairListItem } from '@/types';
+import { Search, Pencil, ArrowRight, RefreshCw, Wrench } from 'lucide-react';
+import type { RepairListItem, CategoryListItem } from '@/types';
+import { Select } from '@/components/ui/Select';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { SendToRepairDrawer } from '@/components/overlays/SendToRepairDrawer';
 import { ReturnFromRepairDrawer } from '@/components/overlays/ReturnFromRepairDrawer';
-import { getRepairs } from '@/lib/api';
+import { getRepairs, getCategories } from '@/lib/api';
 
 const PER_PAGE = 10;
 
@@ -23,6 +25,9 @@ export function UnderRepairList() {
   // ── Filter / sort state ────────────────────────────────────────────────
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [sentDateFrom, setSentDateFrom] = useState('');
+  const [sentDateTo, setSentDateTo] = useState('');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
   const [page, setPage] = useState(1);
 
@@ -31,6 +36,7 @@ export function UnderRepairList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<CategoryListItem[]>([]);
 
   // ── UI state ────────────────────────────────────────────────────────────
   const [editRepair, setEditRepair] = useState<RepairListItem | null>(null);
@@ -38,11 +44,14 @@ export function UnderRepairList() {
   const [showSendToRepair, setShowSendToRepair] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
-  const hasActiveFilters = Boolean(search);
+  const hasActiveFilters = Boolean(search || filterCategory || sentDateFrom || sentDateTo);
 
   const clearFilters = () => {
     setSearch('');
     setDebouncedSearch('');
+    setFilterCategory('');
+    setSentDateFrom('');
+    setSentDateTo('');
     setPage(1);
   };
 
@@ -52,12 +61,22 @@ export function UnderRepairList() {
     return () => clearTimeout(t);
   }, [search]);
 
+  // Categories for the filter dropdown
+  useEffect(() => {
+    getCategories({ status: 'Active', limit: 100 })
+      .then((result) => setCategories(result.data))
+      .catch(() => setCategories([]));
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const result = await getRepairs({
         search: debouncedSearch || undefined,
+        categoryId: filterCategory || undefined,
+        sentDateFrom: sentDateFrom || undefined,
+        sentDateTo: sentDateTo || undefined,
         sortOrder,
         page,
         limit: PER_PAGE,
@@ -71,7 +90,7 @@ export function UnderRepairList() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, sortOrder, page]);
+  }, [debouncedSearch, filterCategory, sentDateFrom, sentDateTo, sortOrder, page]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -101,11 +120,33 @@ export function UnderRepairList() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by asset, serial number, or vendor…"
+            placeholder="Search by asset name, brand, model, or serial number…"
             className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-3 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={filterCategory}
+            onValueChange={(v) => { setFilterCategory(v); setPage(1); }}
+            ariaLabel="Category"
+            placeholder="All Categories"
+            options={[{ value: '', label: 'All Categories' }, ...categories.map((c) => ({ value: c.id, label: c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name }))]}
+          />
+          <div className="flex items-center gap-2">
+            <DatePicker
+              value={sentDateFrom}
+              onChange={(v) => { setSentDateFrom(v); setPage(1); }}
+              ariaLabel="Sent to repair date from"
+              placeholder="From"
+            />
+            <span className="text-2sm text-muted-foreground/70">–</span>
+            <DatePicker
+              value={sentDateTo}
+              onChange={(v) => { setSentDateTo(v); setPage(1); }}
+              ariaLabel="Sent to repair date to"
+              placeholder="To"
+            />
+          </div>
           <button
             onClick={() => { setSortOrder((o) => (o === 'ASC' ? 'DESC' : 'ASC')); setPage(1); }}
             className="rounded-control border border-input px-3 py-2 text-xs text-muted-foreground hover:bg-muted transition-colors"
@@ -116,17 +157,6 @@ export function UnderRepairList() {
           <ClearFiltersButton onClear={clearFilters} disabled={!hasActiveFilters} />
         </div>
       </div>
-
-      {/* Active filter chip */}
-      {hasActiveFilters && (
-        <div className="flex items-center gap-2 mb-3">
-          <button onClick={clearFilters}
-            className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs bg-secondary text-secondary-foreground border border-primary/20 transition-colors hover:bg-primary/15">
-            {`Search: ${search}`}
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-      )}
 
       {/* Card list */}
       {loading ? (
@@ -148,11 +178,19 @@ export function UnderRepairList() {
         </div>
       ) : repairs.length === 0 ? (
         <div className="rounded-lg bg-card border border-border shadow-card">
-          <EmptyState
-            icon="assets"
-            title="No assets under repair"
-            subtitle="Assets sent to a repair vendor will appear here."
-          />
+          {hasActiveFilters ? (
+            <EmptyState
+              icon="assets"
+              title="No matching assets found"
+              subtitle="No asset under repair matches your search or filters. Try a different search or clear your filters."
+            />
+          ) : (
+            <EmptyState
+              icon="assets"
+              title="No assets under repair"
+              subtitle="Assets sent to a repair vendor will appear here."
+            />
+          )}
         </div>
       ) : (
         <div className="space-y-3">
