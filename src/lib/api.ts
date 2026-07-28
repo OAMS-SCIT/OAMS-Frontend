@@ -858,6 +858,20 @@ export function getEmployeeAssignments(
   );
 }
 
+/**
+ * The signed-in user's own assignments (GET /api/assignments/me), same shape
+ * and `isReturned` semantics as getEmployeeAssignments above. This is the only
+ * assignments route an Employee may call — it takes no id, so it can only ever
+ * return the caller's own records.
+ */
+export function getMyAssignments(
+  isReturned?: boolean,
+): Promise<PaginatedResult<EmployeeAssignmentItem>> {
+  return request<PaginatedResult<EmployeeAssignmentItem>>('/assignments/me', {
+    query: { isReturned, limit: 100 },
+  });
+}
+
 export function getAssetHistory(
   assetId: string,
 ): Promise<{ data: AssetHistoryEntry[] }> {
