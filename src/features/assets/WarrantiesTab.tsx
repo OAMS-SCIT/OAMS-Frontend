@@ -1,8 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { ExternalLink } from 'lucide-react';
 import type { AssetWarranties, WarrantyItem } from '@/types';
 import { getAssetWarranties, ApiError } from '@/lib/api';
+import { WarrantyDocumentsDialog } from '@/components/overlays/WarrantyDocumentsDialog';
+
+/** Shared styling for the inline row action, matching the Upgrade Log table. */
+const actionClass =
+  'flex items-center gap-1 rounded-sm px-2 py-1 text-xs text-primary transition-colors hover:bg-secondary';
 
 interface WarrantiesTabProps {
   assetId: string;
@@ -28,6 +34,8 @@ export function WarrantiesTab({ assetId, version = 0 }: WarrantiesTabProps) {
   const [data, setData] = useState<AssetWarranties | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** The row whose documents are listed in the dialog (>1 document only). */
+  const [docsRow, setDocsRow] = useState<WarrantyItem | null>(null);
   // Dedupe the fetch per (assetId, version) so React StrictMode's dev
   // double-invoke doesn't fire the request twice; also ignores stale responses.
   const requestedKey = useRef<string>('');
@@ -65,10 +73,10 @@ export function WarrantiesTab({ assetId, version = 0 }: WarrantiesTabProps) {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-control border border-border">
-          <table className="w-full min-w-[760px]">
+          <table className="w-full min-w-[880px]">
             <thead>
               <tr className="bg-muted/60 border-b border-border">
-                {['Source', 'Item', 'Type', 'Vendor', 'Start', 'Expiry', 'Status'].map((h) => (
+                {['Source', 'Item', 'Type', 'Vendor', 'Start', 'Expiry', 'Status', 'Actions'].map((h) => (
                   <th key={h} className="text-left px-4 py-2.5 micro-label whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -87,11 +95,39 @@ export function WarrantiesTab({ assetId, version = 0 }: WarrantiesTabProps) {
                   <td className="px-4 py-3 text-2sm text-muted-foreground nums whitespace-nowrap">{row.startDate ?? '—'}</td>
                   <td className="px-4 py-3 text-2sm text-muted-foreground nums whitespace-nowrap">{row.expiryDate ?? '—'}</td>
                   <td className="px-4 py-3"><StatusBadge active={row.active} /></td>
+                  <td className="px-4 py-3">
+                    {row.documents.length === 0 ? (
+                      <span className="text-2sm text-muted-foreground">—</span>
+                    ) : row.documents.length === 1 ? (
+                      // A single document opens straight away — no dialog. A real
+                      // anchor so the browser opens a genuine new tab.
+                      <a
+                        href={row.documents[0].url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={actionClass}
+                      >
+                        <ExternalLink className="w-3 h-3" /> View
+                      </a>
+                    ) : (
+                      <button onClick={() => setDocsRow(row)} className={actionClass}>
+                        <ExternalLink className="w-3 h-3" /> View ({row.documents.length})
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {docsRow && (
+        <WarrantyDocumentsDialog
+          title={docsRow.itemName}
+          documents={docsRow.documents}
+          onClose={() => setDocsRow(null)}
+        />
       )}
     </div>
   );
