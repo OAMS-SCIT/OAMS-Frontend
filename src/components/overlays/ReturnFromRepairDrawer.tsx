@@ -21,17 +21,21 @@ import {
   rerouteRepair,
   retireFromRepair,
   uploadRepairInvoice,
-  uploadRepairWarrantyDoc,
+  uploadRepairWarrantyDocs,
+  deleteRepairWarrantyDoc,
   uploadConditionImages,
 } from '@/lib/api';
 import type {
   AssetDetail, Assignment, AttributeDetail, VendorListItem, Vendor,
   RepairOutcome, RepairCostItemType, RepairCostItemInput, AttributeValuePayload,
+  AssetWarrantyDocumentItem,
 } from '@/types';
 import { addMonths, format, parseISO } from 'date-fns';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { ImageUploadZone } from '@/components/ui/ImageUploadZone';
+import { MultiDocumentPickerField } from '@/components/ui/MultiDocumentPickerField';
+import type { StagedDocument } from '@/components/ui/MultiDocumentPickerField';
 import type { UploadedImage } from '@/components/ui/ImageUploadZone';
 
 interface Props {
@@ -91,7 +95,11 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
   const [returnDate, setReturnDate] = useState(today());
   const [costRows, setCostRows] = useState<CostRow[]>([emptyRow()]);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
-  const [warrantyFile, setWarrantyFile] = useState<File | null>(null);
+  // Warranty documents are uploaded BEFORE the repair is completed (see
+  // handleCompleteRepaired), so `existingWarrantyDocs` covers both docs already
+  // on the repair and docs this session just uploaded.
+  const [warrantyFiles, setWarrantyFiles] = useState<StagedDocument[]>([]);
+  const [existingWarrantyDocs, setExistingWarrantyDocs] = useState<AssetWarrantyDocumentItem[]>([]);
   const [attributes, setAttributes] = useState<AttributeDetail[]>([]);
   const [attrValues, setAttrValues] = useState<Record<string, string>>({});
   const [assignmentAction, setAssignmentAction] = useState<'handback' | 'keep_in_store'>('keep_in_store');
@@ -123,6 +131,7 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
         setRepairReason(repair?.reason ?? null);
         setRepairVendor(repair?.vendor?.name ?? null);
         setRepairSentAt(repair?.sentAt ?? null);
+        setExistingWarrantyDocs(repair?.warrantyDocuments ?? []);
 
         // Best-effort: an unassigned asset has no active assignment — a null (or
         // even a failed) response here just means "no assignee", it must not
@@ -216,6 +225,12 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
     return true;
   };
 
+  // A warranty on any cost item means the record must ship with paperwork.
+  const warrantyRequired = costRows.some((r) => r.hasWarranty);
+  const hasAnyWarrantyDoc =
+    existingWarrantyDocs.length + warrantyFiles.length > 0;
+  const warrantyDocMissing = warrantyRequired && !hasAnyWarrantyDoc;
+
   const buildCostItems = (): RepairCostItemInput[] =>
     costRows.map((r) => ({
       itemName: r.itemName.trim(),
@@ -231,16 +246,28 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
       ? attributes.map((at) => ({ attributeId: at.id, value: attrValues[at.id] ?? '' }))
       : undefined;
 
+  /**
+   * The repair already exists, so an existing document is deleted server-side
+   * immediately (unlike RegisterAssetDrawer, which defers because the asset may
+   * not exist yet).
+   */
+  const handleRemoveExistingWarrantyDoc = async (docId: string) => {
+    if (!repairId) return;
+    try {
+      const updated = await deleteRepairWarrantyDoc(assetId, repairId, docId);
+      setExistingWarrantyDocs(updated.warrantyDocuments ?? []);
+      toast.success('Warranty document removed.');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to remove document.');
+    }
+  };
+
   // ── Submit handlers ──────────────────────────────────────────────────────
   const doUploadsAndFinish = async (successMsg: string) => {
     if (!repairId) return;
     if (invoiceFile) {
       try { await uploadRepairInvoice(assetId, repairId, invoiceFile); }
       catch { toast.error('Invoice upload failed — you can add it later.'); }
-    }
-    if (warrantyFile) {
-      try { await uploadRepairWarrantyDoc(assetId, repairId, warrantyFile); }
-      catch { toast.error('Warranty document upload failed — you can add it later.'); }
     }
     if (assignmentAction === 'handback' && handbackImages.length > 0) {
       // Handback created a NEW assignment (the old one was superseded) — attach the
@@ -258,8 +285,31 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
 
   const handleCompleteRepaired = async () => {
     if (!repairId) return;
+    if (warrantyDocMissing) {
+      toast.error('Upload at least one warranty document before saving.');
+      setStep(2);
+      return;
+    }
     setSaving(true);
     try {
+      // Upload warranty documents BEFORE completing. The AC is "submit only
+      // after at least one document is uploaded", and completing first would
+      // close the repair even when the upload failed — with no UI to add one
+      // afterwards. Failing here leaves the repair Open and retryable.
+      let savedDocCount = existingWarrantyDocs.length;
+      if (warrantyFiles.length > 0) {
+        const updated = await uploadRepairWarrantyDocs(
+          assetId,
+          repairId,
+          warrantyFiles.map((f) => f.file),
+        );
+        // Move them to `existing` so a retry after a later failure doesn't
+        // upload them a second time and eat into the 10-document cap.
+        setExistingWarrantyDocs(updated.warrantyDocuments ?? []);
+        setWarrantyFiles([]);
+        savedDocCount = updated.warrantyDocuments?.length ?? savedDocCount;
+      }
+
       await completeRepairReturn(assetId, repairId, {
         outcome: 'Repaired',
         returnDate,
@@ -267,7 +317,11 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
         customAttributes: buildCustomAttributes(),
         assignmentAction,
       });
-      await doUploadsAndFinish('Asset return from repair processed successfully.');
+      await doUploadsAndFinish(
+        savedDocCount > 0
+          ? `Return processed · ${savedDocCount} warranty document${savedDocCount === 1 ? '' : 's'} saved.`
+          : 'Asset return from repair processed successfully.',
+      );
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Failed to process return.');
     } finally {
@@ -503,9 +557,27 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
 
               {outcome === 'Repaired' && step === 2 && (
                 <div className="space-y-5">
-                  <FilePickerField label="Warranty Documents" file={warrantyFile} onPick={setWarrantyFile} icon={<FileText className="w-4 h-4" />} />
+                  <div>
+                    <MultiDocumentPickerField
+                      label="Warranty Documents"
+                      required={warrantyRequired}
+                      files={warrantyFiles}
+                      onChange={setWarrantyFiles}
+                      existing={existingWarrantyDocs}
+                      onRemoveExisting={handleRemoveExistingWarrantyDoc}
+                    />
+                    {warrantyDocMissing && (
+                      <p className="mt-1.5 text-2xs text-danger">
+                        At least one warranty document is required because a cost item has a warranty.
+                      </p>
+                    )}
+                  </div>
                   <FilePickerField label="Invoice" file={invoiceFile} onPick={setInvoiceFile} icon={<FileText className="w-4 h-4" />} />
-                  <p className="text-2xs text-muted-foreground">Both are optional · JPEG, PNG, or PDF · max 10 MB.</p>
+                  <p className="text-2xs text-muted-foreground">
+                    {warrantyRequired
+                      ? 'Invoice is optional · JPEG, PNG, or PDF · max 10 MB.'
+                      : 'Both are optional · JPEG, PNG, or PDF · max 10 MB.'}
+                  </p>
                 </div>
               )}
 
@@ -639,7 +711,11 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
               {/* Right-side action */}
               {outcome === 'Repaired' && step < 4 && (
                 <button
-                  onClick={() => { if (step === 1 && !step1Valid()) { toast.error('Add at least one valid cost item (name + cost).'); return; } setStep((s) => (s + 1) as 2 | 3 | 4); }}
+                  onClick={() => {
+                    if (step === 1 && !step1Valid()) { toast.error('Add at least one valid cost item (name + cost).'); return; }
+                    if (step === 2 && warrantyDocMissing) { toast.error('Upload at least one warranty document before continuing.'); return; }
+                    setStep((s) => (s + 1) as 2 | 3 | 4);
+                  }}
                   className="flex items-center gap-2 rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
                 >
                   {step === 3 ? 'Save & Continue' : 'Continue'} <ArrowRight className="w-4 h-4" />
