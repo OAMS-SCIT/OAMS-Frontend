@@ -154,6 +154,14 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   // Optional warranty documents — multi-file, staged like images.
   const [warrantyFiles, setWarrantyFiles] = useState<StagedDocument[]>([]);
   const [existingWarrantyDocs, setExistingWarrantyDocs] = useState<AssetWarrantyDocumentItem[]>([]);
+  // Warranty values as loaded in edit mode. Assets predating this validation may
+  // hold partial warranty data; comparing against this lets an unrelated edit
+  // (location, condition…) save without being blocked by legacy gaps.
+  const [initialWarranty, setInitialWarranty] = useState({
+    startDate: '',
+    expiryDate: '',
+    provider: '',
+  });
   const [removedWarrantyDocIds, setRemovedWarrantyDocIds] = useState<string[]>([]);
 
   // Load categories list + (edit) existing asset on mount
@@ -177,6 +185,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           setExistingInvoiceUrl(asset.invoiceUrl ?? null);
           setExistingInvoiceFileName(asset.invoiceFileName ?? null);
           setExistingWarrantyDocs(asset.warrantyDocuments ?? []);
+          setInitialWarranty({
+            startDate: asset.warrantyStartDate ?? '',
+            expiryDate: asset.warrantyExpiryDate ?? '',
+            provider: asset.warrantyProvider ?? '',
+          });
           // Pre-load attributes for the asset's category
           const detail = await getCategory(asset.category.id);
           setCategoryAttrs(detail.attributes);
@@ -226,11 +239,13 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
     setErrors((e) => ({
       ...e,
       [k]: '',
-      // The "document required" error is driven by the warranty dates, so
-      // editing either date clears it too — otherwise removing the dates leaves
-      // a stale message that Save alone would clear.
-      ...(k === 'warrantyStartDate' || k === 'warrantyExpiryDate'
-        ? { warrantyDocuments: '' }
+      // Both warranty errors are driven by the whole warranty block, so editing
+      // any field in it clears them — otherwise emptying the block strands a
+      // message the user can no longer act on. validate() re-adds on save.
+      ...(k === 'warrantyStartDate' ||
+      k === 'warrantyExpiryDate' ||
+      k === 'warrantyProvider'
+        ? { warrantyDocuments: '', warrantyExpiryDate: '' }
         : {}),
     }));
   };
@@ -258,10 +273,33 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const remainingExistingWarrantyDocs = existingWarrantyDocs.filter(
     (d) => !removedWarrantyDocIds.includes(d.id),
   );
-  /** Entering a warranty period commits to holding the paperwork for it. */
-  const warrantyDatesEntered = !!(form.warrantyStartDate || form.warrantyExpiryDate);
   const hasAnyWarrantyDoc =
     remainingExistingWarrantyDocs.length + warrantyFiles.length > 0;
+
+  /**
+   * The warranty block is one record, not three loose fields. Any value in it
+   * means a warranty is being claimed — a provider on its own is not a
+   * warranty, and without an expiry date the row can never expire (the backend
+   * treats a null expiry as permanently Active).
+   */
+  const warrantyAnyFilled = !!(
+    form.warrantyStartDate ||
+    form.warrantyExpiryDate ||
+    form.warrantyProvider.trim() ||
+    hasAnyWarrantyDoc
+  );
+
+  /** Did the user actually change the warranty block during this edit? */
+  const warrantyTouched =
+    form.warrantyStartDate !== initialWarranty.startDate ||
+    form.warrantyExpiryDate !== initialWarranty.expiryDate ||
+    form.warrantyProvider.trim() !== initialWarranty.provider.trim() ||
+    warrantyFiles.length > 0 ||
+    removedWarrantyDocIds.length > 0;
+
+  // Always enforced on create; on edit only once the warranty block is touched,
+  // so a legacy asset with partial data can still be edited for other reasons.
+  const warrantyRequired = warrantyAnyFilled && (!isEdit || warrantyTouched);
 
   const handleWarrantyFilesChange = (files: StagedDocument[]) => {
     setWarrantyFiles(files);
@@ -286,11 +324,12 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
       form.warrantyExpiryDate <= form.warrantyStartDate
     )
       e.warrantyExpiryDate = 'Expiry must be after start date';
-    // A recorded warranty period is unverifiable without the document backing
-    // it, so the two travel together.
-    if (warrantyDatesEntered && !hasAnyWarrantyDoc)
-      e.warrantyDocuments =
-        'Upload at least one warranty document when a warranty date is entered';
+    // A claimed warranty needs an end date to be meaningful and a document to
+    // be verifiable. Start date and provider stay optional detail.
+    if (warrantyRequired && !form.warrantyExpiryDate)
+      e.warrantyExpiryDate = 'Warranty expiry date is required';
+    if (warrantyRequired && !hasAnyWarrantyDoc)
+      e.warrantyDocuments = 'Upload at least one warranty document for this warranty';
 
     // Block submission while category attributes are still loading —
     // categoryAttrs is [] during the fetch, so required-attr checks would
@@ -659,7 +698,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                     className="w-full"
                   />
                 </FormField>
-                <FormField label="Warranty Expiry Date" error={errors.warrantyExpiryDate}>
+                <FormField label="Warranty Expiry Date" required={warrantyRequired} error={errors.warrantyExpiryDate}>
                   <DatePicker value={form.warrantyExpiryDate} onChange={(v) => set('warrantyExpiryDate', v)} ariaLabel="Warranty Expiry Date" className="w-full" />
                 </FormField>
               </div>
@@ -712,7 +751,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
               <div>
                 <MultiDocumentPickerField
                   label="Warranty Documents"
-                  required={warrantyDatesEntered}
+                  required={warrantyRequired}
                   files={warrantyFiles}
                   onChange={handleWarrantyFilesChange}
                   existing={remainingExistingWarrantyDocs.map((d) => ({
