@@ -223,7 +223,16 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
 
   const set = (k: keyof FormState, v: string) => {
     setForm((f) => ({ ...f, [k]: v }));
-    setErrors((e) => ({ ...e, [k]: '' }));
+    setErrors((e) => ({
+      ...e,
+      [k]: '',
+      // The "document required" error is driven by the warranty dates, so
+      // editing either date clears it too — otherwise removing the dates leaves
+      // a stale message that Save alone would clear.
+      ...(k === 'warrantyStartDate' || k === 'warrantyExpiryDate'
+        ? { warrantyDocuments: '' }
+        : {}),
+    }));
   };
 
   // Brand is one-of: an existing id OR a new name (created on save). Setting one
@@ -241,6 +250,22 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const setAttr = (attributeId: string, value: string) => {
     setAttrValues((prev) => ({ ...prev, [attributeId]: value }));
     setErrors((e) => ({ ...e, [`attr_${attributeId}`]: '' }));
+  };
+
+  // ── Warranty documents ────────────────────────────────────────────────────
+
+  /** Server-side docs still standing (edit mode stages removals until save). */
+  const remainingExistingWarrantyDocs = existingWarrantyDocs.filter(
+    (d) => !removedWarrantyDocIds.includes(d.id),
+  );
+  /** Entering a warranty period commits to holding the paperwork for it. */
+  const warrantyDatesEntered = !!(form.warrantyStartDate || form.warrantyExpiryDate);
+  const hasAnyWarrantyDoc =
+    remainingExistingWarrantyDocs.length + warrantyFiles.length > 0;
+
+  const handleWarrantyFilesChange = (files: StagedDocument[]) => {
+    setWarrantyFiles(files);
+    if (files.length > 0) setErrors((e) => ({ ...e, warrantyDocuments: '' }));
   };
 
   // ── Validation ────────────────────────────────────────────────────────────
@@ -261,6 +286,11 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
       form.warrantyExpiryDate <= form.warrantyStartDate
     )
       e.warrantyExpiryDate = 'Expiry must be after start date';
+    // A recorded warranty period is unverifiable without the document backing
+    // it, so the two travel together.
+    if (warrantyDatesEntered && !hasAnyWarrantyDoc)
+      e.warrantyDocuments =
+        'Upload at least one warranty document when a warranty date is entered';
 
     // Block submission while category attributes are still loading —
     // categoryAttrs is [] during the fetch, so required-attr checks would
@@ -679,15 +709,23 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 <input type="text" value={form.warrantyProvider} onChange={(e) => set('warrantyProvider', e.target.value)}
                   className="form-input" placeholder="Provider name or contact info" />
               </FormField>
-              <MultiDocumentPickerField
-                label="Warranty Documents"
-                files={warrantyFiles}
-                onChange={setWarrantyFiles}
-                existing={existingWarrantyDocs
-                  .filter((d) => !removedWarrantyDocIds.includes(d.id))
-                  .map((d) => ({ id: d.id, url: d.url, fileName: d.fileName }))}
-                onRemoveExisting={isEdit ? handleRemoveExistingWarrantyDoc : undefined}
-              />
+              <div>
+                <MultiDocumentPickerField
+                  label="Warranty Documents"
+                  required={warrantyDatesEntered}
+                  files={warrantyFiles}
+                  onChange={handleWarrantyFilesChange}
+                  existing={remainingExistingWarrantyDocs.map((d) => ({
+                    id: d.id,
+                    url: d.url,
+                    fileName: d.fileName,
+                  }))}
+                  onRemoveExisting={isEdit ? handleRemoveExistingWarrantyDoc : undefined}
+                />
+                {errors.warrantyDocuments && (
+                  <p className="mt-1.5 text-2xs text-danger">{errors.warrantyDocuments}</p>
+                )}
+              </div>
             </FormSection>
 
             {/* Section 5 - Physical */}
