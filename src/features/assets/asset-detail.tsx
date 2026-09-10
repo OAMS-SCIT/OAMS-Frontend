@@ -951,7 +951,7 @@ export function AssetDetail() {
         <ReturnFromRepairDrawer
           assetId={asset.id}
           onClose={() => setShowReturnFromRepair(false)}
-          onDone={() => { setShowReturnFromRepair(false); refreshAsset(); refreshHistory(); refreshAssetLog(); }}
+          onDone={() => { setShowReturnFromRepair(false); refreshAsset(); refreshHistory(); refreshAssetLog(); setCostVersion((v) => v + 1); }}
         />
       )}
       {showAddUpgrade && (
