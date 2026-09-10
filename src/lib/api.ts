@@ -625,7 +625,12 @@ export function uploadRepairInvoice(
   });
 }
 
-/** Upload/replace the warranty document for a repair (JPEG/PNG/PDF). */
+/**
+ * Upload/replace the warranty document for a repair (JPEG/PNG/PDF).
+ *
+ * @deprecated OAMS-281 — use `uploadRepairWarrantyDocs`, which takes several
+ * files. This route still works and now appends to the same store.
+ */
 export function uploadRepairWarrantyDoc(
   assetId: string,
   repairId: string,
@@ -637,6 +642,38 @@ export function uploadRepairWarrantyDoc(
     method: 'POST',
     body: formData,
   });
+}
+
+/**
+ * Upload one or more warranty documents for a repair (JPEG/PNG/PDF, <=10 MB
+ * each, cap 10 per repair). The field name is `files` (plural) — the singular
+ * `file` is a different endpoint contract.
+ */
+export function uploadRepairWarrantyDocs(
+  assetId: string,
+  repairId: string,
+  files: File[],
+): Promise<RepairRecord> {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  return request<RepairRecord>(`/assets/${assetId}/repairs/${repairId}/warranty-docs`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+/** Delete a single repair warranty document. Returns the updated repair. */
+export function deleteRepairWarrantyDoc(
+  assetId: string,
+  repairId: string,
+  docId: string,
+): Promise<RepairRecord> {
+  return request<RepairRecord>(
+    `/assets/${assetId}/repairs/${repairId}/warranty-docs/${docId}`,
+    { method: 'DELETE' },
+  );
 }
 
 export function deleteAsset(id: string): Promise<{ message: string }> {

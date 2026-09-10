@@ -365,7 +365,9 @@ export interface RepairRecord {
   returnDate?: string | null;
   returnNotes?: string | null;
   invoiceUrl?: string | null;
+  /** @deprecated OAMS-281 — read `warrantyDocuments` instead. */
   warrantyDocUrl?: string | null;
+  warrantyDocuments?: AssetWarrantyDocumentItem[];
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -446,6 +448,14 @@ export interface WarrantyItem {
   startDate: string | null;
   expiryDate: string | null;
   active: boolean;
+  /** Parent repair for `source: 'Repair'` rows; null for the Purchase row. */
+  repairId: string | null;
+  /**
+   * Documents backing this warranty. Always an array, never absent. Repair
+   * documents belong to the repair, so every warranted cost item of the same
+   * repair carries the same set.
+   */
+  documents: AssetWarrantyDocumentItem[];
 }
 
 export interface AssetWarranties {
