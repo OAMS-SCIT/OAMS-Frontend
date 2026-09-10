@@ -926,6 +926,45 @@ export function getAssetWarranties(assetId: string): Promise<AssetWarranties> {
   return request<AssetWarranties>(`/assets/${assetId}/warranties`);
 }
 
+/**
+ * Fetch a warranty document's bytes (OAMS-283).
+ *
+ * A binary sibling of `request`: same bearer auth and error handling, but it
+ * returns a Blob instead of parsing JSON. Needed because the API requires an
+ * Authorization header and an `<img>`/`<iframe>` src cannot send one — the
+ * caller turns this into an object URL to render the document in-app.
+ */
+export async function fetchWarrantyDocument(
+  assetId: string,
+  docId: string,
+): Promise<Blob> {
+  const token = getToken();
+  const response = await fetch(
+    `${API_BASE_URL}/api/assets/${assetId}/warranty-documents/${docId}/file`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
+
+  if (!response.ok) {
+    if (response.status === 401 && token) {
+      clearToken();
+    }
+    let message = `Could not load the document (${response.status})`;
+    try {
+      const errorBody = await response.json();
+      if (errorBody?.message) {
+        message = Array.isArray(errorBody.message)
+          ? errorBody.message.join(', ')
+          : errorBody.message;
+      }
+    } catch {
+      // Non-JSON error body — keep the default message.
+    }
+    throw new ApiError(message, response.status);
+  }
+
+  return response.blob();
+}
+
 /** Assignments awaiting handback confirmation after a repair return (admin). */
 /** Records the employee's Accept/Reject feedback on an assignment (admin stand-in). */
 export function submitAssignmentFeedback(

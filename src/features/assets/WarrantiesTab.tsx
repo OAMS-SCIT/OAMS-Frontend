@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import type { AssetWarranties, WarrantyItem } from '@/types';
 import { getAssetWarranties, ApiError } from '@/lib/api';
-import { WarrantyDocumentsDialog } from '@/components/overlays/WarrantyDocumentsDialog';
+import { DocumentViewerDialog } from '@/components/overlays/DocumentViewerDialog';
 
 /** Shared styling for the inline row action, matching the Upgrade Log table. */
 const actionClass =
@@ -34,8 +34,9 @@ export function WarrantiesTab({ assetId, version = 0 }: WarrantiesTabProps) {
   const [data, setData] = useState<AssetWarranties | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  /** The row whose documents are listed in the dialog (>1 document only). */
+  /** The row whose documents are open in the viewer, and which one is showing. */
   const [docsRow, setDocsRow] = useState<WarrantyItem | null>(null);
+  const [docIndex, setDocIndex] = useState(0);
   // Dedupe the fetch per (assetId, version) so React StrictMode's dev
   // double-invoke doesn't fire the request twice; also ignores stale responses.
   const requestedKey = useRef<string>('');
@@ -98,20 +99,15 @@ export function WarrantiesTab({ assetId, version = 0 }: WarrantiesTabProps) {
                   <td className="px-4 py-3">
                     {row.documents.length === 0 ? (
                       <span className="text-2sm text-muted-foreground">—</span>
-                    ) : row.documents.length === 1 ? (
-                      // A single document opens straight away — no dialog. A real
-                      // anchor so the browser opens a genuine new tab.
-                      <a
-                        href={row.documents[0].url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    ) : (
+                      // Always opens the viewer on the first document, so the
+                      // admin sees a document rather than a list of file names.
+                      <button
+                        onClick={() => { setDocsRow(row); setDocIndex(0); }}
                         className={actionClass}
                       >
-                        <ExternalLink className="w-3 h-3" /> View
-                      </a>
-                    ) : (
-                      <button onClick={() => setDocsRow(row)} className={actionClass}>
-                        <ExternalLink className="w-3 h-3" /> View ({row.documents.length})
+                        <Eye className="w-3 h-3" /> View
+                        {row.documents.length > 1 && ` (${row.documents.length})`}
                       </button>
                     )}
                   </td>
@@ -123,9 +119,12 @@ export function WarrantiesTab({ assetId, version = 0 }: WarrantiesTabProps) {
       )}
 
       {docsRow && (
-        <WarrantyDocumentsDialog
+        <DocumentViewerDialog
+          assetId={assetId}
           title={docsRow.itemName}
           documents={docsRow.documents}
+          index={docIndex}
+          onIndexChange={setDocIndex}
           onClose={() => setDocsRow(null)}
         />
       )}
