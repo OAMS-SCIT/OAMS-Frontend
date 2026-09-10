@@ -29,6 +29,8 @@ interface Props {
   /** Called when the user removes an existing (server) document. */
   onRemoveExisting?: (id: string) => void;
   hint?: string;
+  /** Marks the field required (red asterisk instead of the "(Optional)" tag). */
+  required?: boolean;
 }
 
 /**
@@ -42,6 +44,7 @@ export function MultiDocumentPickerField({
   existing = [],
   onRemoveExisting,
   hint = 'PDF, JPG, or PNG · max 10 MB each',
+  required = false,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const total = existing.length + files.length;
@@ -87,7 +90,12 @@ export function MultiDocumentPickerField({
   return (
     <div>
       <label className="block mb-1.5 text-xs font-medium text-foreground/80">
-        {label} <span className="text-muted-foreground/70">(Optional)</span>
+        {label}{' '}
+        {required ? (
+          <span className="text-danger">*</span>
+        ) : (
+          <span className="text-muted-foreground/70">(Optional)</span>
+        )}
       </label>
       <input
         ref={inputRef}
