@@ -246,6 +246,18 @@ export interface AssetWarrantyDocumentItem {
   fileName: string;
 }
 
+/**
+ * A parent or accessory asset shown in the Linked Accessories tab (OAMS-282).
+ * `categoryName` is the "asset type" listed alongside the asset ID and name.
+ */
+export interface LinkedAssetRef {
+  id: string;
+  displayId: string;
+  name: string;
+  categoryName: string;
+  status: AssetStatus;
+}
+
 /** Returned by GET /api/assets/:id, POST /api/assets, PATCH /api/assets/:id. */
 export interface AssetDetail {
   id: string;
@@ -280,6 +292,10 @@ export interface AssetDetail {
   warrantyDocuments?: AssetWarrantyDocumentItem[];
   customAttributes: AssetCustomAttributeValue[];
   images: AssetImageItem[];
+  /** Main asset this one is an accessory of — null unless it is a child (OAMS-282). */
+  parentAsset: LinkedAssetRef | null;
+  /** Accessories linked to this asset — empty unless it is a parent (OAMS-282). */
+  accessories: LinkedAssetRef[];
   assignmentHistoryCount: number;
   upgradeLogCount: number;
   createdBy: { id: string; firstName: string; lastName: string } | null;
@@ -314,6 +330,16 @@ export interface CreateAssetPayload {
   warrantyExpiryDate?: string;
   warrantyProvider?: string;
   customAttributes?: AttributeValuePayload[];
+  /**
+   * Link this asset as an accessory of another (OAMS-282). `null` unlinks it.
+   * Omit the field entirely to leave the existing link untouched.
+   */
+  parentAssetId?: string | null;
+  /**
+   * Sets this asset's accessory list to exactly these assets (OAMS-282); `[]`
+   * unlinks them all. Omit the field entirely to leave existing links untouched.
+   */
+  accessoryIds?: string[];
 }
 
 export interface UpdateAssetPayload extends Partial<Omit<CreateAssetPayload, 'categoryId'>> {}

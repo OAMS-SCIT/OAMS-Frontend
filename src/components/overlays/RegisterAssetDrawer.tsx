@@ -14,6 +14,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { BrandCombobox, type BrandComboboxHandle } from '@/components/ui/BrandCombobox';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { VendorSelect } from '@/components/ui/VendorSelect';
+import { AssetPicker, toPickable, type PickableAsset } from '@/components/ui/AssetPicker';
 import { addMonths, format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -40,6 +41,7 @@ import type {
   AttributeValuePayload,
   BrandListItem,
   CategoryListItem,
+  UpdateAssetPayload,
   VendorListItem,
 } from '@/types';
 
@@ -164,6 +166,15 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   });
   const [removedWarrantyDocIds, setRemovedWarrantyDocIds] = useState<string[]>([]);
 
+  // Linked accessories (OAMS-282). `linkTouched` records whether the admin
+  // actually engaged this section: when false the link fields are omitted from
+  // the payload entirely, so editing anything else never wipes existing links.
+  const [linkEnabled, setLinkEnabled] = useState(false);
+  const [linkRole, setLinkRole] = useState<'parent' | 'child'>('child');
+  const [linkParent, setLinkParent] = useState<PickableAsset[]>([]);
+  const [linkAccessories, setLinkAccessories] = useState<PickableAsset[]>([]);
+  const [linkTouched, setLinkTouched] = useState(false);
+
   // Load categories list + (edit) existing asset on mount
   useEffect(() => {
     const init = async () => {
@@ -185,6 +196,16 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           setExistingInvoiceUrl(asset.invoiceUrl ?? null);
           setExistingInvoiceFileName(asset.invoiceFileName ?? null);
           setExistingWarrantyDocs(asset.warrantyDocuments ?? []);
+          // An asset is either an accessory or a parent, never both.
+          if (asset.parentAsset) {
+            setLinkEnabled(true);
+            setLinkRole('child');
+            setLinkParent([toPickable(asset.parentAsset)]);
+          } else if ((asset.accessories?.length ?? 0) > 0) {
+            setLinkEnabled(true);
+            setLinkRole('parent');
+            setLinkAccessories(asset.accessories.map(toPickable));
+          }
           setInitialWarranty({
             startDate: asset.warrantyStartDate ?? '',
             expiryDate: asset.warrantyExpiryDate ?? '',
@@ -345,6 +366,15 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
         e[`attr_${attr.id}`] = `${attr.label} is required`;
       }
     }
+
+    // Linked accessories (OAMS-282) — an enabled link needs a counterpart.
+    if (linkEnabled && linkRole === 'child' && linkParent.length === 0) {
+      e.linkedAsset = 'Select the parent asset this accessory belongs to';
+    }
+    if (linkEnabled && linkRole === 'parent' && linkAccessories.length === 0) {
+      e.linkedAsset = 'Select at least one accessory to link';
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -370,6 +400,20 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
       .filter(([, v]) => v.trim() !== '')
       .map(([attributeId, value]) => ({ attributeId, value }));
 
+    // Linked accessories (OAMS-282). Untouched → send nothing at all, so the
+    // backend leaves existing links alone. Unticked after being touched → send
+    // the explicit clears, which is how unlinking from the drawer works.
+    const linkFields: Pick<UpdateAssetPayload, 'parentAssetId' | 'accessoryIds'> =
+      !linkTouched
+        ? {}
+        : !linkEnabled
+          ? isEdit
+            ? { parentAssetId: null, accessoryIds: [] }
+            : {}
+          : linkRole === 'child'
+            ? { parentAssetId: linkParent[0]?.id ?? null, accessoryIds: [] }
+            : { parentAssetId: null, accessoryIds: linkAccessories.map((a) => a.id) };
+
     try {
       let saved: AssetDetail;
       if (isEdit) {
@@ -391,6 +435,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           warrantyExpiryDate: form.warrantyExpiryDate || undefined,
           warrantyProvider: form.warrantyProvider.trim() || undefined,
           customAttributes,
+          ...linkFields,
         });
         // Flush deferred image changes. Deletes run BEFORE the upload so the
         // backend's 5-image cap is evaluated against the post-deletion count.
@@ -448,6 +493,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           warrantyExpiryDate: form.warrantyExpiryDate || undefined,
           warrantyProvider: form.warrantyProvider.trim() || undefined,
           customAttributes,
+          ...linkFields,
         });
         // Persist any images selected during registration (previously discarded).
         if (uploadedImages.length > 0) {
@@ -787,6 +833,85 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 <input type="text" value={form.location} onChange={(e) => set('location', e.target.value)}
                   className="form-input" placeholder="e.g. Office 3A, IT Storage" />
               </FormField>
+            </FormSection>
+
+            {/* Linked Asset (OAMS-282). An asset is either a parent or an
+                accessory, never both, so the role is a single either/or choice.
+                Every control here marks the section as touched — untouched
+                means the link fields are left out of the payload entirely. */}
+            <FormSection title="Linked Asset">
+              <label className="flex items-center gap-2 text-2sm text-foreground/80 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={linkEnabled}
+                  onChange={(e) => {
+                    setLinkEnabled(e.target.checked);
+                    setLinkTouched(true);
+                    setErrors((prev) => ({ ...prev, linkedAsset: '' }));
+                  }}
+                />
+                Is this a linked asset?
+              </label>
+
+              {linkEnabled && (
+                <>
+                  <FormField label="This asset is a">
+                    <div className="flex gap-2">
+                      {([
+                        { key: 'parent', label: 'Parent Asset' },
+                        { key: 'child', label: 'Child Asset (Accessory)' },
+                      ] as const).map((role) => (
+                        <button
+                          key={role.key}
+                          type="button"
+                          onClick={() => {
+                            setLinkRole(role.key);
+                            setLinkTouched(true);
+                            setErrors((prev) => ({ ...prev, linkedAsset: '' }));
+                          }}
+                          className={`flex-1 rounded-control py-2 border text-2sm font-medium transition-all ${
+                            linkRole === role.key
+                              ? 'border-primary bg-secondary text-secondary-foreground'
+                              : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                          }`}
+                        >
+                          {role.label}
+                        </button>
+                      ))}
+                    </div>
+                  </FormField>
+
+                  {linkRole === 'child' ? (
+                    <FormField label="Parent asset" required error={errors.linkedAsset}>
+                      <AssetPicker
+                        mode="single"
+                        selected={linkParent}
+                        onChange={(next) => {
+                          setLinkParent(next);
+                          setLinkTouched(true);
+                          setErrors((prev) => ({ ...prev, linkedAsset: '' }));
+                        }}
+                        excludeIds={assetId ? [assetId] : []}
+                        placeholder="Search the main asset by asset ID or name…"
+                      />
+                    </FormField>
+                  ) : (
+                    <FormField label="Linked accessories" required error={errors.linkedAsset}>
+                      <AssetPicker
+                        mode="multiple"
+                        selected={linkAccessories}
+                        onChange={(next) => {
+                          setLinkAccessories(next);
+                          setLinkTouched(true);
+                          setErrors((prev) => ({ ...prev, linkedAsset: '' }));
+                        }}
+                        excludeIds={assetId ? [assetId] : []}
+                        placeholder="Search an accessory by asset ID or name…"
+                      />
+                    </FormField>
+                  )}
+                </>
+              )}
             </FormSection>
 
             {/* Section 6 - Images. Both modes stage changes locally and flush
