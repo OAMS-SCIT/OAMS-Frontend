@@ -514,6 +514,29 @@ export function updateAssetStatus(
   });
 }
 
+// ── Linked Accessories (OAMS-282) ─────────────────────────────────────────
+//
+// Linking itself rides on createAsset / updateAsset via `parentAssetId` and
+// `accessoryIds`; only unlinking needs its own routes. Both return the updated
+// asset detail, which already carries `parentAsset` and `accessories`.
+
+/** Unlinks one accessory from the parent asset it is attached to. */
+export function unlinkAccessory(
+  assetId: string,
+  childId: string,
+): Promise<AssetDetail> {
+  return request<AssetDetail>(`/assets/${assetId}/accessories/${childId}`, {
+    method: 'DELETE',
+  });
+}
+
+/** Clears an asset's own parent link, from the accessory's side. */
+export function unlinkParent(assetId: string): Promise<AssetDetail> {
+  return request<AssetDetail>(`/assets/${assetId}/parent`, {
+    method: 'DELETE',
+  });
+}
+
 // ── Repairs ───────────────────────────────────────────────────────────────
 
 export interface GetRepairsParams {

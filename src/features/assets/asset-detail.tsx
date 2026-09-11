@@ -9,6 +9,7 @@ import { ApiError, getAsset, getUpgrades, deleteUpgrade, getActiveAssignment, re
 import { AssetHistoryTimeline } from './AssetHistoryTimeline';
 import { CostSummaryTab } from './CostSummaryTab';
 import { WarrantiesTab } from './WarrantiesTab';
+import { LinkedAssetsTab } from './LinkedAssetsTab';
 import { StatusBadge, ConditionBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -292,7 +293,7 @@ export function AssetDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'history' | 'asset_log' | 'upgrades' | 'cost' | 'warranties'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'asset_log' | 'upgrades' | 'cost' | 'warranties' | 'linked'>('history');
   const [costVersion, setCostVersion] = useState(0);
 
   // Which image is shown large in the hero (index into the sorted images).
@@ -480,6 +481,11 @@ export function AssetDetail() {
   const warrantyClass = warrantyDays !== null
     ? (warrantyDays <= 30 ? 'text-danger' : warrantyDays <= 90 ? 'text-warning-foreground' : 'text-foreground')
     : '';
+
+  // ── Linked accessories (OAMS-282) ─────────────────────────────────────────
+  // Counts the parent too, so an accessory's tab still shows a badge.
+  const linkedCount =
+    (asset?.accessories?.length ?? 0) + (asset?.parentAsset ? 1 : 0);
 
   // ── Loading / Error ───────────────────────────────────────────────────────
   if (loading) {
@@ -749,9 +755,10 @@ export function AssetDetail() {
             { key: 'upgrades', label: `Upgrade Log${upgradesTotal > 0 ? ` (${upgradesTotal})` : ''}` },
             { key: 'cost',     label: 'Cost Summary' },
             { key: 'warranties', label: 'Warranties' },
+            { key: 'linked', label: `Linked Accessories${linkedCount > 0 ? ` (${linkedCount})` : ''}` },
           ].map((tab) => (
             <button key={tab.key}
-              onClick={() => setActiveTab(tab.key as 'history' | 'asset_log' | 'upgrades' | 'cost' | 'warranties')}
+              onClick={() => setActiveTab(tab.key as 'history' | 'asset_log' | 'upgrades' | 'cost' | 'warranties' | 'linked')}
               className={`relative mr-6 py-4 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === tab.key
                   ? 'text-primary border-primary'
@@ -820,6 +827,10 @@ export function AssetDetail() {
 
         {activeTab === 'warranties' && (
           <WarrantiesTab assetId={asset.id} version={costVersion} />
+        )}
+
+        {activeTab === 'linked' && (
+          <LinkedAssetsTab asset={asset} onChanged={refreshAsset} />
         )}
 
         {/* Upgrade Log Tab */}
