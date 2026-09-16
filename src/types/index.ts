@@ -247,6 +247,53 @@ export interface AssetWarrantyDocumentItem {
 }
 
 /**
+ * One document in an asset's document pool (Spec 11), with its relevance
+ * resolved for this asset. `warrantyIds` are the asset warranties this document
+ * backs.
+ */
+export interface AssetDocumentItem {
+  id: string;
+  url: string;
+  fileName: string;
+  isInvoice: boolean;
+  isPurchaseOrder: boolean;
+  warrantyIds: string[];
+}
+
+/** One purchase/manufacturer warranty on an asset (Spec 11). */
+export interface AssetWarrantyDetailItem {
+  id: string;
+  description: string;
+  startDate: string | null;
+  expiryDate: string | null;
+  provider: string | null;
+  /** Pooled document ids backing this warranty. */
+  documentIds: string[];
+}
+
+/** Result of POST /assets/:id/documents — the created pool document(s). */
+export interface AssetDocumentUploadResult {
+  id: string;
+  url: string;
+  fileName: string;
+}
+
+/**
+ * A warranty in a create/update payload (Spec 11). `id` present = update an
+ * existing warranty; absent = create. `key` is a client-only id used to wire up
+ * the document checkboxes before save; the server ignores it.
+ */
+export interface WarrantyInput {
+  id?: string;
+  key?: string;
+  description: string;
+  startDate?: string;
+  expiryDate?: string;
+  provider?: string;
+  documentIds?: string[];
+}
+
+/**
  * A parent or accessory asset shown in the Linked Accessories tab (OAMS-282).
  * `categoryName` is the "asset type" listed alongside the asset ID and name.
  */
@@ -285,11 +332,18 @@ export interface AssetDetail {
   invoiceUrl?: string | null;
   /** Original file name of the purchase invoice document, when available. */
   invoiceFileName?: string | null;
+  /**
+   * Legacy single-warranty mirrors (pre-Spec 11). `warrantyExpiryDate` is the
+   * nearest expiry across `warranties`; start/provider are no longer populated
+   * by the new flow. Read `warranties` instead.
+   */
   warrantyStartDate: string | null;
   warrantyExpiryDate: string | null;
   warrantyProvider: string | null;
-  /** Optional warranty documents uploaded against this asset. */
-  warrantyDocuments?: AssetWarrantyDocumentItem[];
+  /** Purchase/manufacturer warranties on this asset (Spec 11). */
+  warranties: AssetWarrantyDetailItem[];
+  /** The asset's document pool with resolved relevance (Spec 11). */
+  documents: AssetDocumentItem[];
   customAttributes: AssetCustomAttributeValue[];
   images: AssetImageItem[];
   /** Main asset this one is an accessory of — null unless it is a child (OAMS-282). */
@@ -326,9 +380,16 @@ export interface CreateAssetPayload {
   vendorId?: string;
   purchaseOrderRef?: string;
   invoiceRef?: string;
-  warrantyStartDate?: string;
-  warrantyExpiryDate?: string;
-  warrantyProvider?: string;
+  /** Pooled document id to mark as the asset's invoice (Spec 11); null clears it. */
+  invoiceDocumentId?: string | null;
+  /** Pooled document id to mark as the asset's purchase order (Spec 11); null clears it. */
+  purchaseOrderDocumentId?: string | null;
+  /**
+   * Full desired warranty set (Spec 11). Items with id are updated, without id
+   * are created, and existing warranties omitted from the array are deleted.
+   * Omit the field entirely to leave warranties untouched.
+   */
+  warranties?: WarrantyInput[];
   customAttributes?: AttributeValuePayload[];
   /**
    * Link this asset as an accessory of another (OAMS-282). `null` unlinks it.
@@ -380,6 +441,20 @@ export interface CreateVendorPayload {
 export type RepairStatus = 'Open' | 'Completed' | 'Cancelled';
 
 /** A repair record, persisted in its own table. Returned by the repair endpoints. */
+/**
+ * One document in a repair's document pool (Spec 12), with its relevance
+ * resolved for this repair. Warranty relevance is repair-scoped, so it is a
+ * single boolean (not per cost item). A document can be both the invoice and a
+ * warranty document.
+ */
+export interface RepairDocumentItem {
+  id: string;
+  url: string;
+  fileName: string;
+  isInvoice: boolean;
+  isWarranty: boolean;
+}
+
 export interface RepairRecord {
   id: string;
   assetId: string;
@@ -391,9 +466,14 @@ export interface RepairRecord {
   returnDate?: string | null;
   returnNotes?: string | null;
   invoiceUrl?: string | null;
+  /** The pooled return-invoice document id (Spec 12), or null. */
+  invoiceDocumentId?: string | null;
   /** @deprecated OAMS-281 — read `warrantyDocuments` instead. */
   warrantyDocUrl?: string | null;
+  /** @deprecated Spec 12 — read `documents` and filter by `isWarranty`. */
   warrantyDocuments?: AssetWarrantyDocumentItem[];
+  /** The repair's document pool with resolved relevance (Spec 12). */
+  documents: RepairDocumentItem[];
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -450,6 +530,16 @@ export interface CompleteRepairPayload {
   reason?: string;
   customAttributes?: AttributeValuePayload[];
   assignmentAction: AssignmentAction;
+  /**
+   * Pooled repair document id to mark as the return invoice (Spec 12); null
+   * clears it. The document must have been uploaded via uploadRepairDocuments.
+   */
+  invoiceDocumentId?: string | null;
+  /**
+   * Full desired set of pooled document ids that are warranty documents (Spec
+   * 12, replace semantics). Repair-scoped — not tied to individual cost items.
+   */
+  warrantyDocumentIds?: string[];
 }
 
 /** Body for POST .../repairs/:repairId/reroute (Return without Repair → different vendor). */

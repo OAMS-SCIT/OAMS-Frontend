@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   X, Plus, Trash2, Upload, Wrench, ArrowRight, ArrowLeft, Check,
-  Search, FileText, ImageIcon, Store,
+  Search, FileText, ImageIcon, Store, ExternalLink,
 } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
@@ -20,22 +20,19 @@ import {
   completeRepairReturn,
   rerouteRepair,
   retireFromRepair,
-  uploadRepairInvoice,
-  uploadRepairWarrantyDocs,
-  deleteRepairWarrantyDoc,
+  uploadRepairDocuments,
+  deleteRepairDocument,
   uploadConditionImages,
 } from '@/lib/api';
 import type {
   AssetDetail, Assignment, AttributeDetail, VendorListItem, Vendor,
   RepairOutcome, RepairCostItemType, RepairCostItemInput, AttributeValuePayload,
-  AssetWarrantyDocumentItem,
+  RepairDocumentItem,
 } from '@/types';
 import { addMonths, format, parseISO } from 'date-fns';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { ImageUploadZone } from '@/components/ui/ImageUploadZone';
-import { MultiDocumentPickerField } from '@/components/ui/MultiDocumentPickerField';
-import type { StagedDocument } from '@/components/ui/MultiDocumentPickerField';
 import type { UploadedImage } from '@/components/ui/ImageUploadZone';
 
 interface Props {
@@ -77,6 +74,32 @@ function expiryFromMonths(start: string, months: number): string {
 }
 
 const WARRANTY_PRESETS = [6, 12, 24];
+const ACCEPTED_DOC_TYPES = '.pdf,image/jpeg,image/png';
+
+/** Stable client-side id for staged documents. */
+function clientKey(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `k_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  }
+}
+
+/**
+ * One document in the repair's common pool (Spec 12). Newly added rows carry a
+ * `file` (not yet uploaded); existing rows carry a server `id` + `url`.
+ * Relevance is captured inline: invoice (single per repair) and warranty
+ * (repair-scoped).
+ */
+interface RepairDocDraft {
+  key: string;
+  id?: string;
+  file?: File;
+  fileName: string;
+  url?: string;
+  isInvoice: boolean;
+  isWarranty: boolean;
+}
 
 export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
   const [loading, setLoading] = useState(true);
@@ -94,12 +117,11 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [returnDate, setReturnDate] = useState(today());
   const [costRows, setCostRows] = useState<CostRow[]>([emptyRow()]);
-  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
-  // Warranty documents are uploaded BEFORE the repair is completed (see
-  // handleCompleteRepaired), so `existingWarrantyDocs` covers both docs already
-  // on the repair and docs this session just uploaded.
-  const [warrantyFiles, setWarrantyFiles] = useState<StagedDocument[]>([]);
-  const [existingWarrantyDocs, setExistingWarrantyDocs] = useState<AssetWarrantyDocumentItem[]>([]);
+  // Common document pool (Spec 12): the repair invoice + warranty documents live
+  // in one place; each file is tagged by relevance. Existing docs load from the
+  // repair; new files are staged and uploaded on complete.
+  const [docs, setDocs] = useState<RepairDocDraft[]>([]);
+  const docInputRef = useRef<HTMLInputElement>(null);
   const [attributes, setAttributes] = useState<AttributeDetail[]>([]);
   const [attrValues, setAttrValues] = useState<Record<string, string>>({});
   const [assignmentAction, setAssignmentAction] = useState<'handback' | 'keep_in_store'>('keep_in_store');
@@ -131,7 +153,16 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
         setRepairReason(repair?.reason ?? null);
         setRepairVendor(repair?.vendor?.name ?? null);
         setRepairSentAt(repair?.sentAt ?? null);
-        setExistingWarrantyDocs(repair?.warrantyDocuments ?? []);
+        setDocs(
+          (repair?.documents ?? []).map((d: RepairDocumentItem) => ({
+            key: d.id,
+            id: d.id,
+            fileName: d.fileName,
+            url: d.url,
+            isInvoice: d.isInvoice,
+            isWarranty: d.isWarranty,
+          })),
+        );
 
         // Best-effort: an unassigned asset has no active assignment — a null (or
         // even a failed) response here just means "no assignee", it must not
@@ -225,10 +256,10 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
     return true;
   };
 
-  // A warranty on any cost item means the record must ship with paperwork.
+  // A warranty on any cost item means the record must ship with paperwork —
+  // at least one pooled document flagged as a warranty document.
   const warrantyRequired = costRows.some((r) => r.hasWarranty);
-  const hasAnyWarrantyDoc =
-    existingWarrantyDocs.length + warrantyFiles.length > 0;
+  const hasAnyWarrantyDoc = docs.some((d) => d.isWarranty);
   const warrantyDocMissing = warrantyRequired && !hasAnyWarrantyDoc;
 
   const buildCostItems = (): RepairCostItemInput[] =>
@@ -246,29 +277,57 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
       ? attributes.map((at) => ({ attributeId: at.id, value: attrValues[at.id] ?? '' }))
       : undefined;
 
+  // ── Document pool helpers (Spec 12) ────────────────────────────────────────
+
+  const addDocFiles = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const added: RepairDocDraft[] = Array.from(fileList).map((file) => ({
+      key: clientKey(),
+      file,
+      fileName: file.name,
+      isInvoice: false,
+      isWarranty: false,
+    }));
+    setDocs((prev) => [...prev, ...added]);
+  };
+
   /**
-   * The repair already exists, so an existing document is deleted server-side
-   * immediately (unlike RegisterAssetDrawer, which defers because the asset may
-   * not exist yet).
+   * Remove a document. The repair already exists, so an existing (uploaded)
+   * document is deleted server-side immediately; a staged file just drops from
+   * local state.
    */
-  const handleRemoveExistingWarrantyDoc = async (docId: string) => {
-    if (!repairId) return;
-    try {
-      const updated = await deleteRepairWarrantyDoc(assetId, repairId, docId);
-      setExistingWarrantyDocs(updated.warrantyDocuments ?? []);
-      toast.success('Warranty document removed.');
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Failed to remove document.');
+  const removeDoc = async (key: string) => {
+    const doc = docs.find((d) => d.key === key);
+    if (!doc) return;
+    if (doc.id && repairId) {
+      try {
+        await deleteRepairDocument(assetId, repairId, doc.id);
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.message : 'Failed to remove document.');
+        return;
+      }
     }
+    setDocs((prev) => prev.filter((d) => d.key !== key));
+  };
+
+  /** Invoice is single-per-repair, so ticking one clears it on the others. */
+  const setDocInvoice = (key: string, value: boolean) => {
+    setDocs((prev) =>
+      prev.map((d) =>
+        d.key === key ? { ...d, isInvoice: value } : value ? { ...d, isInvoice: false } : d,
+      ),
+    );
+  };
+
+  const toggleDocWarranty = (key: string) => {
+    setDocs((prev) =>
+      prev.map((d) => (d.key === key ? { ...d, isWarranty: !d.isWarranty } : d)),
+    );
   };
 
   // ── Submit handlers ──────────────────────────────────────────────────────
   const doUploadsAndFinish = async (successMsg: string) => {
     if (!repairId) return;
-    if (invoiceFile) {
-      try { await uploadRepairInvoice(assetId, repairId, invoiceFile); }
-      catch { toast.error('Invoice upload failed — you can add it later.'); }
-    }
     if (assignmentAction === 'handback' && handbackImages.length > 0) {
       // Handback created a NEW assignment (the old one was superseded) — attach the
       // condition images to the new active assignment, not the pre-repair one.
@@ -286,29 +345,39 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
   const handleCompleteRepaired = async () => {
     if (!repairId) return;
     if (warrantyDocMissing) {
-      toast.error('Upload at least one warranty document before saving.');
+      toast.error('Mark at least one document as a warranty document before saving.');
       setStep(2);
       return;
     }
     setSaving(true);
     try {
-      // Upload warranty documents BEFORE completing. The AC is "submit only
-      // after at least one document is uploaded", and completing first would
-      // close the repair even when the upload failed — with no UI to add one
-      // afterwards. Failing here leaves the repair Open and retryable.
-      let savedDocCount = existingWarrantyDocs.length;
-      if (warrantyFiles.length > 0) {
-        const updated = await uploadRepairWarrantyDocs(
+      // Upload any staged files into the pool BEFORE completing, then resolve
+      // every document's server id so relevance can be sent on complete.
+      // Failing here leaves the repair Open and retryable.
+      const newDocs = docs.filter((d) => !d.id && d.file);
+      const idByKey: Record<string, string> = {};
+      if (newDocs.length > 0) {
+        const res = await uploadRepairDocuments(
           assetId,
           repairId,
-          warrantyFiles.map((f) => f.file),
+          newDocs.map((d) => d.file!),
         );
-        // Move them to `existing` so a retry after a later failure doesn't
-        // upload them a second time and eat into the 10-document cap.
-        setExistingWarrantyDocs(updated.warrantyDocuments ?? []);
-        setWarrantyFiles([]);
-        savedDocCount = updated.warrantyDocuments?.length ?? savedDocCount;
+        res.documents.forEach((rd, i) => {
+          idByKey[newDocs[i].key] = rd.id;
+        });
+        // Mark them uploaded so a retry after a later failure doesn't upload
+        // them again and eat into the 10-document cap.
+        setDocs((prev) =>
+          prev.map((d) => (idByKey[d.key] ? { ...d, id: idByKey[d.key], file: undefined } : d)),
+        );
       }
+      const resolve = (d: RepairDocDraft) => d.id ?? idByKey[d.key];
+
+      const invoiceDoc = docs.find((d) => d.isInvoice);
+      const warrantyDocumentIds = docs
+        .filter((d) => d.isWarranty)
+        .map(resolve)
+        .filter((id): id is string => !!id);
 
       await completeRepairReturn(assetId, repairId, {
         outcome: 'Repaired',
@@ -316,10 +385,12 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
         costItems: buildCostItems(),
         customAttributes: buildCustomAttributes(),
         assignmentAction,
+        invoiceDocumentId: invoiceDoc ? resolve(invoiceDoc) ?? null : null,
+        warrantyDocumentIds,
       });
       await doUploadsAndFinish(
-        savedDocCount > 0
-          ? `Return processed · ${savedDocCount} warranty document${savedDocCount === 1 ? '' : 's'} saved.`
+        warrantyDocumentIds.length > 0
+          ? `Return processed · ${warrantyDocumentIds.length} warranty document${warrantyDocumentIds.length === 1 ? '' : 's'} saved.`
           : 'Asset return from repair processed successfully.',
       );
     } catch (err) {
@@ -556,28 +627,79 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
               )}
 
               {outcome === 'Repaired' && step === 2 && (
-                <div className="space-y-5">
-                  <div>
-                    <MultiDocumentPickerField
-                      label="Warranty Documents"
-                      required={warrantyRequired}
-                      files={warrantyFiles}
-                      onChange={setWarrantyFiles}
-                      existing={existingWarrantyDocs}
-                      onRemoveExisting={handleRemoveExistingWarrantyDoc}
-                    />
-                    {warrantyDocMissing && (
-                      <p className="mt-1.5 text-2xs text-danger">
-                        At least one warranty document is required because a cost item has a warranty.
-                      </p>
-                    )}
-                  </div>
-                  <FilePickerField label="Invoice" file={invoiceFile} onPick={setInvoiceFile} icon={<FileText className="w-4 h-4" />} />
+                <div className="space-y-4">
                   <p className="text-2xs text-muted-foreground">
-                    {warrantyRequired
-                      ? 'Invoice is optional · JPEG, PNG, or PDF · max 10 MB.'
-                      : 'Both are optional · JPEG, PNG, or PDF · max 10 MB.'}
+                    Upload each file once, then mark what it is. A single file can be the invoice
+                    and a warranty document. JPEG, PNG, or PDF · max 10 MB each.
                   </p>
+                  <input
+                    ref={docInputRef}
+                    type="file"
+                    accept={ACCEPTED_DOC_TYPES}
+                    multiple
+                    hidden
+                    onChange={(e) => {
+                      addDocFiles(e.target.files);
+                      if (docInputRef.current) docInputRef.current.value = '';
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => docInputRef.current?.click()}
+                    className="flex items-center gap-1.5 rounded-control border border-dashed border-border px-3 py-2 text-2sm text-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <Upload className="w-4 h-4" /> Upload files
+                  </button>
+
+                  {docs.length === 0 ? (
+                    <p className="text-xs text-muted-foreground/80 italic">No documents uploaded yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {docs.map((d) => (
+                        <div key={d.key} className="rounded-control border border-border p-3 space-y-2.5">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
+                            {d.url ? (
+                              <a href={d.url} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-2sm text-primary hover:underline truncate">
+                                <span className="truncate">{d.fileName}</span>
+                                <ExternalLink className="w-3 h-3 shrink-0" />
+                              </a>
+                            ) : (
+                              <span className="text-2sm text-foreground truncate">{d.fileName}</span>
+                            )}
+                            {!d.id && <span className="text-2xs text-muted-foreground shrink-0">(new)</span>}
+                            <button
+                              type="button"
+                              onClick={() => removeDoc(d.key)}
+                              className="ml-auto rounded-sm p-1 text-muted-foreground hover:bg-muted hover:text-danger transition-colors"
+                              aria-label="Remove document"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1.5 pl-6">
+                            <RelevanceCheckbox
+                              label="Invoice"
+                              checked={d.isInvoice}
+                              onChange={(v) => setDocInvoice(d.key, v)}
+                            />
+                            <RelevanceCheckbox
+                              label="Warranty"
+                              checked={d.isWarranty}
+                              onChange={() => toggleDocWarranty(d.key)}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {warrantyDocMissing && (
+                    <p className="text-2xs text-danger">
+                      At least one document must be marked as a warranty document because a cost item has a warranty.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -713,7 +835,7 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
                 <button
                   onClick={() => {
                     if (step === 1 && !step1Valid()) { toast.error('Add at least one valid cost item (name + cost).'); return; }
-                    if (step === 2 && warrantyDocMissing) { toast.error('Upload at least one warranty document before continuing.'); return; }
+                    if (step === 2 && warrantyDocMissing) { toast.error('Mark at least one document as a warranty document before continuing.'); return; }
                     setStep((s) => (s + 1) as 2 | 3 | 4);
                   }}
                   className="flex items-center gap-2 rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
@@ -818,30 +940,18 @@ function AssignmentStep({
   );
 }
 
-// ── Simple file picker (JPEG/PNG/PDF) ─────────────────────────────────────
-function FilePickerField({
-  label, file, onPick, icon,
+// ── Compact relevance checkbox used in the document rows (Spec 12) ──────────
+function RelevanceCheckbox({
+  label, checked, onChange,
 }: {
   label: string;
-  file: File | null;
-  onPick: (f: File | null) => void;
-  icon: React.ReactNode;
+  checked: boolean;
+  onChange: (v: boolean) => void;
 }) {
   return (
-    <div>
-      <label className="block mb-1.5 text-xs font-medium text-foreground/80">{label} <span className="text-muted-foreground/70">(Optional)</span></label>
-      {file ? (
-        <div className="flex items-center justify-between rounded-control border border-border px-3 py-2.5">
-          <span className="flex items-center gap-2 text-2sm text-foreground truncate">{icon}{file.name}</span>
-          <button onClick={() => onPick(null)} className="text-danger/70 hover:text-danger transition-colors"><X className="w-4 h-4" /></button>
-        </div>
-      ) : (
-        <label className="flex items-center justify-center gap-2 rounded-control border border-dashed border-border px-3 py-2.5 text-2sm text-muted-foreground cursor-pointer hover:bg-muted/60 transition-colors">
-          <Upload className="w-4 h-4" /> Choose file
-          <input type="file" accept="image/jpeg,image/png,application/pdf" className="hidden"
-            onChange={(e) => onPick(e.target.files?.[0] ?? null)} />
-        </label>
-      )}
-    </div>
+    <label className="flex items-center gap-1.5 text-2xs text-foreground/80 cursor-pointer">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span className="truncate max-w-[140px]">{label}</span>
+    </label>
   );
 }

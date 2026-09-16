@@ -5,6 +5,7 @@ import type {
   AssignmentHistoryItem,
   AssetCostSummary,
   AssetDetail,
+  AssetDocumentUploadResult,
   AssetHistoryEntry,
   AssetListItem,
   AssetStatus,
@@ -634,67 +635,38 @@ export function retireFromRepair(
   });
 }
 
-/** Upload/replace the return invoice for a repair (JPEG/PNG/PDF). */
-export function uploadRepairInvoice(
-  assetId: string,
-  repairId: string,
-  file: File,
-): Promise<RepairRecord> {
-  const formData = new FormData();
-  formData.append('file', file);
-  return request<RepairRecord>(`/assets/${assetId}/repairs/${repairId}/invoice`, {
-    method: 'POST',
-    body: formData,
-  });
-}
-
 /**
- * Upload/replace the warranty document for a repair (JPEG/PNG/PDF).
- *
- * @deprecated OAMS-281 — use `uploadRepairWarrantyDocs`, which takes several
- * files. This route still works and now appends to the same store.
+ * Upload one or more files into a repair's document pool (JPEG/PNG/PDF, ≤10 MB
+ * each, cap 10 per repair) — Spec 12. Relevance (invoice / warranty) is assigned
+ * afterwards on the repair complete. Returns the created documents so the caller
+ * can reference their ids in the follow-up complete payload.
  */
-export function uploadRepairWarrantyDoc(
-  assetId: string,
-  repairId: string,
-  file: File,
-): Promise<RepairRecord> {
-  const formData = new FormData();
-  formData.append('file', file);
-  return request<RepairRecord>(`/assets/${assetId}/repairs/${repairId}/warranty-doc`, {
-    method: 'POST',
-    body: formData,
-  });
-}
-
-/**
- * Upload one or more warranty documents for a repair (JPEG/PNG/PDF, <=10 MB
- * each, cap 10 per repair). The field name is `files` (plural) — the singular
- * `file` is a different endpoint contract.
- */
-export function uploadRepairWarrantyDocs(
+export function uploadRepairDocuments(
   assetId: string,
   repairId: string,
   files: File[],
-): Promise<RepairRecord> {
+): Promise<{ documents: AssetDocumentUploadResult[] }> {
   const formData = new FormData();
   for (const file of files) {
     formData.append('files', file);
   }
-  return request<RepairRecord>(`/assets/${assetId}/repairs/${repairId}/warranty-docs`, {
-    method: 'POST',
-    body: formData,
-  });
+  return request<{ documents: AssetDocumentUploadResult[] }>(
+    `/assets/${assetId}/repairs/${repairId}/documents`,
+    {
+      method: 'POST',
+      body: formData,
+    },
+  );
 }
 
-/** Delete a single repair warranty document. Returns the updated repair. */
-export function deleteRepairWarrantyDoc(
+/** Delete a single pooled repair document. Returns the updated repair. */
+export function deleteRepairDocument(
   assetId: string,
   repairId: string,
   docId: string,
 ): Promise<RepairRecord> {
   return request<RepairRecord>(
-    `/assets/${assetId}/repairs/${repairId}/warranty-docs/${docId}`,
+    `/assets/${assetId}/repairs/${repairId}/documents/${docId}`,
     { method: 'DELETE' },
   );
 }
@@ -720,53 +692,35 @@ export function uploadAssetImages(
   });
 }
 
-/** Upload/replace the purchase-order document for an asset (JPEG/PNG/PDF, ≤10 MB). */
-export function uploadAssetPurchaseOrder(
-  assetId: string,
-  file: File,
-): Promise<AssetDetail> {
-  const formData = new FormData();
-  formData.append('file', file);
-  return request<AssetDetail>(`/assets/${assetId}/purchase-order`, {
-    method: 'POST',
-    body: formData,
-  });
-}
-
-/** Upload/replace the purchase invoice document for an asset (JPEG/PNG/PDF, ≤10 MB). */
-export function uploadAssetInvoice(
-  assetId: string,
-  file: File,
-): Promise<AssetDetail> {
-  const formData = new FormData();
-  formData.append('file', file);
-  return request<AssetDetail>(`/assets/${assetId}/invoice`, {
-    method: 'POST',
-    body: formData,
-  });
-}
-
-/** Upload one or more warranty documents for an asset (JPEG/PNG/PDF, ≤10 MB each). */
-export function uploadAssetWarrantyDocs(
+/**
+ * Upload one or more files into the asset's document pool (JPEG/PNG/PDF, ≤10 MB
+ * each) — Spec 11. Relevance (invoice / PO / warranty) is assigned afterwards on
+ * the asset save. Returns the created documents so the caller can reference
+ * their ids in the follow-up create/update payload.
+ */
+export function uploadAssetDocuments(
   assetId: string,
   files: File[],
-): Promise<AssetDetail> {
+): Promise<{ documents: AssetDocumentUploadResult[] }> {
   const formData = new FormData();
   for (const file of files) {
     formData.append('files', file);
   }
-  return request<AssetDetail>(`/assets/${assetId}/warranty-docs`, {
-    method: 'POST',
-    body: formData,
-  });
+  return request<{ documents: AssetDocumentUploadResult[] }>(
+    `/assets/${assetId}/documents`,
+    {
+      method: 'POST',
+      body: formData,
+    },
+  );
 }
 
-/** Delete a single warranty document. Returns the updated detail. */
-export function deleteAssetWarrantyDoc(
+/** Delete a single pooled document. Returns the updated detail. */
+export function deleteAssetDocument(
   assetId: string,
   docId: string,
 ): Promise<AssetDetail> {
-  return request<AssetDetail>(`/assets/${assetId}/warranty-docs/${docId}`, {
+  return request<AssetDetail>(`/assets/${assetId}/documents/${docId}`, {
     method: 'DELETE',
   });
 }
