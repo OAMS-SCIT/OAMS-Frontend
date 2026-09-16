@@ -113,6 +113,8 @@ interface FormState {
   categoryId: string;
   purchaseDate: string;
   purchasePrice: string;
+  /** When true, the cost sits in the parent asset's price, so no separate price. */
+  costIncludedInParent: boolean;
   purchaseOrderRef: string;
   invoiceRef: string;
   condition: AssetCondition;
@@ -121,7 +123,7 @@ interface FormState {
 
 const EMPTY_FORM: FormState = {
   name: '', description: '', brandId: '', brandName: '', model: '', serialNumber: '',
-  categoryId: '', purchaseDate: '', purchasePrice: '',
+  categoryId: '', purchaseDate: '', purchasePrice: '', costIncludedInParent: false,
   purchaseOrderRef: '', invoiceRef: '', condition: 'New', location: '',
 };
 
@@ -136,6 +138,7 @@ function assetDetailToForm(a: AssetDetail): FormState {
     categoryId: a.category.id,
     purchaseDate: a.purchaseDate ?? '',
     purchasePrice: a.purchasePrice != null ? String(a.purchasePrice) : '',
+    costIncludedInParent: a.costIncludedInParent ?? false,
     purchaseOrderRef: a.purchaseOrderRef ?? '',
     invoiceRef: a.invoiceRef ?? '',
     condition: a.condition,
@@ -277,6 +280,13 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
     setErrors((e) => ({ ...e, [k]: '' }));
   };
 
+  // "Cost included in parent" toggle: clears the price when turned on, since a
+  // bundled accessory has no separate price (OAMS-282.1).
+  const setCostIncluded = (v: boolean) => {
+    setForm((f) => ({ ...f, costIncludedInParent: v, purchasePrice: v ? '' : f.purchasePrice }));
+    setErrors((e) => ({ ...e, purchasePrice: '' }));
+  };
+
   // Brand is one-of: an existing id OR a new name (created on save).
   const selectExistingBrand = (id: string) => {
     setForm((f) => ({ ...f, brandId: id, brandName: '' }));
@@ -384,7 +394,9 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
     if (!form.serialNumber.trim()) e.serialNumber = 'Serial number is required';
     if (!form.categoryId) e.categoryId = 'Category is required';
     if (!form.purchaseDate) e.purchaseDate = 'Purchase date is required';
-    if (!form.purchasePrice || parseFloat(form.purchasePrice) <= 0)
+    // A bundled accessory (cost included in its parent) needs no price; only a
+    // standalone asset must have one (OAMS-282.1).
+    if (!form.costIncludedInParent && (!form.purchasePrice || parseFloat(form.purchasePrice) <= 0))
       e.purchasePrice = 'Purchase price must be greater than 0';
 
     for (const w of warranties) {
@@ -494,7 +506,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           condition: form.condition,
           location: form.location.trim() || undefined,
           purchaseDate: form.purchaseDate,
-          purchasePrice: parseFloat(form.purchasePrice),
+          purchasePrice: form.costIncludedInParent ? undefined : parseFloat(form.purchasePrice),
+          costIncludedInParent: form.costIncludedInParent,
           vendorId: selectedVendor?.id || undefined,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
           invoiceRef: form.invoiceRef.trim() || undefined,
@@ -544,7 +557,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           condition: form.condition,
           location: form.location.trim() || undefined,
           purchaseDate: form.purchaseDate,
-          purchasePrice: parseFloat(form.purchasePrice),
+          purchasePrice: form.costIncludedInParent ? undefined : parseFloat(form.purchasePrice),
+          costIncludedInParent: form.costIncludedInParent,
           vendorId: selectedVendor?.id || undefined,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
           invoiceRef: form.invoiceRef.trim() || undefined,
@@ -729,18 +743,35 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 <FormField label="Purchase Date" required error={errors.purchaseDate}>
                   <DatePicker value={form.purchaseDate} onChange={(v) => set('purchaseDate', v)} ariaLabel="Purchase Date" className="w-full" />
                 </FormField>
-                <FormField label="Purchase Price" required error={errors.purchasePrice}>
+                <FormField label="Purchase Price" required={!form.costIncludedInParent} error={errors.purchasePrice}>
                   <div className="relative">
                     <span className="absolute top-1/2 -translate-y-1/2 pointer-events-none select-none text-sm left-3 z-[1] text-muted-foreground/70">
                       $
                     </span>
-                    <input type="number" value={form.purchasePrice}
+                    <input type="number"
+                      value={form.costIncludedInParent ? '' : form.purchasePrice}
                       onChange={(e) => set('purchasePrice', e.target.value)}
+                      disabled={form.costIncludedInParent}
                       className="form-input" style={{ paddingLeft: 28 }}
-                      placeholder="0.00" min="0.01" step="0.01" />
+                      placeholder={form.costIncludedInParent ? 'Included with parent' : '0.00'}
+                      min="0.01" step="0.01" />
                   </div>
                 </FormField>
               </div>
+              <label className="flex items-start gap-2 text-2sm text-foreground/80 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={form.costIncludedInParent}
+                  onChange={(e) => setCostIncluded(e.target.checked)}
+                />
+                <span>
+                  Cost included in parent asset
+                  <span className="block text-2xs text-muted-foreground">
+                    For accessories that came bundled (e.g. a power cable) — no separate price needed.
+                  </span>
+                </span>
+              </label>
               <FormField label="Vendor / Supplier">
                 <VendorSelect value={selectedVendor} onChange={setSelectedVendor} />
               </FormField>
