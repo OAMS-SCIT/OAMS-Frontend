@@ -319,7 +319,10 @@ export interface AssetDetail {
   condition: AssetCondition;
   location: string | null;
   purchaseDate: string;
-  purchasePrice: number;
+  /** Null when `costIncludedInParent` is true (bundled accessory, OAMS-282.1). */
+  purchasePrice: number | null;
+  /** True when this asset's cost is included in its parent asset's price. */
+  costIncludedInParent: boolean;
   vendor: VendorListItem | null;
   purchaseOrderRef: string | null;
   /** Cloud storage URL for the purchase-order document, when uploaded. */
@@ -371,12 +374,20 @@ export interface CreateAssetPayload {
   brandId?: string;
   brandName?: string;
   model: string;
-  serialNumber: string;
+  /** `null` for accessories with no serial number, e.g. a backpack (OAMS-282.1). */
+  serialNumber: string | null;
   categoryId: string;
   condition: AssetCondition;
   location?: string;
   purchaseDate: string;
-  purchasePrice: number;
+  /** Required unless `costIncludedInParent` is true; then omit it (OAMS-282.1). */
+  purchasePrice?: number;
+  /**
+   * When true, this asset's cost is included in its parent asset's price, so
+   * `purchasePrice` is omitted and stored as null. An explicit admin choice,
+   * independent of whether a parent link is set.
+   */
+  costIncludedInParent?: boolean;
   vendorId?: string;
   purchaseOrderRef?: string;
   invoiceRef?: string;

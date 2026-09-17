@@ -672,7 +672,16 @@ export function AssetDetail() {
         <div className="rounded-2xl p-5 bg-card border border-border shadow-card">
           <h3 className="font-semibold mb-3 text-sm tracking-[-0.01em] text-foreground">Financial & Warranty</h3>
           <InfoRow label="Purchase Date" value={asset.purchaseDate} />
-          <InfoRow label="Purchase Price" value={asset.purchasePrice ? `$${Number(asset.purchasePrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : undefined} />
+          <InfoRow
+            label="Purchase Price"
+            value={
+              asset.costIncludedInParent
+                ? 'Included with parent asset'
+                : asset.purchasePrice
+                  ? `$${Number(asset.purchasePrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                  : undefined
+            }
+          />
           <InfoRow label="Vendor / Supplier" value={asset.vendor?.name} />
           <InfoRow label="Purchase Order Ref." value={asset.purchaseOrderRef} />
           <InfoRow
@@ -702,6 +711,20 @@ export function AssetDetail() {
                 : undefined
             }
           />
+          {asset.costIncludedInParent && asset.parentAsset && (
+            <InfoRow
+              label="Documents"
+              value={
+                <button
+                  type="button"
+                  onClick={() => router.push(`/admin/inventory/${asset.parentAsset!.id}`)}
+                  className="text-primary hover:underline"
+                >
+                  Held on parent asset ({asset.parentAsset.displayId})
+                </button>
+              }
+            />
+          )}
           <InfoRow label="Warranty Expiry (nearest)" value={
             asset.warrantyExpiryDate ? (
               <span className={warrantyClass}>
