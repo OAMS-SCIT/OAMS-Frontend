@@ -110,9 +110,13 @@ interface FormState {
   brandName: string;
   model: string;
   serialNumber: string;
+  /** UI-only: when true the item has no serial number (sent as null). */
+  noSerialNumber: boolean;
   categoryId: string;
   purchaseDate: string;
   purchasePrice: string;
+  /** When true, the cost sits in the parent asset's price, so no separate price. */
+  costIncludedInParent: boolean;
   purchaseOrderRef: string;
   invoiceRef: string;
   condition: AssetCondition;
@@ -121,7 +125,8 @@ interface FormState {
 
 const EMPTY_FORM: FormState = {
   name: '', description: '', brandId: '', brandName: '', model: '', serialNumber: '',
-  categoryId: '', purchaseDate: '', purchasePrice: '',
+  noSerialNumber: false,
+  categoryId: '', purchaseDate: '', purchasePrice: '', costIncludedInParent: false,
   purchaseOrderRef: '', invoiceRef: '', condition: 'New', location: '',
 };
 
@@ -132,10 +137,13 @@ function assetDetailToForm(a: AssetDetail): FormState {
     brandId: a.brand.id,
     brandName: '',
     model: a.model,
-    serialNumber: a.serialNumber,
+    serialNumber: a.serialNumber ?? '',
+    // The API returns '' for a serial-less asset; reflect that as the toggle.
+    noSerialNumber: !a.serialNumber,
     categoryId: a.category.id,
     purchaseDate: a.purchaseDate ?? '',
     purchasePrice: a.purchasePrice != null ? String(a.purchasePrice) : '',
+    costIncludedInParent: a.costIncludedInParent ?? false,
     purchaseOrderRef: a.purchaseOrderRef ?? '',
     invoiceRef: a.invoiceRef ?? '',
     condition: a.condition,
@@ -180,6 +188,9 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const [linkParent, setLinkParent] = useState<PickableAsset[]>([]);
   const [linkAccessories, setLinkAccessories] = useState<PickableAsset[]>([]);
   const [linkTouched, setLinkTouched] = useState(false);
+  // Parent whose purchase details were just prefilled into the form (OAMS-282.1
+  // follow-up) — drives the "Prefilled from …" hint; null once nothing is copied.
+  const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null);
 
   // Load categories list + (edit) existing asset on mount
   useEffect(() => {
@@ -275,6 +286,59 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
   const set = (k: keyof FormState, v: string) => {
     setForm((f) => ({ ...f, [k]: v }));
     setErrors((e) => ({ ...e, [k]: '' }));
+  };
+
+  // "Cost included in parent" toggle: clears the price when turned on, since a
+  // bundled accessory has no separate price (OAMS-282.1). Turning it off drops
+  // the prefill hint and re-reveals the Linked Asset section (link state is kept).
+  const setCostIncluded = (v: boolean) => {
+    setForm((f) => ({ ...f, costIncludedInParent: v, purchasePrice: v ? '' : f.purchasePrice }));
+    setErrors((e) => ({ ...e, purchasePrice: '', linkedAsset: '' }));
+    if (!v) setPrefilledFrom(null);
+  };
+
+  // "No serial number" toggle: clears + disables the serial field for items that
+  // don't have one, e.g. a backpack (OAMS-282.1). Stored as null; on save the
+  // serial is omitted.
+  const setNoSerial = (v: boolean) => {
+    setForm((f) => ({ ...f, noSerialNumber: v, serialNumber: v ? '' : f.serialNumber }));
+    setErrors((e) => ({ ...e, serialNumber: '' }));
+  };
+
+  // Picking the parent this asset is bundled with (OAMS-282.1 follow-up): it
+  // drives the accessory link (single source of truth) AND prefills the common
+  // purchase details from the parent, so the admin isn't re-typing them. The
+  // prefill is an editable snapshot, not a live link, and only fires on an
+  // explicit selection — never on drawer load — so editing never clobbers stored
+  // values.
+  const selectCostParent = async (next: PickableAsset[]) => {
+    setLinkParent(next);
+    setLinkEnabled(true);
+    setLinkRole('child');
+    setLinkAccessories([]);
+    setLinkTouched(true);
+    setErrors((e) => ({ ...e, linkedAsset: '' }));
+
+    const parent = next[0];
+    if (!parent) {
+      setPrefilledFrom(null);
+      return;
+    }
+    try {
+      const detail = await getAsset(parent.id);
+      setSelectedVendor(detail.vendor);
+      setForm((f) => ({
+        ...f,
+        purchaseDate: detail.purchaseDate ?? f.purchaseDate,
+        invoiceRef: detail.invoiceRef ?? '',
+        purchaseOrderRef: detail.purchaseOrderRef ?? '',
+      }));
+      setErrors((e) => ({ ...e, purchaseDate: '' }));
+      setPrefilledFrom(parent.displayId);
+    } catch (err) {
+      // A failed prefill must never block registration — the link + flag still save.
+      toast.error(err instanceof ApiError ? err.message : 'Could not load the parent asset details to prefill.');
+    }
   };
 
   // Brand is one-of: an existing id OR a new name (created on save).
@@ -381,10 +445,13 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
     if (!form.name.trim()) e.name = 'Asset name is required';
     if (!brand.brandId && !brand.brandName) e.brand = 'Brand is required';
     if (!form.model.trim()) e.model = 'Model is required';
-    if (!form.serialNumber.trim()) e.serialNumber = 'Serial number is required';
+    if (!form.noSerialNumber && !form.serialNumber.trim())
+      e.serialNumber = 'Serial number is required (or tick “No serial number”)';
     if (!form.categoryId) e.categoryId = 'Category is required';
     if (!form.purchaseDate) e.purchaseDate = 'Purchase date is required';
-    if (!form.purchasePrice || parseFloat(form.purchasePrice) <= 0)
+    // A bundled accessory (cost included in its parent) needs no price; only a
+    // standalone asset must have one (OAMS-282.1).
+    if (!form.costIncludedInParent && (!form.purchasePrice || parseFloat(form.purchasePrice) <= 0))
       e.purchasePrice = 'Purchase price must be greater than 0';
 
     for (const w of warranties) {
@@ -404,6 +471,12 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
       if (attr.isRequired && !attrValues[attr.id]?.trim()) {
         e[`attr_${attr.id}`] = `${attr.label} is required`;
       }
+    }
+
+    // "Cost included in parent" needs a parent — it's meaningless without one,
+    // and the parent also drives the link + prefill (OAMS-282.1 follow-up).
+    if (form.costIncludedInParent && linkParent.length === 0) {
+      e.linkedAsset = 'Select the parent asset this cost is included in';
     }
 
     if (linkEnabled && linkRole === 'child' && linkParent.length === 0) {
@@ -490,11 +563,12 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           brandId: brand.brandId,
           brandName: brand.brandName,
           model: form.model.trim(),
-          serialNumber: form.serialNumber.trim(),
+          serialNumber: form.noSerialNumber ? null : form.serialNumber.trim(),
           condition: form.condition,
           location: form.location.trim() || undefined,
           purchaseDate: form.purchaseDate,
-          purchasePrice: parseFloat(form.purchasePrice),
+          purchasePrice: form.costIncludedInParent ? undefined : parseFloat(form.purchasePrice),
+          costIncludedInParent: form.costIncludedInParent,
           vendorId: selectedVendor?.id || undefined,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
           invoiceRef: form.invoiceRef.trim() || undefined,
@@ -539,12 +613,13 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
           brandId: brand.brandId,
           brandName: brand.brandName,
           model: form.model.trim(),
-          serialNumber: form.serialNumber.trim(),
+          serialNumber: form.noSerialNumber ? null : form.serialNumber.trim(),
           categoryId: form.categoryId,
           condition: form.condition,
           location: form.location.trim() || undefined,
           purchaseDate: form.purchaseDate,
-          purchasePrice: parseFloat(form.purchasePrice),
+          purchasePrice: form.costIncludedInParent ? undefined : parseFloat(form.purchasePrice),
+          costIncludedInParent: form.costIncludedInParent,
           vendorId: selectedVendor?.id || undefined,
           purchaseOrderRef: form.purchaseOrderRef.trim() || undefined,
           invoiceRef: form.invoiceRef.trim() || undefined,
@@ -689,9 +764,21 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                     className="form-input" placeholder="e.g. XPS 15 9530" />
                 </FormField>
               </div>
-              <FormField label="Serial Number" required error={errors.serialNumber}>
-                <input type="text" value={form.serialNumber} onChange={(e) => set('serialNumber', e.target.value)}
-                  className="form-input font-mono" placeholder="Unique serial number" />
+              <FormField label="Serial Number" required={!form.noSerialNumber} error={errors.serialNumber}>
+                <input type="text"
+                  value={form.noSerialNumber ? '' : form.serialNumber}
+                  onChange={(e) => set('serialNumber', e.target.value)}
+                  disabled={form.noSerialNumber}
+                  className="form-input font-mono"
+                  placeholder={form.noSerialNumber ? 'No serial number' : 'Unique serial number'} />
+                <label className="mt-2 flex items-center gap-2 text-2xs text-foreground/80 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.noSerialNumber}
+                    onChange={(e) => setNoSerial(e.target.checked)}
+                  />
+                  No serial number (e.g. a backpack or cable)
+                </label>
               </FormField>
             </FormSection>
 
@@ -725,19 +812,58 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
 
             {/* Section 3 - Purchase (no document upload here — see Documents) */}
             <FormSection title="Purchase Details">
+              <label className="flex items-start gap-2 text-2sm text-foreground/80 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={form.costIncludedInParent}
+                  onChange={(e) => setCostIncluded(e.target.checked)}
+                />
+                <span>
+                  This is an accessory bundled with a parent asset
+                  <span className="block text-2xs text-muted-foreground">
+                    e.g. a laptop&apos;s charger or backpack. Select the parent below to link its
+                    purchasing details and documents — no separate price needed. The accessory is
+                    still assigned on its own, so it can go to a different person than the parent.
+                  </span>
+                </span>
+              </label>
+              {form.costIncludedInParent && (
+                <FormField
+                  label="Parent asset"
+                  required
+                  error={errors.linkedAsset}
+                >
+                  <AssetPicker
+                    mode="single"
+                    selected={linkParent}
+                    onChange={selectCostParent}
+                    excludeIds={assetId ? [assetId] : []}
+                    placeholder="Search the parent asset by asset ID or name…"
+                  />
+                  {prefilledFrom && (
+                    <p className="mt-1.5 text-2xs text-muted-foreground">
+                      Vendor, purchase date and invoice/PO references prefilled from {prefilledFrom} — edit as needed.
+                    </p>
+                  )}
+                </FormField>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Purchase Date" required error={errors.purchaseDate}>
                   <DatePicker value={form.purchaseDate} onChange={(v) => set('purchaseDate', v)} ariaLabel="Purchase Date" className="w-full" />
                 </FormField>
-                <FormField label="Purchase Price" required error={errors.purchasePrice}>
+                <FormField label="Purchase Price" required={!form.costIncludedInParent} error={errors.purchasePrice}>
                   <div className="relative">
                     <span className="absolute top-1/2 -translate-y-1/2 pointer-events-none select-none text-sm left-3 z-[1] text-muted-foreground/70">
                       $
                     </span>
-                    <input type="number" value={form.purchasePrice}
+                    <input type="number"
+                      value={form.costIncludedInParent ? '' : form.purchasePrice}
                       onChange={(e) => set('purchasePrice', e.target.value)}
+                      disabled={form.costIncludedInParent}
                       className="form-input" style={{ paddingLeft: 28 }}
-                      placeholder="0.00" min="0.01" step="0.01" />
+                      placeholder={form.costIncludedInParent ? 'Included with parent' : '0.00'}
+                      min="0.01" step="0.01" />
                   </div>
                 </FormField>
               </div>
@@ -868,6 +994,12 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
 
             {/* Section 5 - Documents (common upload + relevance) */}
             <FormSection title="Documents">
+              {form.costIncludedInParent ? (
+                <p className="text-2sm text-muted-foreground">
+                  Documents are held on the parent asset — nothing to upload here for a bundled accessory.
+                </p>
+              ) : (
+              <>
               <p className="text-2xs text-muted-foreground -mt-1">
                 Upload each file once, then mark what it is. A single file can be the invoice and back one or more warranties.
               </p>
@@ -942,6 +1074,8 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                   ))}
                 </div>
               )}
+              </>
+              )}
             </FormSection>
 
             {/* Section 6 - Physical */}
@@ -966,7 +1100,9 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
               </FormField>
             </FormSection>
 
-            {/* Linked Asset (OAMS-282). */}
+            {/* Linked Asset (OAMS-282). Hidden while "cost included in parent" is
+                on — that toggle's inline picker already drives the child link. */}
+            {!form.costIncludedInParent && (
             <FormSection title="Linked Asset">
               <label className="flex items-center gap-2 text-2sm text-foreground/80 cursor-pointer">
                 <input
@@ -1041,6 +1177,7 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 </>
               )}
             </FormSection>
+            )}
 
             {/* Section 7 - Images. */}
             <FormSection title="Asset Images">
