@@ -374,7 +374,8 @@ export interface CreateAssetPayload {
   brandId?: string;
   brandName?: string;
   model: string;
-  serialNumber: string;
+  /** `null` for accessories with no serial number, e.g. a backpack (OAMS-282.1). */
+  serialNumber: string | null;
   categoryId: string;
   condition: AssetCondition;
   location?: string;

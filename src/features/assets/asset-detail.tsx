@@ -711,6 +711,20 @@ export function AssetDetail() {
                 : undefined
             }
           />
+          {asset.costIncludedInParent && asset.parentAsset && (
+            <InfoRow
+              label="Documents"
+              value={
+                <button
+                  type="button"
+                  onClick={() => router.push(`/admin/inventory/${asset.parentAsset!.id}`)}
+                  className="text-primary hover:underline"
+                >
+                  Held on parent asset ({asset.parentAsset.displayId})
+                </button>
+              }
+            />
+          )}
           <InfoRow label="Warranty Expiry (nearest)" value={
             asset.warrantyExpiryDate ? (
               <span className={warrantyClass}>
