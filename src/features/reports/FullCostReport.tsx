@@ -49,7 +49,11 @@ export function FullCostReport() {
     ? { assetId: asset[0].id, costCategory, dateFrom, dateTo }
     : null;
   const filtersChanged =
-    report !== null && applied !== null && JSON.stringify(current) !== JSON.stringify(applied);
+    report !== null &&
+    applied !== null &&
+    current !== null &&
+    !dateRangeInvalid &&
+    JSON.stringify(current) !== JSON.stringify(applied);
 
   const clearFilters = () => {
     setAsset([]);

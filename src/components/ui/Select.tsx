@@ -42,10 +42,13 @@ export function Select({
   disabled,
 }: SelectProps) {
   const isEmpty = value === '';
+  // '' selects the "All" option when the list has one; otherwise pass '' through
+  // so Radix shows the placeholder instead of a blank trigger.
+  const hasEmptyOption = options.some((o) => o.value === '');
 
   return (
     <RSelect.Root
-      value={isEmpty ? EMPTY : value}
+      value={isEmpty ? (hasEmptyOption ? EMPTY : '') : value}
       onValueChange={(v) => onValueChange(v === EMPTY ? '' : v)}
       disabled={disabled}
     >
