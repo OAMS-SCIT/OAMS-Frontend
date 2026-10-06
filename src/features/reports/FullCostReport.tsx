@@ -145,7 +145,7 @@ export function FullCostReport() {
         <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-border/60">
           {filtersChanged && (
             <span className="mr-auto text-2xs text-muted-foreground">
-              Filters changed — click Generate to update the preview.
+              Filters changed - click Generate to update the preview.
             </span>
           )}
           <ClearFiltersButton onClear={clearFilters} disabled={!hasFilters || loading} />
