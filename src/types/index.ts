@@ -1001,6 +1001,13 @@ export interface TotalExpenseReportRow extends ExpenseTotals {
   displayId: string | null;
   name: string;
   categoryName: string | null;
+  /** Set when this asset is a linked accessory of another asset (OAMS-300). */
+  parentAssetId: string | null;
+  parentDisplayId: string | null;
+  /** Bundled accessory — its price is included in the parent's purchase price. */
+  costIncludedInParent: boolean;
+  /** Own total + linked accessories' cost (display only; not part of the grand total). */
+  totalWithAccessories: number;
 }
 
 export interface TotalExpenseReport {

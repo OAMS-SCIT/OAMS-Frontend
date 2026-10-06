@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, Play } from 'lucide-react';
+import { CornerDownRight, Loader2, Play } from 'lucide-react';
 import { AssetPicker, PickableAsset } from '@/components/ui/AssetPicker';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { MultiSearchableSelect } from '@/components/ui/MultiSearchableSelect';
@@ -86,6 +86,8 @@ export function TotalExpenseReport() {
     categoryIds.length > 0 || status !== '' || assets.length > 0 || costCategory !== '' || dateFrom !== '' || dateTo !== '';
   const filtersChanged =
     report !== null && applied !== null && !dateRangeInvalid && JSON.stringify(current) !== JSON.stringify(applied);
+
+  const accessoryCount = report?.rows.filter((r) => r.parentAssetId !== null).length ?? 0;
 
   const clearFilters = () => {
     setCategoryIds([]);
@@ -227,6 +229,7 @@ export function TotalExpenseReport() {
               <div className="font-semibold text-foreground">Total Expense Report</div>
               <div className="text-2sm text-muted-foreground mt-0.5">
                 {report.rows.length} {report.rows.length === 1 ? 'asset' : 'assets'}
+                {accessoryCount > 0 && <> · {accessoryCount} linked {accessoryCount === 1 ? 'accessory' : 'accessories'}</>}
               </div>
             </div>
 
@@ -254,36 +257,68 @@ export function TotalExpenseReport() {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.rows.map((row, i) => (
-                      <tr
-                        key={row.assetId}
-                        className={`border-b border-border/60 ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}
-                      >
-                        <td className="px-4 py-3 text-2sm font-mono whitespace-nowrap">
-                          <Link href={`/admin/inventory/${row.assetId}`} className="text-primary hover:underline">
-                            {row.displayId ?? '—'}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3 text-2sm text-foreground/90">{row.name}</td>
-                        <td className="px-4 py-3 text-2sm text-muted-foreground whitespace-nowrap">
-                          {row.categoryName ?? '—'}
-                        </td>
-                        {COST_COLUMNS.map((c) => (
-                          <td
-                            key={c.key}
-                            className={`px-4 py-3 text-2sm nums whitespace-nowrap text-right ${
-                              c.key === 'totalCost'
-                                ? 'font-semibold text-foreground'
-                                : row[c.key] === 0
-                                  ? 'text-muted-foreground/60'
-                                  : 'text-foreground/80'
-                            }`}
-                          >
-                            {fmt(row[c.key])}
+                    {report.rows.map((row) => {
+                      const isAccessory = row.parentAssetId !== null;
+                      const showWithAccessories = row.totalWithAccessories !== row.totalCost;
+                      return (
+                        <tr
+                          key={row.assetId}
+                          className={`border-b border-border/60 ${isAccessory ? 'bg-muted/25' : 'bg-card'}`}
+                        >
+                          <td className="px-4 py-3 text-2sm font-mono whitespace-nowrap align-top">
+                            <span className={`inline-flex items-center gap-1.5 ${isAccessory ? 'pl-4' : ''}`}>
+                              {isAccessory && <CornerDownRight className="w-3.5 h-3.5 text-muted-foreground/60" />}
+                              <Link href={`/admin/inventory/${row.assetId}`} className="text-primary hover:underline">
+                                {row.displayId ?? '—'}
+                              </Link>
+                            </span>
                           </td>
-                        ))}
-                      </tr>
-                    ))}
+                          <td className="px-4 py-3 text-2sm text-foreground/90 align-top">
+                            <div>{row.name}</div>
+                            {isAccessory && (
+                              <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-2xs text-muted-foreground">
+                                <span>
+                                  Accessory of{' '}
+                                  <Link href={`/admin/inventory/${row.parentAssetId}`} className="font-mono hover:underline">
+                                    {row.parentDisplayId ?? 'parent'}
+                                  </Link>
+                                </span>
+                                {row.costIncludedInParent && (
+                                  <span className="rounded-full px-2 py-px font-medium bg-info-surface text-info-foreground">
+                                    Included in parent price
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-2sm text-muted-foreground whitespace-nowrap align-top">
+                            {row.categoryName ?? '—'}
+                          </td>
+                          {COST_COLUMNS.map((c) => (
+                            <td
+                              key={c.key}
+                              className={`px-4 py-3 text-2sm nums whitespace-nowrap text-right align-top ${
+                                c.key === 'totalCost'
+                                  ? 'font-semibold text-foreground'
+                                  : row[c.key] === 0
+                                    ? 'text-muted-foreground/60'
+                                    : 'text-foreground/80'
+                              }`}
+                            >
+                              {fmt(row[c.key])}
+                              {c.key === 'totalCost' && showWithAccessories && (
+                                <div
+                                  className="mt-0.5 text-2xs font-normal text-muted-foreground"
+                                  title="This asset's own total plus its linked accessories (not added to the Grand Total)"
+                                >
+                                  {fmt(row.totalWithAccessories)} incl. accessories
+                                </div>
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                   <tfoot>
                     <tr className="bg-muted/60">
