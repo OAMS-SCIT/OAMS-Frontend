@@ -53,6 +53,8 @@ import type {
   Vendor,
   VendorListItem,
   CreateVendorPayload,
+  CostCategory,
+  FullCostReport,
 } from '@/types';
 
 export const API_BASE_URL =
@@ -896,6 +898,27 @@ export function getAssetHistory(
 
 export function getAssetCostSummary(assetId: string): Promise<AssetCostSummary> {
   return request<AssetCostSummary>(`/assets/${assetId}/cost-summary`);
+}
+
+// ── Reports (OAMS-290) ──────────────────────────────────────────────────────
+
+export interface FullCostReportParams {
+  assetId: string;
+  costCategories?: CostCategory[];
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+/** Asset Expenses — Full Cost Details: every expense line for one asset + total. */
+export function getFullCostReport(params: FullCostReportParams): Promise<FullCostReport> {
+  return request<FullCostReport>('/reports/asset-expenses/full-cost', {
+    query: {
+      assetId: params.assetId,
+      costCategories: params.costCategories?.length ? params.costCategories.join(',') : undefined,
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+    },
+  });
 }
 
 /** All warranties for an asset: base purchase warranty + repair-item warranties. */
