@@ -988,6 +988,26 @@ export interface FullCostReport {
   totalCost: number;
 }
 
+export interface ExpenseTotals {
+  purchaseCost: number;
+  upgradeCost: number;
+  repairCost: number;
+  accessoryCost: number;
+  totalCost: number;
+}
+
+export interface TotalExpenseReportRow extends ExpenseTotals {
+  assetId: string;
+  displayId: string | null;
+  name: string;
+  categoryName: string | null;
+}
+
+export interface TotalExpenseReport {
+  rows: TotalExpenseReportRow[];
+  grandTotal: ExpenseTotals;
+}
+
 // ── Condition Images (OAMS-257/262) ───────────────────────────────────────
 
 export interface AssignmentConditionImages {

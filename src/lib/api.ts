@@ -55,6 +55,7 @@ import type {
   CreateVendorPayload,
   CostCategory,
   FullCostReport,
+  TotalExpenseReport,
 } from '@/types';
 
 export const API_BASE_URL =
@@ -915,6 +916,31 @@ export function getFullCostReport(params: FullCostReportParams): Promise<FullCos
     query: {
       assetId: params.assetId,
       costCategories: params.costCategories?.length ? params.costCategories.join(',') : undefined,
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+    },
+  });
+}
+
+export interface TotalExpenseReportParams {
+  categoryIds?: string[];
+  statuses?: AssetStatus[];
+  assetIds?: string[];
+  costCategories?: CostCategory[];
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+const csvParam = (values?: string[]) => (values?.length ? values.join(',') : undefined);
+
+/** Asset Expenses — Total Expense Report: per-asset cost totals + grand total (OAMS-291). */
+export function getTotalExpenseReport(params: TotalExpenseReportParams): Promise<TotalExpenseReport> {
+  return request<TotalExpenseReport>('/reports/asset-expenses/total', {
+    query: {
+      categoryIds: csvParam(params.categoryIds),
+      statuses: csvParam(params.statuses),
+      assetIds: csvParam(params.assetIds),
+      costCategories: csvParam(params.costCategories),
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
     },
