@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Loader2, Play } from 'lucide-react';
 import { AssetPicker, PickableAsset } from '@/components/ui/AssetPicker';
 import { Select } from '@/components/ui/Select';
@@ -42,6 +42,8 @@ export function FullCostReport() {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<FullCostReportData | null>(null);
   const [applied, setApplied] = useState<AppliedFilters | null>(null);
+  // Bumped whenever a response should be ignored (asset changed mid-request).
+  const requestId = useRef(0);
 
   const dateRangeInvalid = Boolean(dateFrom && dateTo && dateFrom > dateTo);
   const hasFilters = asset.length > 0 || costCategory !== '' || dateFrom !== '' || dateTo !== '';
@@ -55,8 +57,22 @@ export function FullCostReport() {
     !dateRangeInvalid &&
     JSON.stringify(current) !== JSON.stringify(applied);
 
+  // The preview belongs to one asset — drop it when the asset is removed or
+  // swapped so a stale report is never shown against a different selection.
+  // (Cost category / date changes keep it, with the "Filters changed" hint.)
+  const changeAsset = (next: PickableAsset[]) => {
+    setAsset(next);
+    if (next[0]?.id !== applied?.assetId) {
+      requestId.current += 1;
+      setLoading(false);
+      setReport(null);
+      setApplied(null);
+      setError(null);
+    }
+  };
+
   const clearFilters = () => {
-    setAsset([]);
+    changeAsset([]);
     setCostCategory('');
     setDateFrom('');
     setDateTo('');
@@ -64,6 +80,7 @@ export function FullCostReport() {
 
   const generate = async () => {
     if (!current || dateRangeInvalid) return;
+    const id = ++requestId.current;
     setLoading(true);
     setError(null);
     try {
@@ -73,12 +90,14 @@ export function FullCostReport() {
         dateFrom: current.dateFrom || undefined,
         dateTo: current.dateTo || undefined,
       });
+      if (id !== requestId.current) return;
       setReport(data);
       setApplied(current);
     } catch (err) {
+      if (id !== requestId.current) return;
       setError(err instanceof ApiError ? err.message : 'Failed to generate the report.');
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
   };
 
@@ -92,7 +111,7 @@ export function FullCostReport() {
             <AssetPicker
               mode="single"
               selected={asset}
-              onChange={setAsset}
+              onChange={changeAsset}
               placeholder="Search by asset ID, name or serial number…"
             />
           </div>
