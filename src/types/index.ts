@@ -992,7 +992,6 @@ export interface ExpenseTotals {
   purchaseCost: number;
   upgradeCost: number;
   repairCost: number;
-  accessoryCost: number;
   totalCost: number;
 }
 

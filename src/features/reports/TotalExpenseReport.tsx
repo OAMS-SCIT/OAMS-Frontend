@@ -19,7 +19,6 @@ const COST_COLUMNS: { key: keyof ExpenseTotals; label: string }[] = [
   { key: 'purchaseCost', label: 'Purchase Cost' },
   { key: 'upgradeCost', label: 'Upgrade Cost' },
   { key: 'repairCost', label: 'Repair Cost' },
-  { key: 'accessoryCost', label: 'Accessory Cost' },
   { key: 'totalCost', label: 'Total Cost' },
 ];
 
