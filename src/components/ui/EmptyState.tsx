@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { Package, Users, ClipboardList, History, Monitor } from 'lucide-react';
+import { Package, Users, ClipboardList, History, Monitor, FileChartColumn } from 'lucide-react';
 import { ReactNode } from 'react';
 
 const ICONS: Record<string, typeof Package> = {
@@ -9,6 +9,7 @@ const ICONS: Record<string, typeof Package> = {
   assignments: ClipboardList,
   history: History,
   myassets: Monitor,
+  reports: FileChartColumn,
 };
 
 interface EmptyStateProps {
