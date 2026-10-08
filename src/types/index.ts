@@ -1019,3 +1019,10 @@ export interface AssignmentConditionImages {
   assigned: ConditionImageItem[];
   returned: ConditionImageItem[];
 }
+
+// ── Organisation settings (OAMS-304) ──────────────────────────────────────
+
+export interface AppSettings {
+  /** ISO 4217 code every money amount is shown in, e.g. "LKR". */
+  currency: string;
+}

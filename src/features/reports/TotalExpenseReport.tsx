@@ -18,6 +18,7 @@ import {
   TotalExpenseReportParams,
 } from '@/lib/api';
 import { todayStamp } from '@/lib/download';
+import { useCurrency } from '@/providers/currency-provider';
 import { ExportCsvButton } from './ExportCsvButton';
 import type {
   AssetStatus,
@@ -55,10 +56,6 @@ const COLUMNS: { label: string; sortKey?: TotalSortKey; align?: 'right' }[] = [
   { label: 'Cost', sortKey: 'cost', align: 'right' },
 ];
 
-function fmt(n: number) {
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
-}
-
 /** The filters a preview was generated with — the export (OAMS-299) reuses these. */
 interface AppliedFilters {
   categoryIds: string[];
@@ -83,6 +80,7 @@ const toParams = (f: AppliedFilters): TotalExpenseReportParams => ({
  * one row per expense transaction, ordered by asset then date (OAMS-301).
  */
 export function TotalExpenseReport() {
+  const { format: fmt } = useCurrency();
   const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
 

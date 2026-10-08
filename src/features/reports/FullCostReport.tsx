@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SortableHeader } from '@/components/ui/SortableHeader';
 import { ApiError, exportFullCostReport, FullCostReportParams, getFullCostReport } from '@/lib/api';
 import { todayStamp } from '@/lib/download';
+import { useCurrency } from '@/providers/currency-provider';
 import { ExportCsvButton } from './ExportCsvButton';
 import type { CostCategory, FullCostReport as FullCostReportData, FullCostReportItem } from '@/types';
 import { CATEGORY_BADGE } from './cost-badges';
@@ -36,10 +37,6 @@ const COLUMNS: { label: string; sortKey?: FullCostSortKey; align?: 'right' }[] =
   { label: 'Cost', sortKey: 'cost', align: 'right' },
 ];
 
-function fmt(n: number) {
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
-}
-
 /** The filters a preview was generated with — the export (OAMS-299) reuses these. */
 interface AppliedFilters {
   assetId: string;
@@ -57,6 +54,7 @@ const toParams = (f: AppliedFilters): FullCostReportParams => ({
 
 /** Asset Expenses → Full Cost Details: every expense line for one asset (OAMS-290). */
 export function FullCostReport() {
+  const { format: fmt } = useCurrency();
   const [asset, setAsset] = useState<PickableAsset[]>([]);
   const [costCategory, setCostCategory] = useState<CostCategory | ''>('');
   const [dateFrom, setDateFrom] = useState('');

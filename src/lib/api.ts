@@ -56,6 +56,7 @@ import type {
   CostCategory,
   FullCostReport,
   TotalExpenseReport,
+  AppSettings,
 } from '@/types';
 
 export const API_BASE_URL =
@@ -1088,4 +1089,16 @@ export function getAssignmentConditionImages(
   return request<AssignmentConditionImages>(
     `/assignments/${assignmentId}/condition-images`,
   );
+}
+
+// ── Organisation settings (OAMS-304) ──────────────────────────────────────
+
+/** Organisation settings (any signed-in user), e.g. the currency money is shown in. */
+export function getSettings(): Promise<AppSettings> {
+  return request<AppSettings>('/settings');
+}
+
+/** Update the organisation settings (Admin). Changing the currency relabels amounts; it does not convert them. */
+export function updateSettings(body: AppSettings): Promise<AppSettings> {
+  return request<AppSettings>('/settings', { method: 'PATCH', body });
 }

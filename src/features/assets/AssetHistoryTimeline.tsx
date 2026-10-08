@@ -24,6 +24,10 @@ import { toast } from 'sonner';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ImageLightbox } from '@/components/overlays/ImageLightbox';
 import { getAssignmentConditionImages } from '@/lib/api';
+import { useCurrency } from '@/providers/currency-provider';
+
+/** Diff fields that hold money, shown in the organisation currency (OAMS-307). */
+const MONEY_FIELDS = new Set(['purchasePrice']);
 
 // ── Event metadata ────────────────────────────────────────────────────────────
 
@@ -72,6 +76,13 @@ const EVENT_META: Record<
 // ── Change detail renderers ───────────────────────────────────────────────────
 
 function FieldChangesDetail({ changes }: { changes: AssetHistoryChangeEntry[] }) {
+  const { format: formatMoney } = useCurrency();
+  const show = (field: string, value: unknown) =>
+    value === null || value === undefined
+      ? '—'
+      : MONEY_FIELDS.has(field) && !Number.isNaN(Number(value))
+        ? formatMoney(Number(value))
+        : String(value);
   if (changes.length === 0) return null;
   return (
     <div className="mt-2 rounded-control overflow-hidden border border-border/60">
@@ -86,11 +97,11 @@ function FieldChangesDetail({ changes }: { changes: AssetHistoryChangeEntry[] })
             {c.field.replace(/([A-Z])/g, ' $1').trim()}
           </span>
           <span className="text-danger line-through max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap">
-            {c.oldValue !== null && c.oldValue !== undefined ? String(c.oldValue) : '—'}
+            {show(c.field, c.oldValue)}
           </span>
           <span className="text-muted-foreground/80 text-[10px]">→</span>
           <span className="text-success-foreground font-medium max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap">
-            {c.newValue !== null && c.newValue !== undefined ? String(c.newValue) : '—'}
+            {show(c.field, c.newValue)}
           </span>
         </div>
       ))}

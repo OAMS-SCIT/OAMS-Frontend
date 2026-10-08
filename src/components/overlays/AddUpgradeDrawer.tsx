@@ -5,6 +5,7 @@ import { X, Paperclip, FileText, ImageIcon, XCircle } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { toast } from 'sonner';
+import { useCurrency } from '@/providers/currency-provider';
 import { ApiError, createUpgrade, updateUpgrade, uploadUpgradeInvoice } from '@/lib/api';
 import type { AssetUpgrade, CreateUpgradePayload, UpgradeType } from '@/types';
 import { Select } from '@/components/ui/Select';
@@ -39,6 +40,7 @@ export function AddUpgradeDrawer({
   onClose,
   onSaved,
 }: Props) {
+  const { currency } = useCurrency();
   const isEdit = !!existing;
 
   const [form, setForm] = useState({ ...EMPTY });
@@ -180,10 +182,10 @@ export function AddUpgradeDrawer({
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Cost" required error={errors.cost}>
                   <div className="relative">
-                    <span className="absolute top-1/2 -translate-y-1/2 text-sm pointer-events-none select-none left-3 text-muted-foreground/70">$</span>
+                    <span className="absolute top-1/2 -translate-y-1/2 text-sm pointer-events-none select-none left-3 text-muted-foreground/70">{currency}</span>
                     <input type="number" value={form.cost}
                       onChange={(e) => set('cost', e.target.value)}
-                      className="upg-input" style={{ paddingLeft: 28 }}
+                      className="upg-input" style={{ paddingLeft: 48 }}
                       placeholder="0.00" min="0.01" step="0.01" />
                   </div>
                 </Field>
