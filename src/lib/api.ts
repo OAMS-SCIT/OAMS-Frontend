@@ -53,6 +53,9 @@ import type {
   Vendor,
   VendorListItem,
   CreateVendorPayload,
+  CostCategory,
+  FullCostReport,
+  TotalExpenseReport,
 } from '@/types';
 
 export const API_BASE_URL =
@@ -896,6 +899,111 @@ export function getAssetHistory(
 
 export function getAssetCostSummary(assetId: string): Promise<AssetCostSummary> {
   return request<AssetCostSummary>(`/assets/${assetId}/cost-summary`);
+}
+
+// ── Reports (OAMS-290/291/292) ─────────────────────────────────────────────
+
+type ReportQuery = Record<string, string | undefined>;
+
+const csvParam = (values?: string[]) => (values?.length ? values.join(',') : undefined);
+
+export interface FullCostReportParams {
+  assetId: string;
+  costCategories?: CostCategory[];
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+const fullCostQuery = (params: FullCostReportParams): ReportQuery => ({
+  assetId: params.assetId,
+  costCategories: csvParam(params.costCategories),
+  dateFrom: params.dateFrom,
+  dateTo: params.dateTo,
+});
+
+/** Asset Expenses — Full Cost Details: every expense line for one asset + total. */
+export function getFullCostReport(params: FullCostReportParams): Promise<FullCostReport> {
+  return request<FullCostReport>('/reports/asset-expenses/full-cost', { query: fullCostQuery(params) });
+}
+
+export interface TotalExpenseReportParams {
+  categoryIds?: string[];
+  statuses?: AssetStatus[];
+  assetIds?: string[];
+  costCategories?: CostCategory[];
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+const totalExpenseQuery = (params: TotalExpenseReportParams): ReportQuery => ({
+  categoryIds: csvParam(params.categoryIds),
+  statuses: csvParam(params.statuses),
+  assetIds: csvParam(params.assetIds),
+  costCategories: csvParam(params.costCategories),
+  dateFrom: params.dateFrom,
+  dateTo: params.dateTo,
+});
+
+/** Asset Expenses — Total Expense Report: per-asset cost totals + grand total (OAMS-291). */
+export function getTotalExpenseReport(params: TotalExpenseReportParams): Promise<TotalExpenseReport> {
+  return request<TotalExpenseReport>('/reports/asset-expenses/total', { query: totalExpenseQuery(params) });
+}
+
+/**
+ * Fetches a report export as a Blob (OAMS-292). A plain link can't send the
+ * bearer token, so the file is fetched like fetchWarrantyDocument and saved
+ * by the caller.
+ */
+async function fetchReportCsv(path: string, query: ReportQuery): Promise<Blob> {
+  const url = new URL(`${API_BASE_URL}/api${path}`);
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== '') url.searchParams.set(key, value);
+  }
+
+  const token = getToken();
+  const response = await fetch(url.toString(), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!response.ok) {
+    if (response.status === 401 && token) {
+      clearToken();
+    }
+    let message = `Could not export the report (${response.status})`;
+    try {
+      const errorBody = await response.json();
+      if (errorBody?.message) {
+        message = Array.isArray(errorBody.message) ? errorBody.message.join(', ') : errorBody.message;
+      }
+    } catch {
+      // Non-JSON error body — keep the default message.
+    }
+    throw new ApiError(message, response.status);
+  }
+
+  return response.blob();
+}
+
+/** Full Cost Details as CSV — same filters as the preview. */
+/** The on-screen table sort, sent with an export so the CSV rows match it (OAMS-302). */
+export interface ReportExportSort {
+  key: string;
+  direction: 'asc' | 'desc';
+}
+
+const sortQuery = (sort?: ReportExportSort | null): ReportQuery =>
+  sort ? { sortBy: sort.key, sortOrder: sort.direction } : {};
+
+export function exportFullCostReport(params: FullCostReportParams, sort?: ReportExportSort | null): Promise<Blob> {
+  return fetchReportCsv('/reports/asset-expenses/full-cost/export', { ...fullCostQuery(params), ...sortQuery(sort) });
+}
+
+/** Total Expense Report as CSV — same filters as the preview. */
+export function exportTotalExpenseReport(
+  params: TotalExpenseReportParams,
+  sort?: ReportExportSort | null,
+): Promise<Blob> {
+  return fetchReportCsv('/reports/asset-expenses/total/export', { ...totalExpenseQuery(params), ...sortQuery(sort) });
 }
 
 /** All warranties for an asset: base purchase warranty + repair-item warranties. */

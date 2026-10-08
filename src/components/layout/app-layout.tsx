@@ -4,7 +4,7 @@ import { ReactNode, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, Tag, Users, ClipboardList, UserCog, LogOut,
-  Bell, Search, ChevronDown, Monitor, User, Wrench,
+  Bell, Search, ChevronDown, Monitor, User, Wrench, FileChartColumn,
 } from 'lucide-react';
 import { AppRole } from '@/types';
 import { useAuth } from '@/providers/auth-provider';
@@ -24,6 +24,7 @@ const adminNavItems = [
   { path: '/admin/under-repair', label: 'Under Repair', icon: Wrench },
   { path: '/admin/categories', label: 'Asset Categories', icon: Tag },
   { path: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
+  { path: '/admin/reports', label: 'Reports', icon: FileChartColumn },
   { path: '/admin/users', label: 'User Management', icon: Users },
   { path: '/admin/designations', label: 'Designation Mgmt', icon: UserCog },
 ];
@@ -188,6 +189,7 @@ function BreadcrumbDisplay({ pathname, role }: { pathname: string; role: AppRole
     '/admin/under-repair': ['Under Repair'],
     '/admin/categories': ['Asset Categories'],
     '/admin/assignments': ['Active Assignments'],
+    '/admin/reports': ['Reports'],
     '/admin/users': ['User Management'],
     '/admin/designations': ['Designation Management'],
     '/admin/profile': ['Personal Profile'],
