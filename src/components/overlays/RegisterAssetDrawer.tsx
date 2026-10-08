@@ -12,6 +12,7 @@ import { VendorSelect } from '@/components/ui/VendorSelect';
 import { AssetPicker, toPickable, type PickableAsset } from '@/components/ui/AssetPicker';
 import { addMonths, format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
+import { useCurrency } from '@/providers/currency-provider';
 import {
   ApiError,
   createAsset,
@@ -152,6 +153,7 @@ function assetDetailToForm(a: AssetDetail): FormState {
 }
 
 export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
+  const { currency } = useCurrency();
   const isEdit = !!assetId;
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -855,13 +857,13 @@ export function RegisterAssetDrawer({ assetId, onClose, onSaved }: Props) {
                 <FormField label="Purchase Price" required={!form.costIncludedInParent} error={errors.purchasePrice}>
                   <div className="relative">
                     <span className="absolute top-1/2 -translate-y-1/2 pointer-events-none select-none text-sm left-3 z-[1] text-muted-foreground/70">
-                      $
+                      {currency}
                     </span>
                     <input type="number"
                       value={form.costIncludedInParent ? '' : form.purchasePrice}
                       onChange={(e) => set('purchasePrice', e.target.value)}
                       disabled={form.costIncludedInParent}
-                      className="form-input" style={{ paddingLeft: 28 }}
+                      className="form-input" style={{ paddingLeft: 48 }}
                       placeholder={form.costIncludedInParent ? 'Included with parent' : '0.00'}
                       min="0.01" step="0.01" />
                   </div>

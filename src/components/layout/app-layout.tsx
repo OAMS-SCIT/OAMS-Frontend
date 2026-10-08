@@ -4,7 +4,7 @@ import { ReactNode, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, Tag, Users, ClipboardList, UserCog, LogOut,
-  Bell, Search, ChevronDown, Monitor, User, Wrench, FileChartColumn,
+  Bell, Search, ChevronDown, Monitor, User, Wrench, FileChartColumn, Settings,
 } from 'lucide-react';
 import { AppRole } from '@/types';
 import { useAuth } from '@/providers/auth-provider';
@@ -27,6 +27,7 @@ const adminNavItems = [
   { path: '/admin/reports', label: 'Reports', icon: FileChartColumn },
   { path: '/admin/users', label: 'User Management', icon: Users },
   { path: '/admin/designations', label: 'Designation Mgmt', icon: UserCog },
+  { path: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
 // Asset and history views return once the employee-scoped endpoints exist.
@@ -192,6 +193,7 @@ function BreadcrumbDisplay({ pathname, role }: { pathname: string; role: AppRole
     '/admin/reports': ['Reports'],
     '/admin/users': ['User Management'],
     '/admin/designations': ['Designation Management'],
+    '/admin/settings': ['Settings'],
     '/admin/profile': ['Personal Profile'],
     '/employee/dashboard': ['Home'],
     '/employee/profile': ['My Profile'],

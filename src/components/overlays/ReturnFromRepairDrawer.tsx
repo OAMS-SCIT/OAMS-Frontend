@@ -10,6 +10,7 @@ import { useDrawerAnimation } from './useDrawerAnimation';
 import { AddVendorDialog } from './AddVendorDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { toast } from 'sonner';
+import { useCurrency } from '@/providers/currency-provider';
 import {
   ApiError,
   getAsset,
@@ -102,6 +103,7 @@ interface RepairDocDraft {
 }
 
 export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
+  const { currency, format: formatMoney } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [asset, setAsset] = useState<AssetDetail | null>(null);
   const [repairId, setRepairId] = useState<string | null>(null);
@@ -555,9 +557,12 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
                             ariaLabel="Item Type" className="w-full"
                             options={ITEM_TYPES.map((t) => ({ value: t, label: t }))} />
                         </div>
-                        <input type="number" min="0" step="0.01" value={row.cost}
-                          onChange={(e) => setRow(i, { cost: e.target.value })}
-                          placeholder="Cost" className={inputClass} />
+                        <div className="relative">
+                          <span className="absolute top-1/2 -translate-y-1/2 text-2sm pointer-events-none select-none left-3 text-muted-foreground/70">{currency}</span>
+                          <input type="number" min="0" step="0.01" value={row.cost}
+                            onChange={(e) => setRow(i, { cost: e.target.value })}
+                            placeholder="Cost" className={inputClass} style={{ paddingLeft: 48 }} />
+                        </div>
                         <label className="flex items-center gap-2 text-2sm text-foreground/80 cursor-pointer">
                           <input type="checkbox" checked={row.hasWarranty}
                             onChange={(e) => setRow(i, { hasWarranty: e.target.checked })} />
@@ -621,7 +626,7 @@ export function ReturnFromRepairDrawer({ assetId, onClose, onDone }: Props) {
 
                   <div className="flex items-center justify-between rounded-lg bg-muted/60 border border-border px-4 py-3">
                     <span className="text-sm font-semibold text-foreground">Total Cost</span>
-                    <span className="text-base font-bold text-foreground nums">{totalCost.toFixed(2)}</span>
+                    <span className="text-base font-bold text-foreground nums">{formatMoney(totalCost)}</span>
                   </div>
                 </div>
               )}

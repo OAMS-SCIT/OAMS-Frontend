@@ -5,16 +5,12 @@ import { ExternalLink, ChevronDown, Download } from 'lucide-react';
 import type { AssetCostSummary, CostBreakdownItem } from '@/types';
 import { getAssetCostSummary } from '@/lib/api';
 import { ApiError } from '@/lib/api';
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function fmt(n: number) {
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
-}
+import { useCurrency } from '@/providers/currency-provider';
 
 // ── Summary Cards ─────────────────────────────────────────────────────────────
 
 function SummaryCards({ data }: { data: AssetCostSummary }) {
+  const { format: fmt } = useCurrency();
   const cards = [
     { label: 'Purchase Cost',  value: data.purchaseCost,     color: 'text-info-foreground',      bg: 'bg-info-surface' },
     { label: 'Upgrade Cost',   value: data.upgradeCost,      color: 'text-warning-foreground',   bg: 'bg-warning-surface' },
@@ -38,6 +34,7 @@ function SummaryCards({ data }: { data: AssetCostSummary }) {
 const CATEGORIES = ['All', 'Purchase', 'Upgrade', 'Repair'] as const;
 
 function BreakdownTable({ rows }: { rows: CostBreakdownItem[] }) {
+  const { format: fmt } = useCurrency();
   const [filter, setFilter] = useState<string>('All');
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
