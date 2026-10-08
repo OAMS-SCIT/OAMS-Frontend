@@ -9,14 +9,37 @@ import { MultiSearchableSelect } from '@/components/ui/MultiSearchableSelect';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SortableHeader } from '@/components/ui/SortableHeader';
 import { ApiError, getCategories, getTotalExpenseReport } from '@/lib/api';
-import type { AssetStatus, CostCategory, TotalExpenseReport as TotalExpenseReportData } from '@/types';
+import type { AssetStatus, CostCategory, TotalExpenseLine, TotalExpenseReport as TotalExpenseReportData } from '@/types';
 import { CATEGORY_BADGE } from './cost-badges';
+import { SortValue, useTableSort } from './use-table-sort';
 
 const STATUSES: AssetStatus[] = ['Available', 'Assigned', 'Under Repair', 'Reserved', 'Lost/Stolen', 'Retired'];
 const COST_CATEGORIES: CostCategory[] = ['Purchase', 'Upgrade', 'Repair', 'Accessories'];
 
-const COLUMNS = ['Asset ID', 'Asset Name', 'Category', 'Cost Type', 'Date', 'Description', 'Cost'];
+/** Sortable columns and the value each sorts by (OAMS-302). Keys match the export's `sortBy`. */
+export const TOTAL_SORT_ACCESSORS = {
+  displayId: (r: TotalExpenseLine) => r.displayId,
+  name: (r: TotalExpenseLine) => r.name,
+  categoryName: (r: TotalExpenseLine) => r.categoryName,
+  costType: (r: TotalExpenseLine) => r.costType,
+  date: (r: TotalExpenseLine) => r.date,
+  cost: (r: TotalExpenseLine) => r.cost,
+} satisfies Record<string, (r: TotalExpenseLine) => SortValue>;
+
+type TotalSortKey = keyof typeof TOTAL_SORT_ACCESSORS;
+
+/** Table columns in order; `sortKey` is omitted for columns that can't be sorted. */
+const COLUMNS: { label: string; sortKey?: TotalSortKey; align?: 'right' }[] = [
+  { label: 'Asset ID', sortKey: 'displayId' },
+  { label: 'Asset Name', sortKey: 'name' },
+  { label: 'Category', sortKey: 'categoryName' },
+  { label: 'Cost Type', sortKey: 'costType' },
+  { label: 'Date', sortKey: 'date' },
+  { label: 'Description' },
+  { label: 'Cost', sortKey: 'cost', align: 'right' },
+];
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
@@ -86,8 +109,10 @@ export function TotalExpenseReport() {
     report !== null && applied !== null && !dateRangeInvalid && JSON.stringify(current) !== JSON.stringify(applied);
 
   const assetCount = new Set(report?.rows.map((r) => r.assetId)).size;
+  const { sorted, sort, toggle, reset: resetSort } = useTableSort(report?.rows ?? [], TOTAL_SORT_ACCESSORS);
 
   const clearFilters = () => {
+    resetSort();
     setCategoryIds([]);
     setStatus('');
     setAssets([]);
@@ -242,18 +267,26 @@ export function TotalExpenseReport() {
                 <table className="w-full min-w-[960px]">
                   <thead>
                     <tr className="bg-muted/60 border-b border-border">
-                      {COLUMNS.map((h) => (
-                        <th
-                          key={h}
-                          className={`px-4 py-2.5 micro-label whitespace-nowrap ${h === 'Cost' ? 'text-right' : 'text-left'}`}
-                        >
-                          {h}
-                        </th>
-                      ))}
+                      {COLUMNS.map((c) =>
+                        c.sortKey ? (
+                          <SortableHeader
+                            key={c.label}
+                            label={c.label}
+                            align={c.align}
+                            active={sort?.key === c.sortKey}
+                            direction={sort?.direction}
+                            onClick={() => toggle(c.sortKey!)}
+                          />
+                        ) : (
+                          <th key={c.label} className="px-4 py-2.5 micro-label whitespace-nowrap text-left">
+                            {c.label}
+                          </th>
+                        ),
+                      )}
                     </tr>
                   </thead>
                   <tbody>
-                    {report.rows.map((row, i) => {
+                    {sorted.map((row, i) => {
                       const isAccessory = row.parentAssetId !== null;
                       return (
                         <tr
