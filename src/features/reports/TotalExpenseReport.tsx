@@ -272,10 +272,10 @@ export function TotalExpenseReport() {
                   {assetCount === 1 ? 'asset' : 'assets'}
                 </div>
               </div>
-              {/* Exports the filters the preview was generated with, not unsaved edits. */}
+              {/* Exports the filters the preview was generated with (not unsaved edits), in the on-screen sort order. */}
               {applied && report.rows.length > 0 && (
                 <ExportCsvButton
-                  fetchCsv={() => exportTotalExpenseReport(toParams(applied))}
+                  fetchCsv={() => exportTotalExpenseReport(toParams(applied), sort)}
                   fileName={`asset-expenses-total-${todayStamp()}.csv`}
                 />
               )}

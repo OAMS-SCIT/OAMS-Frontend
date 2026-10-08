@@ -985,13 +985,25 @@ async function fetchReportCsv(path: string, query: ReportQuery): Promise<Blob> {
 }
 
 /** Full Cost Details as CSV — same filters as the preview. */
-export function exportFullCostReport(params: FullCostReportParams): Promise<Blob> {
-  return fetchReportCsv('/reports/asset-expenses/full-cost/export', fullCostQuery(params));
+/** The on-screen table sort, sent with an export so the CSV rows match it (OAMS-302). */
+export interface ReportExportSort {
+  key: string;
+  direction: 'asc' | 'desc';
+}
+
+const sortQuery = (sort?: ReportExportSort | null): ReportQuery =>
+  sort ? { sortBy: sort.key, sortOrder: sort.direction } : {};
+
+export function exportFullCostReport(params: FullCostReportParams, sort?: ReportExportSort | null): Promise<Blob> {
+  return fetchReportCsv('/reports/asset-expenses/full-cost/export', { ...fullCostQuery(params), ...sortQuery(sort) });
 }
 
 /** Total Expense Report as CSV — same filters as the preview. */
-export function exportTotalExpenseReport(params: TotalExpenseReportParams): Promise<Blob> {
-  return fetchReportCsv('/reports/asset-expenses/total/export', totalExpenseQuery(params));
+export function exportTotalExpenseReport(
+  params: TotalExpenseReportParams,
+  sort?: ReportExportSort | null,
+): Promise<Blob> {
+  return fetchReportCsv('/reports/asset-expenses/total/export', { ...totalExpenseQuery(params), ...sortQuery(sort) });
 }
 
 /** All warranties for an asset: base purchase warranty + repair-item warranties. */

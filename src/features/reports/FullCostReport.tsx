@@ -204,10 +204,10 @@ export function FullCostReport() {
                   {report.asset.categoryName && <> · {report.asset.categoryName}</>}
                 </div>
               </div>
-              {/* Exports the filters the preview was generated with, not unsaved edits. */}
+              {/* Exports the filters the preview was generated with (not unsaved edits), in the on-screen sort order. */}
               {applied && report.items.length > 0 && (
                 <ExportCsvButton
-                  fetchCsv={() => exportFullCostReport(toParams(applied))}
+                  fetchCsv={() => exportFullCostReport(toParams(applied), sort)}
                   fileName={`asset-expenses-full-cost-${report.asset.displayId ?? 'asset'}-${todayStamp()}.csv`}
                 />
               )}
