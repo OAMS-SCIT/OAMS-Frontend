@@ -988,30 +988,29 @@ export interface FullCostReport {
   totalCost: number;
 }
 
-export interface ExpenseTotals {
-  purchaseCost: number;
-  upgradeCost: number;
-  repairCost: number;
-  totalCost: number;
-}
+/** The type of an individual Total Expense transaction. */
+export type CostType = 'Purchase' | 'Upgrade' | 'Repair';
 
-export interface TotalExpenseReportRow extends ExpenseTotals {
+/** One expense transaction in the Total Expense Report (OAMS-301). */
+export interface TotalExpenseLine {
   assetId: string;
   displayId: string | null;
   name: string;
   categoryName: string | null;
-  /** Set when this asset is a linked accessory of another asset (OAMS-300). */
+  /** Set when this asset is a linked accessory of another asset. */
   parentAssetId: string | null;
   parentDisplayId: string | null;
   /** Bundled accessory — its price is included in the parent's purchase price. */
   costIncludedInParent: boolean;
-  /** Own total + linked accessories' cost (display only; not part of the grand total). */
-  totalWithAccessories: number;
+  costType: CostType;
+  date: string;
+  description: string;
+  cost: number;
 }
 
 export interface TotalExpenseReport {
-  rows: TotalExpenseReportRow[];
-  grandTotal: ExpenseTotals;
+  rows: TotalExpenseLine[];
+  grandTotal: number;
 }
 
 // ── Condition Images (OAMS-257/262) ───────────────────────────────────────

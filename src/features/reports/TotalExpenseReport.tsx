@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { CornerDownRight, Loader2, Play } from 'lucide-react';
+import { Loader2, Play } from 'lucide-react';
 import { AssetPicker, PickableAsset } from '@/components/ui/AssetPicker';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { MultiSearchableSelect } from '@/components/ui/MultiSearchableSelect';
@@ -10,17 +10,13 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ApiError, getCategories, getTotalExpenseReport } from '@/lib/api';
-import type { AssetStatus, CostCategory, ExpenseTotals, TotalExpenseReport as TotalExpenseReportData } from '@/types';
+import type { AssetStatus, CostCategory, TotalExpenseReport as TotalExpenseReportData } from '@/types';
+import { CATEGORY_BADGE } from './cost-badges';
 
 const STATUSES: AssetStatus[] = ['Available', 'Assigned', 'Under Repair', 'Reserved', 'Lost/Stolen', 'Retired'];
 const COST_CATEGORIES: CostCategory[] = ['Purchase', 'Upgrade', 'Repair', 'Accessories'];
 
-const COST_COLUMNS: { key: keyof ExpenseTotals; label: string }[] = [
-  { key: 'purchaseCost', label: 'Purchase Cost' },
-  { key: 'upgradeCost', label: 'Upgrade Cost' },
-  { key: 'repairCost', label: 'Repair Cost' },
-  { key: 'totalCost', label: 'Total Cost' },
-];
+const COLUMNS = ['Asset ID', 'Asset Name', 'Category', 'Cost Type', 'Date', 'Description', 'Cost'];
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
@@ -36,7 +32,10 @@ interface AppliedFilters {
   dateTo: string;
 }
 
-/** Asset Expenses → Total Expense Report: per-asset cost totals + grand total (OAMS-291). */
+/**
+ * Asset Expenses → Total Expense Report (OAMS-291): an itemised price audit with
+ * one row per expense transaction, ordered by asset then date (OAMS-301).
+ */
 export function TotalExpenseReport() {
   const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
@@ -86,7 +85,7 @@ export function TotalExpenseReport() {
   const filtersChanged =
     report !== null && applied !== null && !dateRangeInvalid && JSON.stringify(current) !== JSON.stringify(applied);
 
-  const accessoryCount = report?.rows.filter((r) => r.parentAssetId !== null).length ?? 0;
+  const assetCount = new Set(report?.rows.map((r) => r.assetId)).size;
 
   const clearFilters = () => {
     setCategoryIds([]);
@@ -227,8 +226,8 @@ export function TotalExpenseReport() {
             <div className="px-5 pt-4 pb-3">
               <div className="font-semibold text-foreground">Total Expense Report</div>
               <div className="text-2sm text-muted-foreground mt-0.5">
-                {report.rows.length} {report.rows.length === 1 ? 'asset' : 'assets'}
-                {accessoryCount > 0 && <> · {accessoryCount} linked {accessoryCount === 1 ? 'accessory' : 'accessories'}</>}
+                {report.rows.length} {report.rows.length === 1 ? 'transaction' : 'transactions'} · {assetCount}{' '}
+                {assetCount === 1 ? 'asset' : 'assets'}
               </div>
             </div>
 
@@ -243,34 +242,28 @@ export function TotalExpenseReport() {
                 <table className="w-full min-w-[960px]">
                   <thead>
                     <tr className="bg-muted/60 border-b border-border">
-                      {['Asset ID', 'Asset Name', 'Category'].map((h) => (
-                        <th key={h} className="px-4 py-2.5 micro-label whitespace-nowrap text-left">
+                      {COLUMNS.map((h) => (
+                        <th
+                          key={h}
+                          className={`px-4 py-2.5 micro-label whitespace-nowrap ${h === 'Cost' ? 'text-right' : 'text-left'}`}
+                        >
                           {h}
-                        </th>
-                      ))}
-                      {COST_COLUMNS.map((c) => (
-                        <th key={c.key} className="px-4 py-2.5 micro-label whitespace-nowrap text-right">
-                          {c.label}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {report.rows.map((row) => {
+                    {report.rows.map((row, i) => {
                       const isAccessory = row.parentAssetId !== null;
-                      const showWithAccessories = row.totalWithAccessories !== row.totalCost;
                       return (
                         <tr
-                          key={row.assetId}
-                          className={`border-b border-border/60 ${isAccessory ? 'bg-muted/25' : 'bg-card'}`}
+                          key={`${row.assetId}-${i}`}
+                          className={`border-b border-border/60 ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}
                         >
                           <td className="px-4 py-3 text-2sm font-mono whitespace-nowrap align-top">
-                            <span className={`inline-flex items-center gap-1.5 ${isAccessory ? 'pl-4' : ''}`}>
-                              {isAccessory && <CornerDownRight className="w-3.5 h-3.5 text-muted-foreground/60" />}
-                              <Link href={`/admin/inventory/${row.assetId}`} className="text-primary hover:underline">
-                                {row.displayId ?? '—'}
-                              </Link>
-                            </span>
+                            <Link href={`/admin/inventory/${row.assetId}`} className="text-primary hover:underline">
+                              {row.displayId ?? '—'}
+                            </Link>
                           </td>
                           <td className="px-4 py-3 text-2sm text-foreground/90 align-top">
                             <div>{row.name}</div>
@@ -293,47 +286,36 @@ export function TotalExpenseReport() {
                           <td className="px-4 py-3 text-2sm text-muted-foreground whitespace-nowrap align-top">
                             {row.categoryName ?? '—'}
                           </td>
-                          {COST_COLUMNS.map((c) => (
-                            <td
-                              key={c.key}
-                              className={`px-4 py-3 text-2sm nums whitespace-nowrap text-right align-top ${
-                                c.key === 'totalCost'
-                                  ? 'font-semibold text-foreground'
-                                  : row[c.key] === 0
-                                    ? 'text-muted-foreground/60'
-                                    : 'text-foreground/80'
-                              }`}
-                            >
-                              {fmt(row[c.key])}
-                              {c.key === 'totalCost' && showWithAccessories && (
-                                <div
-                                  className="mt-0.5 text-2xs font-normal text-muted-foreground"
-                                  title="This asset's own total plus its linked accessories (not added to the Grand Total)"
-                                >
-                                  {fmt(row.totalWithAccessories)} incl. accessories
-                                </div>
-                              )}
-                            </td>
-                          ))}
+                          <td className="px-4 py-3 align-top">
+                            <span className={`rounded-full px-2.5 py-0.5 font-medium text-2xs ${CATEGORY_BADGE[row.costType]}`}>
+                              {row.costType}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-2sm text-muted-foreground nums whitespace-nowrap align-top">
+                            {row.date}
+                          </td>
+                          <td className="px-4 py-3 text-2sm text-foreground/80 whitespace-normal align-top">
+                            {row.description}
+                          </td>
+                          <td
+                            className={`px-4 py-3 text-2sm font-semibold nums whitespace-nowrap text-right align-top ${
+                              row.cost === 0 ? 'text-muted-foreground/60' : 'text-foreground'
+                            }`}
+                          >
+                            {fmt(row.cost)}
+                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
                   <tfoot>
                     <tr className="bg-muted/60">
-                      <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-foreground">
+                      <td colSpan={COLUMNS.length - 1} className="px-4 py-3 text-sm font-semibold text-foreground">
                         Grand Total
                       </td>
-                      {COST_COLUMNS.map((c) => (
-                        <td
-                          key={c.key}
-                          className={`px-4 py-3 text-sm nums whitespace-nowrap text-right text-foreground ${
-                            c.key === 'totalCost' ? 'font-bold' : 'font-semibold'
-                          }`}
-                        >
-                          {fmt(report.grandTotal[c.key])}
-                        </td>
-                      ))}
+                      <td className="px-4 py-3 text-sm font-bold nums whitespace-nowrap text-right text-foreground">
+                        {fmt(report.grandTotal)}
+                      </td>
                     </tr>
                   </tfoot>
                 </table>

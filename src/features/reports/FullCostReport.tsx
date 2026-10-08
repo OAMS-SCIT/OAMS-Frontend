@@ -9,15 +9,9 @@ import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ApiError, getFullCostReport } from '@/lib/api';
 import type { CostCategory, FullCostReport as FullCostReportData } from '@/types';
+import { CATEGORY_BADGE } from './cost-badges';
 
 const COST_CATEGORIES: CostCategory[] = ['Purchase', 'Upgrade', 'Repair', 'Accessories'];
-
-const CATEGORY_BADGE: Record<CostCategory, string> = {
-  Purchase: 'bg-info-surface text-info-foreground',
-  Upgrade: 'bg-warning-surface text-warning-foreground',
-  Repair: 'bg-secondary text-secondary-foreground',
-  Accessories: 'bg-purple-surface text-purple-foreground',
-};
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
