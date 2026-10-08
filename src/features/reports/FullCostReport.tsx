@@ -8,7 +8,9 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SortableHeader } from '@/components/ui/SortableHeader';
-import { ApiError, getFullCostReport } from '@/lib/api';
+import { ApiError, exportFullCostReport, FullCostReportParams, getFullCostReport } from '@/lib/api';
+import { todayStamp } from '@/lib/download';
+import { ExportCsvButton } from './ExportCsvButton';
 import type { CostCategory, FullCostReport as FullCostReportData, FullCostReportItem } from '@/types';
 import { CATEGORY_BADGE } from './cost-badges';
 import { SortValue, useTableSort } from './use-table-sort';
@@ -45,6 +47,13 @@ interface AppliedFilters {
   dateFrom: string;
   dateTo: string;
 }
+
+const toParams = (f: AppliedFilters): FullCostReportParams => ({
+  assetId: f.assetId,
+  costCategories: f.costCategory ? [f.costCategory] : undefined,
+  dateFrom: f.dateFrom || undefined,
+  dateTo: f.dateTo || undefined,
+});
 
 /** Asset Expenses → Full Cost Details: every expense line for one asset (OAMS-290). */
 export function FullCostReport() {
@@ -102,12 +111,7 @@ export function FullCostReport() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getFullCostReport({
-        assetId: current.assetId,
-        costCategories: current.costCategory ? [current.costCategory] : undefined,
-        dateFrom: current.dateFrom || undefined,
-        dateTo: current.dateTo || undefined,
-      });
+      const data = await getFullCostReport(toParams(current));
       if (id !== requestId.current) return;
       setReport(data);
       setApplied(current);
@@ -191,13 +195,22 @@ export function FullCostReport() {
           />
         ) : (
           <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-            <div className="px-5 pt-4 pb-3">
-              <div className="font-semibold text-foreground">Full Cost Details</div>
-              <div className="text-2sm text-muted-foreground mt-0.5">
-                <span className="font-mono">{report.asset.displayId ?? '—'}</span> · {report.asset.name}
-                {report.asset.serialNumber && <> · S/N {report.asset.serialNumber}</>}
-                {report.asset.categoryName && <> · {report.asset.categoryName}</>}
+            <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
+              <div>
+                <div className="font-semibold text-foreground">Full Cost Details</div>
+                <div className="text-2sm text-muted-foreground mt-0.5">
+                  <span className="font-mono">{report.asset.displayId ?? '—'}</span> · {report.asset.name}
+                  {report.asset.serialNumber && <> · S/N {report.asset.serialNumber}</>}
+                  {report.asset.categoryName && <> · {report.asset.categoryName}</>}
+                </div>
               </div>
+              {/* Exports the filters the preview was generated with (not unsaved edits), in the on-screen sort order. */}
+              {applied && report.items.length > 0 && (
+                <ExportCsvButton
+                  fetchCsv={() => exportFullCostReport(toParams(applied), sort)}
+                  fileName={`asset-expenses-full-cost-${report.asset.displayId ?? 'asset'}-${todayStamp()}.csv`}
+                />
+              )}
             </div>
 
             {report.items.length === 0 ? (

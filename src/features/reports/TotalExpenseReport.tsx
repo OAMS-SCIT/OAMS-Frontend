@@ -10,7 +10,15 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SortableHeader } from '@/components/ui/SortableHeader';
-import { ApiError, getCategories, getTotalExpenseReport } from '@/lib/api';
+import {
+  ApiError,
+  exportTotalExpenseReport,
+  getCategories,
+  getTotalExpenseReport,
+  TotalExpenseReportParams,
+} from '@/lib/api';
+import { todayStamp } from '@/lib/download';
+import { ExportCsvButton } from './ExportCsvButton';
 import type {
   AssetStatus,
   TotalCostCategory,
@@ -60,6 +68,15 @@ interface AppliedFilters {
   dateFrom: string;
   dateTo: string;
 }
+
+const toParams = (f: AppliedFilters): TotalExpenseReportParams => ({
+  categoryIds: f.categoryIds,
+  statuses: f.status ? [f.status] : undefined,
+  assetIds: f.assetIds,
+  costCategories: f.costCategory ? [f.costCategory] : undefined,
+  dateFrom: f.dateFrom || undefined,
+  dateTo: f.dateTo || undefined,
+});
 
 /**
  * Asset Expenses → Total Expense Report (OAMS-291): an itemised price audit with
@@ -139,14 +156,7 @@ export function TotalExpenseReport() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getTotalExpenseReport({
-        categoryIds: filters.categoryIds,
-        statuses: filters.status ? [filters.status] : undefined,
-        assetIds: filters.assetIds,
-        costCategories: filters.costCategory ? [filters.costCategory] : undefined,
-        dateFrom: filters.dateFrom || undefined,
-        dateTo: filters.dateTo || undefined,
-      });
+      const data = await getTotalExpenseReport(toParams(filters));
       if (id !== requestId.current) return;
       setReport(data);
       setApplied(filters);
@@ -254,12 +264,21 @@ export function TotalExpenseReport() {
           />
         ) : (
           <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-            <div className="px-5 pt-4 pb-3">
-              <div className="font-semibold text-foreground">Total Expense Report</div>
-              <div className="text-2sm text-muted-foreground mt-0.5">
-                {report.rows.length} {report.rows.length === 1 ? 'transaction' : 'transactions'} · {assetCount}{' '}
-                {assetCount === 1 ? 'asset' : 'assets'}
+            <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
+              <div>
+                <div className="font-semibold text-foreground">Total Expense Report</div>
+                <div className="text-2sm text-muted-foreground mt-0.5">
+                  {report.rows.length} {report.rows.length === 1 ? 'transaction' : 'transactions'} · {assetCount}{' '}
+                  {assetCount === 1 ? 'asset' : 'assets'}
+                </div>
               </div>
+              {/* Exports the filters the preview was generated with (not unsaved edits), in the on-screen sort order. */}
+              {applied && report.rows.length > 0 && (
+                <ExportCsvButton
+                  fetchCsv={() => exportTotalExpenseReport(toParams(applied), sort)}
+                  fileName={`asset-expenses-total-${todayStamp()}.csv`}
+                />
+              )}
             </div>
 
             {report.rows.length === 0 ? (
