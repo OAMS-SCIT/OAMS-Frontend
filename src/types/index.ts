@@ -964,6 +964,30 @@ export interface AssetCostSummary {
   breakdown: CostBreakdownItem[];
 }
 
+// ── Reports — Asset Expenses (OAMS-290) ──────────────────────────────────
+
+export type CostCategory = 'Purchase' | 'Upgrade' | 'Repair' | 'Accessories';
+
+export interface FullCostReportItem {
+  category: CostCategory;
+  date: string;
+  description: string;
+  vendor: string | null;
+  cost: number;
+}
+
+export interface FullCostReport {
+  asset: {
+    id: string;
+    displayId: string | null;
+    name: string;
+    serialNumber: string | null;
+    categoryName: string | null;
+  };
+  items: FullCostReportItem[];
+  totalCost: number;
+}
+
 // ── Condition Images (OAMS-257/262) ───────────────────────────────────────
 
 export interface AssignmentConditionImages {
