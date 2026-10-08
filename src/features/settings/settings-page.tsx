@@ -12,12 +12,12 @@ import { useCurrency } from '@/providers/currency-provider';
 
 const SAMPLE_AMOUNT = 1250;
 
-/** Every ISO 4217 currency the browser knows, labelled e.g. "LKR — Sri Lankan Rupee". */
+/** Every ISO 4217 currency the browser knows, labelled e.g. "LKR - Sri Lankan Rupee". */
 function currencyOptions(): SelectOption[] {
   const names = new Intl.DisplayNames(['en'], { type: 'currency' });
   return Intl.supportedValuesOf('currency').map((code) => {
     const name = names.of(code);
-    return { value: code, label: name && name !== code ? `${code} — ${name}` : code };
+    return { value: code, label: name && name !== code ? `${code} - ${name}` : code };
   });
 }
 
@@ -117,7 +117,7 @@ export function SettingsPage() {
       {confirming && (
         <ConfirmDialog
           title={`Change currency to ${selected}?`}
-          description={`Existing amounts are not converted — they will keep their numbers and be shown in ${selected} (e.g. ${formatMoney(SAMPLE_AMOUNT, currency)} becomes ${formatMoney(SAMPLE_AMOUNT, selected)}).`}
+          description={`Existing amounts are not converted. They will keep their numbers and be shown in ${selected} (e.g. ${formatMoney(SAMPLE_AMOUNT, currency)} becomes ${formatMoney(SAMPLE_AMOUNT, selected)}).`}
           confirmLabel="Change Currency"
           onConfirm={save}
           onCancel={() => setConfirming(false)}
