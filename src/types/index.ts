@@ -988,8 +988,8 @@ export interface FullCostReport {
   totalCost: number;
 }
 
-/** The type of an individual Total Expense transaction. */
-export type CostType = 'Purchase' | 'Upgrade' | 'Repair';
+/** Cost category of an individual Total Expense transaction (never "Accessories"). */
+export type TotalCostCategory = 'Purchase' | 'Upgrade' | 'Repair';
 
 /** One expense transaction in the Total Expense Report (OAMS-301). */
 export interface TotalExpenseLine {
@@ -1002,7 +1002,7 @@ export interface TotalExpenseLine {
   parentDisplayId: string | null;
   /** Bundled accessory — its price is included in the parent's purchase price. */
   costIncludedInParent: boolean;
-  costType: CostType;
+  costCategory: TotalCostCategory;
   date: string;
   description: string;
   cost: number;

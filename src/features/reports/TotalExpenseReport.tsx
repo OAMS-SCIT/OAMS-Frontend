@@ -11,19 +11,25 @@ import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SortableHeader } from '@/components/ui/SortableHeader';
 import { ApiError, getCategories, getTotalExpenseReport } from '@/lib/api';
-import type { AssetStatus, CostCategory, TotalExpenseLine, TotalExpenseReport as TotalExpenseReportData } from '@/types';
+import type {
+  AssetStatus,
+  TotalCostCategory,
+  TotalExpenseLine,
+  TotalExpenseReport as TotalExpenseReportData,
+} from '@/types';
 import { CATEGORY_BADGE } from './cost-badges';
 import { SortValue, useTableSort } from './use-table-sort';
 
 const STATUSES: AssetStatus[] = ['Available', 'Assigned', 'Under Repair', 'Reserved', 'Lost/Stolen', 'Retired'];
-const COST_CATEGORIES: CostCategory[] = ['Purchase', 'Upgrade', 'Repair', 'Accessories'];
+// No "Accessories" here: an accessory's purchase is an ordinary Purchase transaction.
+const COST_CATEGORIES: TotalCostCategory[] = ['Purchase', 'Upgrade', 'Repair'];
 
 /** Sortable columns and the value each sorts by (OAMS-302). Keys match the export's `sortBy`. */
 export const TOTAL_SORT_ACCESSORS = {
   displayId: (r: TotalExpenseLine) => r.displayId,
   name: (r: TotalExpenseLine) => r.name,
   categoryName: (r: TotalExpenseLine) => r.categoryName,
-  costType: (r: TotalExpenseLine) => r.costType,
+  costCategory: (r: TotalExpenseLine) => r.costCategory,
   date: (r: TotalExpenseLine) => r.date,
   cost: (r: TotalExpenseLine) => r.cost,
 } satisfies Record<string, (r: TotalExpenseLine) => SortValue>;
@@ -35,7 +41,7 @@ const COLUMNS: { label: string; sortKey?: TotalSortKey; align?: 'right' }[] = [
   { label: 'Asset ID', sortKey: 'displayId' },
   { label: 'Asset Name', sortKey: 'name' },
   { label: 'Category', sortKey: 'categoryName' },
-  { label: 'Cost Type', sortKey: 'costType' },
+  { label: 'Cost Category', sortKey: 'costCategory' },
   { label: 'Date', sortKey: 'date' },
   { label: 'Description' },
   { label: 'Cost', sortKey: 'cost', align: 'right' },
@@ -50,7 +56,7 @@ interface AppliedFilters {
   categoryIds: string[];
   status: AssetStatus | '';
   assetIds: string[];
-  costCategory: CostCategory | '';
+  costCategory: TotalCostCategory | '';
   dateFrom: string;
   dateTo: string;
 }
@@ -66,7 +72,7 @@ export function TotalExpenseReport() {
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [status, setStatus] = useState<AssetStatus | ''>('');
   const [assets, setAssets] = useState<PickableAsset[]>([]);
-  const [costCategory, setCostCategory] = useState<CostCategory | ''>('');
+  const [costCategory, setCostCategory] = useState<TotalCostCategory | ''>('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
@@ -194,7 +200,7 @@ export function TotalExpenseReport() {
             <div className="micro-label mb-1.5">Cost Category</div>
             <Select
               value={costCategory}
-              onValueChange={(v) => setCostCategory(v as CostCategory | '')}
+              onValueChange={(v) => setCostCategory(v as TotalCostCategory | '')}
               ariaLabel="Cost Category"
               placeholder="All Categories"
               options={[
@@ -320,8 +326,8 @@ export function TotalExpenseReport() {
                             {row.categoryName ?? '—'}
                           </td>
                           <td className="px-4 py-3 align-top">
-                            <span className={`rounded-full px-2.5 py-0.5 font-medium text-2xs ${CATEGORY_BADGE[row.costType]}`}>
-                              {row.costType}
+                            <span className={`rounded-full px-2.5 py-0.5 font-medium text-2xs ${CATEGORY_BADGE[row.costCategory]}`}>
+                              {row.costCategory}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-2sm text-muted-foreground nums whitespace-nowrap align-top">
