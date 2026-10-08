@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/providers/auth-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
+import { CurrencyProvider } from '@/providers/currency-provider';
 import './globals.css';
 
 const inter = Inter({
@@ -25,8 +26,10 @@ export default function RootLayout({
       <body className="min-h-full">
         <ThemeProvider>
           <AuthProvider>
-            {children}
-            <Toaster />
+            <CurrencyProvider>
+              {children}
+              <Toaster />
+            </CurrencyProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

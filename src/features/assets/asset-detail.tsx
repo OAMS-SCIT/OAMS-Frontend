@@ -22,6 +22,7 @@ import { ChangeStatusDrawer } from '@/components/overlays/ChangeStatusDrawer';
 import { SendToRepairDrawer } from '@/components/overlays/SendToRepairDrawer';
 import { ReturnFromRepairDrawer } from '@/components/overlays/ReturnFromRepairDrawer';
 import { ImageLightbox } from '@/components/overlays/ImageLightbox';
+import { useCurrency } from '@/providers/currency-provider';
 
 function fileNameFromUrl(url: string): string {
   try {
@@ -286,6 +287,7 @@ function NoteCell({ note }: { note: string | null }) {
 }
 
 export function AssetDetail() {
+  const { format: formatMoney } = useCurrency();
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
@@ -678,7 +680,7 @@ export function AssetDetail() {
               asset.costIncludedInParent
                 ? 'Included with parent asset'
                 : asset.purchasePrice
-                  ? `$${Number(asset.purchasePrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                  ? formatMoney(asset.purchasePrice)
                   : undefined
             }
           />
@@ -883,7 +885,7 @@ export function AssetDetail() {
                       </td>
                       <td className="px-5 py-3.5 text-2sm text-muted-foreground">{u.specBefore ?? '—'}</td>
                       <td className="px-5 py-3.5 text-2sm text-success-foreground font-medium">{u.specAfter}</td>
-                      <td className="px-5 py-3.5 text-2sm text-foreground nums">${Number(u.cost).toFixed(2)}</td>
+                      <td className="px-5 py-3.5 text-2sm text-foreground nums">{formatMoney(u.cost)}</td>
                       <td className="px-5 py-3.5 text-2sm text-muted-foreground">{u.vendorName}</td>
                       <td className="px-5 py-3.5 text-2sm text-muted-foreground">
                         {u.loggedBy ? `${u.loggedBy.firstName} ${u.loggedBy.lastName}` : '—'}
