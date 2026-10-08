@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Select, SelectOption } from '@/components/ui/Select';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FullCostReport } from './FullCostReport';
+import { TotalExpenseReport } from './TotalExpenseReport';
 
 type ReportType = 'asset-expenses';
 type AssetExpensesSubReport = 'full-cost' | 'total-expense';
@@ -79,13 +80,7 @@ export function ReportsPage() {
       {subReport === 'full-cost' ? (
         <FullCostReport key="full-cost" />
       ) : subReport === 'total-expense' ? (
-        <div className="rounded-lg bg-card border border-border shadow-card">
-          <EmptyState
-            icon="reports"
-            title="Total Expense Report"
-            subtitle="This report is coming soon."
-          />
-        </div>
+        <TotalExpenseReport key="total-expense" />
       ) : (
         <div className="rounded-lg bg-card border border-border shadow-card">
           <EmptyState

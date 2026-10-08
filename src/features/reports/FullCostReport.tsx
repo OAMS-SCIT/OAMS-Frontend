@@ -7,17 +7,32 @@ import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SortableHeader } from '@/components/ui/SortableHeader';
 import { ApiError, getFullCostReport } from '@/lib/api';
-import type { CostCategory, FullCostReport as FullCostReportData } from '@/types';
+import type { CostCategory, FullCostReport as FullCostReportData, FullCostReportItem } from '@/types';
+import { CATEGORY_BADGE } from './cost-badges';
+import { SortValue, useTableSort } from './use-table-sort';
 
 const COST_CATEGORIES: CostCategory[] = ['Purchase', 'Upgrade', 'Repair', 'Accessories'];
 
-const CATEGORY_BADGE: Record<CostCategory, string> = {
-  Purchase: 'bg-info-surface text-info-foreground',
-  Upgrade: 'bg-warning-surface text-warning-foreground',
-  Repair: 'bg-secondary text-secondary-foreground',
-  Accessories: 'bg-purple-surface text-purple-foreground',
-};
+/** Sortable columns and the value each sorts by (OAMS-302). Keys match the export's `sortBy`. */
+export const FULL_COST_SORT_ACCESSORS = {
+  category: (r: FullCostReportItem) => r.category,
+  date: (r: FullCostReportItem) => r.date,
+  vendor: (r: FullCostReportItem) => r.vendor,
+  cost: (r: FullCostReportItem) => r.cost,
+} satisfies Record<string, (r: FullCostReportItem) => SortValue>;
+
+type FullCostSortKey = keyof typeof FULL_COST_SORT_ACCESSORS;
+
+/** Table columns in order; `sortKey` is omitted for columns that can't be sorted. */
+const COLUMNS: { label: string; sortKey?: FullCostSortKey; align?: 'right' }[] = [
+  { label: 'Cost Category', sortKey: 'category' },
+  { label: 'Date', sortKey: 'date' },
+  { label: 'Description' },
+  { label: 'Vendor', sortKey: 'vendor' },
+  { label: 'Cost', sortKey: 'cost', align: 'right' },
+];
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
@@ -60,9 +75,12 @@ export function FullCostReport() {
   // The preview belongs to one asset — drop it when the asset is removed or
   // swapped so a stale report is never shown against a different selection.
   // (Cost category / date changes keep it, with the "Filters changed" hint.)
+  const { sorted, sort, toggle, reset: resetSort } = useTableSort(report?.items ?? [], FULL_COST_SORT_ACCESSORS);
+
   const changeAsset = (next: PickableAsset[]) => {
     setAsset(next);
     if (next[0]?.id !== applied?.assetId) {
+      resetSort();
       requestId.current += 1;
       setLoading(false);
       setReport(null);
@@ -193,18 +211,26 @@ export function FullCostReport() {
                 <table className="w-full min-w-[720px]">
                   <thead>
                     <tr className="bg-muted/60 border-b border-border">
-                      {['Cost Category', 'Date', 'Description', 'Vendor', 'Cost'].map((h) => (
-                        <th
-                          key={h}
-                          className={`px-4 py-2.5 micro-label whitespace-nowrap ${h === 'Cost' ? 'text-right' : 'text-left'}`}
-                        >
-                          {h}
-                        </th>
-                      ))}
+                      {COLUMNS.map((c) =>
+                        c.sortKey ? (
+                          <SortableHeader
+                            key={c.label}
+                            label={c.label}
+                            align={c.align}
+                            active={sort?.key === c.sortKey}
+                            direction={sort?.direction}
+                            onClick={() => toggle(c.sortKey!)}
+                          />
+                        ) : (
+                          <th key={c.label} className="px-4 py-2.5 micro-label whitespace-nowrap text-left">
+                            {c.label}
+                          </th>
+                        ),
+                      )}
                     </tr>
                   </thead>
                   <tbody>
-                    {report.items.map((row, i) => (
+                    {sorted.map((row, i) => (
                       <tr
                         key={`${row.category}-${row.date}-${i}`}
                         className={`border-b border-border/60 ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}
