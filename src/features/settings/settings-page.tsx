@@ -61,7 +61,7 @@ export function SettingsPage() {
         <p className="text-2sm text-muted-foreground mt-1">Organisation-wide settings for OAMS.</p>
       </div>
 
-      <div className="rounded-lg p-5 bg-card border border-border shadow-card max-w-2xl">
+      <div className="rounded-lg p-4 bg-card border border-border shadow-card">
         <h2 className="font-semibold text-base text-foreground">Organisation</h2>
         <p className="text-2sm text-muted-foreground mt-1">
           The currency every price and cost is shown in, across the app and the report exports.
