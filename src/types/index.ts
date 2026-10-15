@@ -766,6 +766,17 @@ export interface MyAssetListItem {
   confirmationStatus: AssignmentConfirmationStatus;
 }
 
+/**
+ * Values for the My Assets filter dropdowns (GET /api/me/assets/filter-options):
+ * every active category (plus any inactive one the user still holds an asset
+ * in), and the statuses Assigned and Under Repair plus any other status the
+ * user currently holds, so the filter always covers what the table shows.
+ */
+export interface MyAssetFilterOptions {
+  categories: { id: string; name: string }[];
+  statuses: AssetStatus[];
+}
+
 /** POST /api/assignments request body. */
 export interface CreateAssignmentPayload {
   assetId: string;

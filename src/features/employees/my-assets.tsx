@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Clock, Eye, ImageIcon, RefreshCw, Search, X } from 'lucide-react';
-import { ApiError, getMyAssets } from '@/lib/api';
+import { ApiError, getMyAssetFilterOptions, getMyAssets } from '@/lib/api';
 import { warrantyStyle } from '@/lib/warranty';
-import type { MyAssetListItem } from '@/types';
+import type { AssetStatus, MyAssetFilterOptions, MyAssetListItem } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Select } from '@/components/ui/Select';
+import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 
 const PER_PAGE = 10;
 
@@ -22,9 +24,12 @@ export function MyAssets() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // The URL is the source of truth for the list state (?q=, ?page=), so it
-  // survives a refresh and coming back from the asset detail view (OAMS-250).
+  // The URL is the source of truth for the list state (?q=, ?category=,
+  // ?status=, ?page=), so it survives a refresh and coming back from the asset
+  // detail view (OAMS-250).
   const q = searchParams.get('q') ?? '';
+  const category = searchParams.get('category') ?? '';
+  const status = (searchParams.get('status') ?? '') as AssetStatus | '';
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
 
   const updateQuery = useCallback(
@@ -55,6 +60,37 @@ export function MyAssets() {
     setSearchInput('');
     updateQuery({ q: null, page: null });
   };
+  const setFilter = (key: 'category' | 'status', value: string) =>
+    updateQuery({ [key]: value || null, page: null });
+  const clearAll = () => {
+    setSearchInput('');
+    updateQuery({ q: null, category: null, status: null, page: null });
+  };
+
+  // Dropdown values: every active category, and the statuses an assigned asset
+  // can have (GET /categories is Admin-only, so they come from the /me API).
+  // Loaded once; on failure the dropdowns simply offer "All" and the list
+  // still works.
+  const [options, setOptions] = useState<MyAssetFilterOptions>({ categories: [], statuses: [] });
+  useEffect(() => {
+    let cancelled = false;
+    getMyAssetFilterOptions()
+      .then((result) => {
+        if (!cancelled) setOptions(result);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const categoryName = options.categories.find((c) => c.id === category)?.name ?? 'Selected category';
+  const isFiltered = Boolean(q || category || status);
+  const activeFilters = [
+    q && { key: 'q', label: `Search: "${q}"`, clear: clearSearch },
+    category && { key: 'category', label: `Category: ${categoryName}`, clear: () => setFilter('category', '') },
+    status && { key: 'status', label: `Status: ${status}`, clear: () => setFilter('status', '') },
+  ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   const [rows, setRows] = useState<MyAssetListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -74,7 +110,13 @@ export function MyAssets() {
           setLoading(true);
           setError(null);
         }
-        return getMyAssets({ search: q || undefined, page, limit: PER_PAGE });
+        return getMyAssets({
+          search: q || undefined,
+          categoryId: category || undefined,
+          status: status || undefined,
+          page,
+          limit: PER_PAGE,
+        });
       })
       .then((result) => {
         if (cancelled) return;
@@ -93,7 +135,7 @@ export function MyAssets() {
     return () => {
       cancelled = true;
     };
-  }, [q, page, version]);
+  }, [q, category, status, page, version]);
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
@@ -126,7 +168,46 @@ export function MyAssets() {
             </button>
           )}
         </div>
+        <div className="flex items-center gap-2">
+          <Select
+            value={category}
+            onValueChange={(v) => setFilter('category', v)}
+            ariaLabel="Filter by category"
+            placeholder="Category"
+            options={[
+              { value: '', label: 'All Categories' },
+              ...options.categories.map((c) => ({ value: c.id, label: c.name })),
+            ]}
+          />
+          <Select
+            value={status}
+            onValueChange={(v) => setFilter('status', v)}
+            ariaLabel="Filter by status"
+            placeholder="Status"
+            options={[
+              { value: '', label: 'All Statuses' },
+              ...options.statuses.map((s) => ({ value: s, label: s })),
+            ]}
+          />
+          <ClearFiltersButton onClear={clearAll} disabled={!isFiltered && !searchInput} />
+        </div>
       </div>
+
+      {/* Active filter chips: each one clears just its own filter */}
+      {activeFilters.length > 0 && (
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          {activeFilters.map((f) => (
+            <button
+              key={f.key}
+              onClick={f.clear}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs bg-secondary text-secondary-foreground border border-primary/20 transition-colors hover:bg-primary/15"
+            >
+              {f.label}
+              <X className="w-3 h-3" />
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">
         {loading ? (
@@ -147,17 +228,17 @@ export function MyAssets() {
               </button>
             }
           />
-        ) : rows.length === 0 && q ? (
+        ) : rows.length === 0 && isFiltered ? (
           <EmptyState
             icon="myassets"
             title="No matching assets found"
-            subtitle="None of your assets match that name, brand, model or serial number. Try a different search."
+            subtitle="None of your assets match the current search or filters. Try changing or clearing them."
             action={
               <button
-                onClick={clearSearch}
+                onClick={clearAll}
                 className="flex items-center gap-2 rounded-control px-4 py-2 text-2sm font-semibold border border-border text-foreground/80 transition-colors hover:bg-muted"
               >
-                <X className="w-4 h-4" /> Clear search
+                <X className="w-4 h-4" /> Clear filters
               </button>
             }
           />
