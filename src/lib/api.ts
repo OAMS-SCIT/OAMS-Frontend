@@ -909,8 +909,8 @@ export function getMyAssets(
 }
 
 /**
- * The categories and statuses among the signed-in user's own assets, for the
- * My Assets filter dropdowns (GET /api/me/assets/filter-options). Employees
+ * Values for the My Assets filter dropdowns (GET /api/me/assets/filter-options):
+ * every active category, and the statuses an assigned asset can have. Employees
  * can't call GET /categories, which is Admin-only.
  */
 export function getMyAssetFilterOptions(): Promise<MyAssetFilterOptions> {

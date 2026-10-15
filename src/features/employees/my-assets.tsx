@@ -67,9 +67,10 @@ export function MyAssets() {
     updateQuery({ q: null, category: null, status: null, page: null });
   };
 
-  // Dropdown values: only the categories/statuses the employee actually holds
-  // (GET /categories is Admin-only). Loaded once; on failure the dropdowns
-  // simply offer "All" and the list still works.
+  // Dropdown values: every active category, and the statuses an assigned asset
+  // can have (GET /categories is Admin-only, so they come from the /me API).
+  // Loaded once; on failure the dropdowns simply offer "All" and the list
+  // still works.
   const [options, setOptions] = useState<MyAssetFilterOptions>({ categories: [], statuses: [] });
   useEffect(() => {
     let cancelled = false;
