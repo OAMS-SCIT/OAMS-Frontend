@@ -896,7 +896,7 @@ export function getMyAssignments(
  * (GET /api/me/assets). Scoped to the JWT user on the server; takes no id.
  */
 export function getMyAssets(
-  params: { page?: number; limit?: number } = {},
+  params: { search?: string; page?: number; limit?: number } = {},
 ): Promise<PaginatedResult<MyAssetListItem>> {
   return request<PaginatedResult<MyAssetListItem>>('/me/assets', { query: params });
 }
