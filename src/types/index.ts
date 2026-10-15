@@ -590,15 +590,14 @@ export interface AssetWarranties {
   warranties: WarrantyItem[];
 }
 
-/** A row in the admin Pending Handbacks list (GET /api/assignments/pending-handback). */
+/** General = a normal assignment; Handback = re-assigned after a repair. */
 export type AssignmentType = 'General' | 'Handback';
+/**
+ * The employee's response to a handover. Rejected means they reported an issue
+ * (shown as "Issue Reported"). Set only by the employee via
+ * PATCH /api/me/assignments/:id/confirmation (OAMS-251).
+ */
 export type AssignmentConfirmationStatus = 'Pending' | 'Accepted' | 'Rejected';
-
-/** Body for PATCH /api/assignments/:id/feedback — employee Accept/Reject. */
-export interface AssignmentFeedbackPayload {
-  status: Extract<AssignmentConfirmationStatus, 'Accepted' | 'Rejected'>;
-  note?: string;
-}
 
 // ── Upgrades ──────────────────────────────────────────────────────────────
 

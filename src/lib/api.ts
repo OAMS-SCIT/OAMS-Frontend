@@ -37,7 +37,7 @@ import type {
   RetireRepairPayload,
   AssetWarranties,
   AssignmentType,
-  AssignmentFeedbackPayload,
+  AssignmentConfirmationStatus,
   ConfirmAssignmentPayload,
   MyAssignmentConfirmation,
   MyAssetDetail,
@@ -804,6 +804,8 @@ export interface GetAssignmentsParams {
   assignmentDateFrom?: string;
   assignmentDateTo?: string;
   assignmentType?: AssignmentType;
+  /** The employee's handover confirmation; Pending + assignmentType gives the admin pending views. */
+  confirmationStatus?: AssignmentConfirmationStatus;
   sortBy?: 'assignmentDate' | 'expectedReturnDate' | 'createdAt';
   sortOrder?: 'ASC' | 'DESC';
   page?: number;
@@ -821,6 +823,7 @@ export function getAssignments(
     assignmentDateFrom: params.assignmentDateFrom,
     assignmentDateTo: params.assignmentDateTo,
     assignmentType: params.assignmentType,
+    confirmationStatus: params.confirmationStatus,
     sortBy: params.sortBy,
     sortOrder: params.sortOrder,
     page: params.page,
@@ -1111,18 +1114,6 @@ export async function fetchWarrantyDocument(
   }
 
   return response.blob();
-}
-
-/** Assignments awaiting handback confirmation after a repair return (admin). */
-/** Records the employee's Accept/Reject feedback on an assignment (admin stand-in). */
-export function submitAssignmentFeedback(
-  assignmentId: string,
-  payload: AssignmentFeedbackPayload,
-): Promise<ActiveAssignmentListItem> {
-  return request<ActiveAssignmentListItem>(`/assignments/${assignmentId}/feedback`, {
-    method: 'PATCH',
-    body: payload,
-  });
 }
 
 // ── Condition Images (OAMS-257/262) ───────────────────────────────────────
