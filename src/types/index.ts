@@ -766,6 +766,22 @@ export interface MyAssetListItem {
 }
 
 /**
+ * What happened at the service center before an asset was handed back to the
+ * employee (OAMS-252). Work items carry names and types only, never costs.
+ */
+export interface MyHandbackSummary {
+  repairId: string;
+  vendor: string | null;
+  /** Why the asset was sent for repair. */
+  reason: string;
+  outcome: string | null;
+  sentAt: string;
+  returnDate: string | null;
+  notes: string | null;
+  workDone: { itemName: string; itemType: string }[];
+}
+
+/**
  * The employee's read-only view of one of their assets
  * (GET /api/me/assets/:assetId). No financial or document data.
  */
@@ -780,6 +796,8 @@ export interface MyAssetDetail {
   confirmedAt: string | null;
   /** The reported issue when confirmationStatus is Rejected. */
   confirmationNote: string | null;
+  /** For a Handback assignment: the repair it came from (OAMS-252); otherwise null. */
+  handback: MyHandbackSummary | null;
   asset: {
     id: string;
     displayId: string;
