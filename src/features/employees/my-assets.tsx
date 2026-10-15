@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Clock, Eye, ImageIcon, RefreshCw } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Clock, Eye, ImageIcon, RefreshCw, Search, X } from 'lucide-react';
 import { ApiError, getMyAssets } from '@/lib/api';
 import { warrantyStyle } from '@/lib/warranty';
 import type { MyAssetListItem } from '@/types';
@@ -17,7 +18,44 @@ const PER_PAGE = 10;
  * own assets.
  */
 export function MyAssets() {
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // The URL is the source of truth for the list state (?q=, ?page=), so it
+  // survives a refresh and coming back from the asset detail view (OAMS-250).
+  const q = searchParams.get('q') ?? '';
+  const page = Math.max(1, Number(searchParams.get('page')) || 1);
+
+  const updateQuery = useCallback(
+    (changes: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(changes)) {
+        if (value) params.set(key, value);
+        else params.delete(key);
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams],
+  );
+
+  // The input is local so typing stays instant; it reaches the URL (and the
+  // API) after the same 350ms debounce Asset Inventory uses.
+  const [searchInput, setSearchInput] = useState(q);
+  useEffect(() => {
+    const term = searchInput.trim();
+    if (term === q) return;
+    const t = setTimeout(() => updateQuery({ q: term || null, page: null }), 350);
+    return () => clearTimeout(t);
+  }, [searchInput, q, updateQuery]);
+
+  const setPage = (next: number) => updateQuery({ page: next > 1 ? String(next) : null });
+  const clearSearch = () => {
+    setSearchInput('');
+    updateQuery({ q: null, page: null });
+  };
+
   const [rows, setRows] = useState<MyAssetListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -36,7 +74,7 @@ export function MyAssets() {
           setLoading(true);
           setError(null);
         }
-        return getMyAssets({ page, limit: PER_PAGE });
+        return getMyAssets({ search: q || undefined, page, limit: PER_PAGE });
       })
       .then((result) => {
         if (cancelled) return;
@@ -55,7 +93,7 @@ export function MyAssets() {
     return () => {
       cancelled = true;
     };
-  }, [page, version]);
+  }, [q, page, version]);
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
@@ -64,6 +102,30 @@ export function MyAssets() {
       <div className="mb-6">
         <h1 className="font-bold text-2xl tracking-[-0.02em] text-foreground">My Assets</h1>
         <p className="mt-1 text-2sm text-muted-foreground">Every asset currently assigned to you.</p>
+      </div>
+
+      {/* Filter bar */}
+      <div className="rounded-lg mb-4 p-4 flex items-center gap-3 flex-wrap bg-card border border-border shadow-card">
+        <div className="relative flex-1 min-w-[260px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search by name, brand, model or serial number…"
+            aria-label="Search my assets"
+            className="w-full rounded-control border border-input bg-input-background text-2sm pl-9 pr-9 py-2 placeholder:text-muted-foreground/60 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+          />
+          {searchInput && (
+            <button
+              onClick={clearSearch}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-control p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="rounded-lg overflow-hidden bg-card border border-border shadow-card">
@@ -82,6 +144,20 @@ export function MyAssets() {
                 className="flex items-center gap-2 rounded-control px-4 py-2 text-2sm font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
               >
                 <RefreshCw className="w-4 h-4" /> Retry
+              </button>
+            }
+          />
+        ) : rows.length === 0 && q ? (
+          <EmptyState
+            icon="myassets"
+            title="No matching assets found"
+            subtitle="None of your assets match that name, brand, model or serial number. Try a different search."
+            action={
+              <button
+                onClick={clearSearch}
+                className="flex items-center gap-2 rounded-control px-4 py-2 text-2sm font-semibold border border-border text-foreground/80 transition-colors hover:bg-muted"
+              >
+                <X className="w-4 h-4" /> Clear search
               </button>
             }
           />
@@ -174,7 +250,7 @@ export function MyAssets() {
               </span>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
                   className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40"
                 >
@@ -184,7 +260,7 @@ export function MyAssets() {
                   Page {page} of {totalPages}
                 </span>
                 <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
                   disabled={page === totalPages}
                   className="rounded-control px-3 py-1.5 border border-border text-2sm text-foreground/70 transition-colors hover:bg-muted disabled:opacity-40"
                 >
