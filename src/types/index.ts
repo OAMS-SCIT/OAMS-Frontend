@@ -767,6 +767,37 @@ export interface MyAssetListItem {
 }
 
 /**
+ * The employee's read-only view of one of their assets
+ * (GET /api/me/assets/:assetId). No financial or document data.
+ */
+export interface MyAssetDetail {
+  assignmentId: string;
+  assignmentType: AssignmentType;
+  confirmationStatus: AssignmentConfirmationStatus;
+  assignmentDate: string;
+  expectedReturnDate: string | null;
+  conditionAtAssignment: AssetCondition | null;
+  asset: {
+    id: string;
+    displayId: string;
+    name: string;
+    description: string | null;
+    brand: string | null;
+    model: string;
+    serialNumber: string | null;
+    status: AssetStatus;
+    condition: AssetCondition;
+    location: string | null;
+    warrantyExpiryDate: string | null;
+    category: { id: string; name: string } | null;
+    /** Sorted; the first is the primary image. */
+    images: { id: string; url: string }[];
+    /** The category's attributes in registration-form order. */
+    customAttributes: { label: string; type: string; value: string }[];
+  };
+}
+
+/**
  * Values for the My Assets filter dropdowns (GET /api/me/assets/filter-options):
  * every active category (plus any inactive one the user still holds an asset
  * in), and the statuses Assigned and Under Repair plus any other status the

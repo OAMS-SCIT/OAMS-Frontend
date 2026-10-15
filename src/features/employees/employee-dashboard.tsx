@@ -249,14 +249,12 @@ function AssetCard({ row }: { row: EmployeeAssignmentItem }) {
           </div>
         </div>
 
-        {/* Opens the employee asset detail view, which OAMS-250 delivers. */}
-        <button
-          disabled
-          title="Asset details are coming soon"
-          className="mt-4 w-full rounded-control py-2 text-2sm font-medium border border-primary/30 text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        <Link
+          href={`/employee/assets/${row.asset.id}`}
+          className="mt-4 w-full rounded-control py-2 text-center text-2sm font-medium border border-primary/30 text-primary transition-colors hover:bg-primary/5"
         >
           View Details
-        </button>
+        </Link>
       </div>
     </div>
   );
