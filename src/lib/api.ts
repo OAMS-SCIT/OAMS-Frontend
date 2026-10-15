@@ -38,6 +38,7 @@ import type {
   AssetWarranties,
   AssignmentType,
   AssignmentFeedbackPayload,
+  MyAssetDetail,
   MyAssetFilterOptions,
   MyAssetListItem,
   ResetPasswordPayload,
@@ -915,6 +916,14 @@ export function getMyAssets(
  */
 export function getMyAssetFilterOptions(): Promise<MyAssetFilterOptions> {
   return request<MyAssetFilterOptions>('/me/assets/filter-options');
+}
+
+/**
+ * Read-only detail of one of the signed-in user's assigned assets
+ * (GET /api/me/assets/:assetId). 404 when it isn't one of theirs.
+ */
+export function getMyAsset(assetId: string): Promise<MyAssetDetail> {
+  return request<MyAssetDetail>(`/me/assets/${encodeURIComponent(assetId)}`);
 }
 
 export function getAssetHistory(

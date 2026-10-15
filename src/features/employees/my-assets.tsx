@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Clock, Eye, ImageIcon, RefreshCw, Search, X } from 'lucide-react';
 import { ApiError, getMyAssetFilterOptions, getMyAssets } from '@/lib/api';
@@ -54,6 +55,12 @@ export function MyAssets() {
     const t = setTimeout(() => updateQuery({ q: term || null, page: null }), 350);
     return () => clearTimeout(t);
   }, [searchInput, q, updateQuery]);
+
+  // The detail view gets the current list query as ?from= so its "Back to My
+  // Assets" returns to the same search, filters and page (OAMS-250).
+  const listQuery = searchParams.toString();
+  const detailHref = (assetId: string) =>
+    `/employee/assets/${assetId}${listQuery ? `?from=${encodeURIComponent(listQuery)}` : ''}`;
 
   const setPage = (next: number) => updateQuery({ page: next > 1 ? String(next) : null });
   const clearSearch = () => {
@@ -309,14 +316,12 @@ export function MyAssets() {
                         {row.assignmentDate}
                       </td>
                       <td className="px-5 py-3.5">
-                        {/* Opens the employee asset detail view, which OAMS-250 delivers. */}
-                        <button
-                          disabled
-                          title="Asset details are coming soon"
-                          className="flex items-center gap-1 text-2sm font-medium whitespace-nowrap text-foreground/70 transition-colors hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-foreground/70"
+                        <Link
+                          href={detailHref(row.asset.id)}
+                          className="flex items-center gap-1 text-2sm font-medium whitespace-nowrap text-foreground/70 transition-colors hover:text-foreground"
                         >
                           <Eye className="w-3.5 h-3.5" /> View
-                        </button>
+                        </Link>
                       </td>
                     </tr>
                   ))}
