@@ -769,7 +769,8 @@ export interface MyAssetListItem {
 /**
  * Values for the My Assets filter dropdowns (GET /api/me/assets/filter-options):
  * every active category (plus any inactive one the user still holds an asset
- * in), and the statuses an assigned asset can have (Assigned, Under Repair).
+ * in), and the statuses Assigned and Under Repair plus any other status the
+ * user currently holds, so the filter always covers what the table shows.
  */
 export interface MyAssetFilterOptions {
   categories: { id: string; name: string }[];
