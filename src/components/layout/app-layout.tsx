@@ -30,9 +30,9 @@ const adminNavItems = [
   { path: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
-// Asset and history views return once the employee-scoped endpoints exist.
 const employeeNavItems = [
   { path: '/employee/dashboard', label: 'Home', icon: LayoutDashboard },
+  { path: '/employee/assets', label: 'My Assets', icon: Package },
 ];
 
 export function AppLayout({ children, role, onLogout }: LayoutProps) {
@@ -196,6 +196,7 @@ function BreadcrumbDisplay({ pathname, role }: { pathname: string; role: AppRole
     '/admin/settings': ['Settings'],
     '/admin/profile': ['Personal Profile'],
     '/employee/dashboard': ['Home'],
+    '/employee/assets': ['My Assets'],
     '/employee/profile': ['My Profile'],
   };
   const base = pathname.startsWith('/admin/inventory/')

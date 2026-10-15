@@ -38,6 +38,7 @@ import type {
   AssetWarranties,
   AssignmentType,
   AssignmentFeedbackPayload,
+  MyAssetListItem,
   ResetPasswordPayload,
   ReturnAssignmentPayload,
   SendToRepairPayload,
@@ -888,6 +889,16 @@ export function getMyAssignments(
   return request<PaginatedResult<EmployeeAssignmentItem>>('/assignments/me', {
     query: { isReturned, limit: 100 },
   });
+}
+
+/**
+ * The signed-in user's currently assigned assets for the My Assets list
+ * (GET /api/me/assets). Scoped to the JWT user on the server; takes no id.
+ */
+export function getMyAssets(
+  params: { page?: number; limit?: number } = {},
+): Promise<PaginatedResult<MyAssetListItem>> {
+  return request<PaginatedResult<MyAssetListItem>>('/me/assets', { query: params });
 }
 
 export function getAssetHistory(
