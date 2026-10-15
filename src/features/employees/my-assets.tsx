@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Clock, Eye, ImageIcon, RefreshCw, Search, X } from 'lucide-react';
+import { AlertTriangle, Clock, Eye, ImageIcon, RefreshCw, Search, X } from 'lucide-react';
 import { ApiError, getMyAssetFilterOptions, getMyAssets } from '@/lib/api';
 import { warrantyStyle } from '@/lib/warranty';
 import type { AssetStatus, MyAssetFilterOptions, MyAssetListItem } from '@/types';
@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Select } from '@/components/ui/Select';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
+import { AssetDeclarationDrawer } from '@/components/overlays/AssetDeclarationDrawer';
 
 const PER_PAGE = 10;
 
@@ -108,6 +109,9 @@ export function MyAssets() {
   // setting state synchronously inside an effect body cascades renders.
   const [version, setVersion] = useState(0);
   const reload = useCallback(() => setVersion((v) => v + 1), []);
+
+  // The asset whose Asset Declaration is open (OAMS-251), if any.
+  const [declarationAssetId, setDeclarationAssetId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -307,7 +311,7 @@ export function MyAssets() {
                       </td>
                       <td className="px-5 py-3.5">
                         <StatusBadge status={row.asset.status} />
-                        <PendingConfirmation row={row} />
+                        <PendingConfirmation row={row} onReview={() => setDeclarationAssetId(row.asset.id)} />
                       </td>
                       <td className={`px-5 py-3.5 text-xs nums whitespace-nowrap ${warrantyStyle(row.asset.warrantyExpiryDate)}`}>
                         {row.asset.warrantyExpiryDate ?? '—'}
@@ -357,6 +361,14 @@ export function MyAssets() {
           </>
         )}
       </div>
+
+      {declarationAssetId && (
+        <AssetDeclarationDrawer
+          assetId={declarationAssetId}
+          onClose={() => setDeclarationAssetId(null)}
+          onConfirmed={reload}
+        />
+      )}
     </div>
   );
 }
@@ -379,16 +391,40 @@ function AssetThumb({ url, name }: { url: string | null; name: string }) {
  * A short, single-line flag under the status badge for a handover the employee
  * still has to confirm (OAMS-251 / OAMS-252). The full wording is the tooltip.
  */
-function PendingConfirmation({ row }: { row: MyAssetListItem }) {
+function PendingConfirmation({ row, onReview }: { row: MyAssetListItem; onReview: () => void }) {
+  // A reported issue stays visible so the employee knows it was recorded.
+  if (row.confirmationStatus === 'Rejected') {
+    return (
+      <div
+        className="flex items-center gap-1 mt-1.5 text-2xs font-medium whitespace-nowrap text-danger"
+        title="You reported an issue with this handover. Your administrator will follow up."
+      >
+        <AlertTriangle className="w-3 h-3" />
+        Issue reported
+      </div>
+    );
+  }
   if (row.confirmationStatus !== 'Pending') return null;
-  const handback = row.assignmentType === 'Handback';
+  // Handback confirmation (OAMS-252) isn't actionable yet, so it stays a plain label.
+  if (row.assignmentType === 'Handback') {
+    return (
+      <div
+        className="flex items-center gap-1 mt-1.5 text-2xs font-medium whitespace-nowrap text-warning-foreground"
+        title="Handback Confirmation Pending"
+      >
+        <Clock className="w-3 h-3" />
+        Handback pending
+      </div>
+    );
+  }
   return (
-    <div
-      className="flex items-center gap-1 mt-1.5 text-2xs font-medium whitespace-nowrap text-warning-foreground"
-      title={handback ? 'Handback Confirmation Pending' : 'Receipt Confirmation Pending'}
+    <button
+      onClick={onReview}
+      className="flex items-center gap-1 mt-1.5 text-2xs font-medium whitespace-nowrap text-warning-foreground underline-offset-2 transition-opacity hover:underline hover:opacity-80"
+      title="Receipt Confirmation Pending: review and accept this asset"
     >
       <Clock className="w-3 h-3" />
-      {handback ? 'Handback pending' : 'Receipt pending'}
-    </div>
+      Receipt pending
+    </button>
   );
 }

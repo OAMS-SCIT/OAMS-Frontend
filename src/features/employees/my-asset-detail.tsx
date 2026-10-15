@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Clock, Monitor, RefreshCw, ZoomIn } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Clock, Monitor, RefreshCw, ZoomIn } from 'lucide-react';
 import { ApiError, getMyAsset } from '@/lib/api';
 import { warrantyStyle } from '@/lib/warranty';
 import type { MyAssetDetail as MyAssetDetailType } from '@/types';
@@ -11,6 +11,7 @@ import { StatusBadge, ConditionBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { InfoRow } from '@/components/ui/InfoRow';
 import { ImageLightbox } from '@/components/overlays/ImageLightbox';
+import { AssetDeclarationDrawer } from '@/components/overlays/AssetDeclarationDrawer';
 
 /**
  * The employee's read-only view of one of their assets. Backed by
@@ -35,6 +36,7 @@ export function MyAssetDetail() {
   const [error, setError] = useState<{ message: string; notFound: boolean } | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [declarationOpen, setDeclarationOpen] = useState(false);
 
   // Version counter + deferred setState, matching the other employee loaders.
   const [version, setVersion] = useState(0);
@@ -81,6 +83,16 @@ export function MyAssetDetail() {
     </Link>
   );
 
+  // Rendered in every state below, so the reload that follows a confirmation
+  // doesn't unmount the drawer before its close animation finishes.
+  const declarationDrawer = declarationOpen && params.id ? (
+    <AssetDeclarationDrawer
+      assetId={params.id}
+      onClose={() => setDeclarationOpen(false)}
+      onConfirmed={reload}
+    />
+  ) : null;
+
   if (loading) {
     return (
       <div>
@@ -88,6 +100,7 @@ export function MyAssetDetail() {
         <div className="rounded-2xl flex items-center justify-center py-16 text-2sm text-muted-foreground bg-card border border-border shadow-card">
           Loading asset…
         </div>
+        {declarationDrawer}
       </div>
     );
   }
@@ -119,6 +132,7 @@ export function MyAssetDetail() {
             />
           )}
         </div>
+        {declarationDrawer}
       </div>
     );
   }
@@ -203,15 +217,7 @@ export function MyAssetDetail() {
               <HeroFact label="Assigned Since" value={detail.assignmentDate} />
             </div>
 
-            {/* Read-only for now; OAMS-251 / OAMS-252 add the confirmation action. */}
-            {detail.confirmationStatus === 'Pending' && (
-              <div className="flex items-center gap-2 mt-5 rounded-control px-3 py-2 text-2sm bg-warning-surface text-warning-foreground border border-warning/30">
-                <Clock className="w-4 h-4 shrink-0" />
-                {detail.assignmentType === 'Handback'
-                  ? 'Handback confirmation pending for this asset.'
-                  : 'Receipt confirmation pending for this asset.'}
-              </div>
-            )}
+            <ConfirmationBanner detail={detail} onReview={() => setDeclarationOpen(true)} />
           </div>
         </div>
       </div>
@@ -262,6 +268,7 @@ export function MyAssetDetail() {
           title={asset.name}
         />
       )}
+      {declarationDrawer}
     </div>
   );
 }
@@ -271,6 +278,58 @@ function HeroFact({ label, value }: { label: string; value: string }) {
     <div>
       <div className="text-2xs text-muted-foreground/80 mb-0.5">{label.toUpperCase()}</div>
       <div className="text-2sm text-foreground/80">{value}</div>
+    </div>
+  );
+}
+
+/**
+ * The handover confirmation state for this asset (OAMS-251): a call to action
+ * while receipt is Pending, then the recorded outcome. Handback confirmation
+ * (OAMS-252) is shown but not yet actionable.
+ */
+function ConfirmationBanner({ detail, onReview }: { detail: MyAssetDetailType; onReview: () => void }) {
+  const handback = detail.assignmentType === 'Handback';
+  const when = detail.confirmedAt
+    ? new Date(detail.confirmedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+    : null;
+
+  if (detail.confirmationStatus === 'Pending') {
+    return (
+      <div className="flex flex-wrap items-center gap-3 mt-5 rounded-control px-3 py-2.5 text-2sm bg-warning-surface text-warning-foreground border border-warning/30">
+        <Clock className="w-4 h-4 shrink-0" />
+        <span className="flex-1 min-w-[200px]">
+          {handback
+            ? 'Handback confirmation pending for this asset.'
+            : 'Please review this asset and confirm you have received it.'}
+        </span>
+        {!handback && (
+          <button
+            onClick={onReview}
+            className="rounded-control px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
+          >
+            Review &amp; Accept
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (detail.confirmationStatus === 'Rejected') {
+    return (
+      <div className="flex items-start gap-2 mt-5 rounded-control px-3 py-2.5 text-2sm bg-danger-surface text-danger-foreground border border-danger/30">
+        <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+        <span>
+          Issue reported{when ? ` on ${when}` : ''}: {detail.confirmationNote ?? 'No details given.'}
+          <span className="block text-xs opacity-80 mt-0.5">Your administrator will follow up.</span>
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 mt-5 rounded-control px-3 py-2 text-2sm bg-success-surface text-success-foreground border border-success/30">
+      <CheckCircle2 className="w-4 h-4 shrink-0" />
+      {handback ? 'Handback confirmed' : 'Receipt confirmed'}{when ? ` on ${when}` : ''}.
     </div>
   );
 }

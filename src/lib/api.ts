@@ -38,6 +38,8 @@ import type {
   AssetWarranties,
   AssignmentType,
   AssignmentFeedbackPayload,
+  ConfirmAssignmentPayload,
+  MyAssignmentConfirmation,
   MyAssetDetail,
   MyAssetFilterOptions,
   MyAssetListItem,
@@ -924,6 +926,30 @@ export function getMyAssetFilterOptions(): Promise<MyAssetFilterOptions> {
  */
 export function getMyAsset(assetId: string): Promise<MyAssetDetail> {
   return request<MyAssetDetail>(`/me/assets/${encodeURIComponent(assetId)}`);
+}
+
+/**
+ * The employee's response to a handover of one of their assets
+ * (PATCH /api/me/assignments/:id/confirmation): Accepted, or Rejected with a
+ * reason to report an issue. 409 when it was already confirmed.
+ */
+export function confirmMyAssignment(
+  assignmentId: string,
+  payload: ConfirmAssignmentPayload,
+): Promise<MyAssignmentConfirmation> {
+  return request<MyAssignmentConfirmation>(
+    `/me/assignments/${encodeURIComponent(assignmentId)}/confirmation`,
+    { method: 'PATCH', body: payload },
+  );
+}
+
+/** Handover/return photos for one of the employee's own active assignments. */
+export function getMyConditionImages(
+  assignmentId: string,
+): Promise<{ assigned: ConditionImageItem[]; returned: ConditionImageItem[] }> {
+  return request<{ assigned: ConditionImageItem[]; returned: ConditionImageItem[] }>(
+    `/me/assignments/${encodeURIComponent(assignmentId)}/condition-images`,
+  );
 }
 
 export function getAssetHistory(
