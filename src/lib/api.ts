@@ -37,7 +37,13 @@ import type {
   RetireRepairPayload,
   AssetWarranties,
   AssignmentType,
-  AssignmentFeedbackPayload,
+  AssignmentConfirmationStatus,
+  ConfirmAssignmentPayload,
+  MyAssignmentConfirmation,
+  MyAssetDetail,
+  MyAssetFilterOptions,
+  MyPendingActions,
+  MyAssetListItem,
   ResetPasswordPayload,
   ReturnAssignmentPayload,
   SendToRepairPayload,
@@ -799,6 +805,8 @@ export interface GetAssignmentsParams {
   assignmentDateFrom?: string;
   assignmentDateTo?: string;
   assignmentType?: AssignmentType;
+  /** The employee's handover confirmation; Pending + assignmentType gives the admin pending views. */
+  confirmationStatus?: AssignmentConfirmationStatus;
   sortBy?: 'assignmentDate' | 'expectedReturnDate' | 'createdAt';
   sortOrder?: 'ASC' | 'DESC';
   page?: number;
@@ -816,6 +824,7 @@ export function getAssignments(
     assignmentDateFrom: params.assignmentDateFrom,
     assignmentDateTo: params.assignmentDateTo,
     assignmentType: params.assignmentType,
+    confirmationStatus: params.confirmationStatus,
     sortBy: params.sortBy,
     sortOrder: params.sortOrder,
     page: params.page,
@@ -888,6 +897,71 @@ export function getMyAssignments(
   return request<PaginatedResult<EmployeeAssignmentItem>>('/assignments/me', {
     query: { isReturned, limit: 100 },
   });
+}
+
+/**
+ * The signed-in user's currently assigned assets for the My Assets list
+ * (GET /api/me/assets). Scoped to the JWT user on the server; takes no id.
+ */
+export function getMyAssets(
+  params: {
+    search?: string;
+    categoryId?: string;
+    status?: AssetStatus;
+    page?: number;
+    limit?: number;
+  } = {},
+): Promise<PaginatedResult<MyAssetListItem>> {
+  return request<PaginatedResult<MyAssetListItem>>('/me/assets', { query: params });
+}
+
+/**
+ * Values for the My Assets filter dropdowns (GET /api/me/assets/filter-options):
+ * every active category, and the statuses an assigned asset can have. Employees
+ * can't call GET /categories, which is Admin-only.
+ */
+export function getMyAssetFilterOptions(): Promise<MyAssetFilterOptions> {
+  return request<MyAssetFilterOptions>('/me/assets/filter-options');
+}
+
+/**
+ * Read-only detail of one of the signed-in user's assigned assets
+ * (GET /api/me/assets/:assetId). 404 when it isn't one of theirs.
+ */
+export function getMyAsset(assetId: string): Promise<MyAssetDetail> {
+  return request<MyAssetDetail>(`/me/assets/${encodeURIComponent(assetId)}`);
+}
+
+/**
+ * The employee's response to a handover of one of their assets
+ * (PATCH /api/me/assignments/:id/confirmation): Accepted, or Rejected with a
+ * reason to report an issue. 409 when it was already confirmed.
+ */
+export function confirmMyAssignment(
+  assignmentId: string,
+  payload: ConfirmAssignmentPayload,
+): Promise<MyAssignmentConfirmation> {
+  return request<MyAssignmentConfirmation>(
+    `/me/assignments/${encodeURIComponent(assignmentId)}/confirmation`,
+    { method: 'PATCH', body: payload },
+  );
+}
+
+/**
+ * The signed-in employee's outstanding handover confirmations for the dashboard
+ * Pending Actions widget (GET /api/me/pending-actions).
+ */
+export function getMyPendingActions(): Promise<MyPendingActions> {
+  return request<MyPendingActions>('/me/pending-actions');
+}
+
+/** Handover/return photos for one of the employee's own active assignments. */
+export function getMyConditionImages(
+  assignmentId: string,
+): Promise<{ assigned: ConditionImageItem[]; returned: ConditionImageItem[] }> {
+  return request<{ assigned: ConditionImageItem[]; returned: ConditionImageItem[] }>(
+    `/me/assignments/${encodeURIComponent(assignmentId)}/condition-images`,
+  );
 }
 
 export function getAssetHistory(
@@ -1049,18 +1123,6 @@ export async function fetchWarrantyDocument(
   }
 
   return response.blob();
-}
-
-/** Assignments awaiting handback confirmation after a repair return (admin). */
-/** Records the employee's Accept/Reject feedback on an assignment (admin stand-in). */
-export function submitAssignmentFeedback(
-  assignmentId: string,
-  payload: AssignmentFeedbackPayload,
-): Promise<ActiveAssignmentListItem> {
-  return request<ActiveAssignmentListItem>(`/assignments/${assignmentId}/feedback`, {
-    method: 'PATCH',
-    body: payload,
-  });
 }
 
 // ── Condition Images (OAMS-257/262) ───────────────────────────────────────

@@ -13,6 +13,7 @@ import { LinkedAssetsTab } from './LinkedAssetsTab';
 import { StatusBadge, ConditionBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { InfoRow } from '@/components/ui/InfoRow';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
 import { RegisterAssetDrawer } from '@/components/overlays/RegisterAssetDrawer';
 import { AssignAssetDrawer } from '@/components/overlays/AssignAssetDrawer';
@@ -63,17 +64,6 @@ function DocumentActions({
         <Download className="w-3.5 h-3.5" />
         <span>Download</span>
       </a>
-    </div>
-  );
-}
-
-function InfoRow({ label, value, mono, style }: {
-  label: string; value: React.ReactNode; mono?: boolean; style?: React.CSSProperties;
-}) {
-  return (
-    <div className="flex flex-col gap-0.5 py-2.5 border-b border-border/60">
-      <span className="micro-label font-semibold tracking-[0.04em]">{label}</span>
-      <span className={`text-2sm text-foreground ${mono ? 'font-mono' : ''}`} style={style}>{value ?? '—'}</span>
     </div>
   );
 }

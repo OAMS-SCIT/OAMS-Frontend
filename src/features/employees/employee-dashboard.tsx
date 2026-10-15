@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   AlertCircle,
+  ChevronRight,
   Headphones,
   Laptop,
   Mail,
@@ -15,6 +17,7 @@ import { ApiError, getMyAssignments } from '@/lib/api';
 import type { EmployeeAssignmentItem } from '@/types';
 import { useAuth } from '@/providers/auth-provider';
 import { ConditionBadge } from '@/components/ui/StatusBadge';
+import { PendingActions } from './pending-actions';
 
 /**
  * The employee portal landing page: the assets currently issued to the signed-in
@@ -88,9 +91,21 @@ export function EmployeeDashboard() {
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Assets */}
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold mb-4 text-lg tracking-[-0.01em] text-foreground">
-            My Current Assets
-          </h2>
+          {/* Handovers awaiting the employee's confirmation (OAMS-246). Confirming
+              one also refreshes the asset cards below. */}
+          <PendingActions onConfirmed={reload} />
+
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-lg tracking-[-0.01em] text-foreground">
+              My Current Assets
+            </h2>
+            <Link
+              href="/employee/assets"
+              className="flex items-center gap-1 text-2sm font-medium text-primary transition-colors hover:text-primary/80"
+            >
+              View All <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
 
           {loading ? (
             <div className="rounded-2xl flex items-center justify-center py-16 text-2sm text-muted-foreground bg-card border border-border shadow-card">
@@ -239,14 +254,12 @@ function AssetCard({ row }: { row: EmployeeAssignmentItem }) {
           </div>
         </div>
 
-        {/* Opens the employee asset detail view, which OAMS-250 delivers. */}
-        <button
-          disabled
-          title="Asset details are coming soon"
-          className="mt-4 w-full rounded-control py-2 text-2sm font-medium border border-primary/30 text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        <Link
+          href={`/employee/assets/${row.asset.id}`}
+          className="mt-4 w-full rounded-control py-2 text-center text-2sm font-medium border border-primary/30 text-primary transition-colors hover:bg-primary/5"
         >
           View Details
-        </button>
+        </Link>
       </div>
     </div>
   );

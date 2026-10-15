@@ -18,6 +18,7 @@ import { RegisterAssetDrawer } from '@/components/overlays/RegisterAssetDrawer';
 import { ChangeStatusDrawer } from '@/components/overlays/ChangeStatusDrawer';
 import { ConfirmDialog } from '@/components/overlays/ConfirmDialog';
 import { ApiError, deleteAsset, getAssets } from '@/lib/api';
+import { warrantyStyle } from '@/lib/warranty';
 
 const PER_PAGE = 10;
 const STATUSES: AssetStatus[] = ['Available', 'Assigned', 'Under Repair', 'Reserved', 'Lost/Stolen', 'Retired'];
@@ -29,15 +30,6 @@ const SORT_OPTIONS = [
 ] as const;
 
 type SortBy = 'createdAt' | 'name' | 'purchaseDate' | 'warrantyExpiryDate';
-
-function warrantyStyle(expiry?: string | null) {
-  if (!expiry) return 'text-muted-foreground/80';
-  const days = Math.floor((new Date(expiry).getTime() - Date.now()) / 86400000);
-  if (days < 0) return 'text-danger font-semibold';
-  if (days <= 30) return 'text-danger';
-  if (days <= 90) return 'text-warning-foreground';
-  return 'text-muted-foreground';
-}
 
 export function AssetInventory() {
   const router = useRouter();

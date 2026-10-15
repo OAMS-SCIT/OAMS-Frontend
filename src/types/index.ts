@@ -590,15 +590,14 @@ export interface AssetWarranties {
   warranties: WarrantyItem[];
 }
 
-/** A row in the admin Pending Handbacks list (GET /api/assignments/pending-handback). */
+/** General = a normal assignment; Handback = re-assigned after a repair. */
 export type AssignmentType = 'General' | 'Handback';
+/**
+ * The employee's response to a handover. Rejected means they reported an issue
+ * (shown as "Issue Reported"). Set only by the employee via
+ * PATCH /api/me/assignments/:id/confirmation (OAMS-251).
+ */
 export type AssignmentConfirmationStatus = 'Pending' | 'Accepted' | 'Rejected';
-
-/** Body for PATCH /api/assignments/:id/feedback — employee Accept/Reject. */
-export interface AssignmentFeedbackPayload {
-  status: Extract<AssignmentConfirmationStatus, 'Accepted' | 'Rejected'>;
-  note?: string;
-}
 
 // ── Upgrades ──────────────────────────────────────────────────────────────
 
@@ -739,6 +738,128 @@ export interface EmployeeAssignmentItem {
    */
   isReturned: boolean;
   assignedBy: { id: string; firstName: string; lastName: string } | null;
+}
+
+/**
+ * A row in the employee's My Assets list (GET /api/me/assets). Only the
+ * signed-in user's currently assigned assets; `assignmentId` is the active
+ * assignment the asset is held under.
+ */
+export interface MyAssetListItem {
+  assignmentId: string;
+  asset: {
+    id: string;
+    displayId: string;
+    name: string;
+    brand: string | null;
+    model: string;
+    serialNumber: string | null;
+    status: AssetStatus;
+    category: { id: string; name: string } | null;
+    /** Primary image, or null when the asset has none. */
+    imageUrl: string | null;
+    warrantyExpiryDate: string | null;
+  };
+  assignmentDate: string;
+  assignmentType: AssignmentType;
+  confirmationStatus: AssignmentConfirmationStatus;
+}
+
+/** One outstanding handover the employee still has to confirm (OAMS-246). */
+export interface PendingActionItem {
+  assignmentId: string;
+  assignmentDate: string;
+  asset: { id: string; displayId: string; name: string };
+}
+
+/**
+ * The dashboard's Pending Actions (GET /api/me/pending-actions): receipts of
+ * newly assigned assets and handbacks after repair awaiting confirmation.
+ */
+export interface MyPendingActions {
+  receipt: PendingActionItem[];
+  handback: PendingActionItem[];
+}
+
+/**
+ * What happened at the service center before an asset was handed back to the
+ * employee (OAMS-252). Work items carry names and types only, never costs.
+ */
+export interface MyHandbackSummary {
+  repairId: string;
+  vendor: string | null;
+  /** Why the asset was sent for repair. */
+  reason: string;
+  outcome: string | null;
+  sentAt: string;
+  returnDate: string | null;
+  notes: string | null;
+  workDone: { itemName: string; itemType: string }[];
+}
+
+/**
+ * The employee's read-only view of one of their assets
+ * (GET /api/me/assets/:assetId). No financial or document data.
+ */
+export interface MyAssetDetail {
+  assignmentId: string;
+  assignmentType: AssignmentType;
+  confirmationStatus: AssignmentConfirmationStatus;
+  assignmentDate: string;
+  expectedReturnDate: string | null;
+  conditionAtAssignment: AssetCondition | null;
+  /** When the employee accepted or reported an issue; null while Pending. */
+  confirmedAt: string | null;
+  /** The reported issue when confirmationStatus is Rejected. */
+  confirmationNote: string | null;
+  /** For a Handback assignment: the repair it came from (OAMS-252); otherwise null. */
+  handback: MyHandbackSummary | null;
+  asset: {
+    id: string;
+    displayId: string;
+    name: string;
+    description: string | null;
+    brand: string | null;
+    model: string;
+    serialNumber: string | null;
+    status: AssetStatus;
+    condition: AssetCondition;
+    location: string | null;
+    warrantyExpiryDate: string | null;
+    category: { id: string; name: string } | null;
+    /** Sorted; the first is the primary image. */
+    images: { id: string; url: string }[];
+    /** The category's attributes in registration-form order. */
+    customAttributes: { label: string; type: string; value: string }[];
+  };
+}
+
+/**
+ * Body for PATCH /api/me/assignments/:id/confirmation: the employee accepts a
+ * handover, or reports an issue (Rejected) with a required reason.
+ */
+export interface ConfirmAssignmentPayload {
+  status: Extract<AssignmentConfirmationStatus, 'Accepted' | 'Rejected'>;
+  note?: string;
+}
+
+/** Result of PATCH /api/me/assignments/:id/confirmation. */
+export interface MyAssignmentConfirmation {
+  assignmentId: string;
+  confirmationStatus: AssignmentConfirmationStatus;
+  confirmationNote: string | null;
+  confirmedAt: string;
+}
+
+/**
+ * Values for the My Assets filter dropdowns (GET /api/me/assets/filter-options):
+ * every active category (plus any inactive one the user still holds an asset
+ * in), and the statuses Assigned and Under Repair plus any other status the
+ * user currently holds, so the filter always covers what the table shows.
+ */
+export interface MyAssetFilterOptions {
+  categories: { id: string; name: string }[];
+  statuses: AssetStatus[];
 }
 
 /** POST /api/assignments request body. */

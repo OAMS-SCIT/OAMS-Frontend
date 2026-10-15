@@ -3,16 +3,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Search, Eye, RefreshCw, AlertTriangle, RotateCcw, Check, X } from 'lucide-react';
+import { Search, Eye, RefreshCw, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
-import type { ActiveAssignmentListItem, AssetCondition, CategoryListItem, AssignmentConfirmationStatus } from '@/types';
+import type { ActiveAssignmentListItem, AssetCondition, CategoryListItem, AssignmentConfirmationStatus, AssignmentType } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ClearFiltersButton } from '@/components/ui/ClearFiltersButton';
 import { ReturnAssetDrawer } from '@/components/overlays/ReturnAssetDrawer';
-import { OverlayPortal } from '@/components/overlays/OverlayPortal';
-import { ApiError, getAssignments, getCategories, returnAssignment, submitAssignmentFeedback, uploadConditionImages } from '@/lib/api';
+import { ApiError, getAssignments, getCategories, returnAssignment, uploadConditionImages } from '@/lib/api';
 
 const PER_PAGE = 10;
 
@@ -21,8 +20,22 @@ function ConfirmationBadge({ status }: { status: AssignmentConfirmationStatus })
     status === 'Accepted' ? 'bg-success-surface text-success-foreground'
     : status === 'Rejected' ? 'bg-danger-surface text-danger-foreground'
     : 'bg-warning-surface text-warning-foreground';
-  return <span className={`inline-flex items-center rounded-full px-2.5 py-1 font-medium text-2xs ${style}`}>{status}</span>;
+  // The employee "reports an issue" rather than rejecting; label it that way.
+  const label = status === 'Rejected' ? 'Issue Reported' : status;
+  return <span className={`inline-flex items-center rounded-full px-2.5 py-1 font-medium text-2xs ${style}`}>{label}</span>;
 }
+
+/**
+ * The admin's views of the employee's handover confirmation (OAMS-251/252).
+ * Pending Receipt / Pending Handback are the "pending confirmations" lists: an
+ * assignment leaves them as soon as the employee accepts or reports an issue.
+ */
+const CONFIRMATION_VIEWS: Record<string, { label: string; assignmentType?: AssignmentType; confirmationStatus: AssignmentConfirmationStatus }> = {
+  'pending-receipt': { label: 'Pending Receipt', assignmentType: 'General', confirmationStatus: 'Pending' },
+  'pending-handback': { label: 'Pending Handback', assignmentType: 'Handback', confirmationStatus: 'Pending' },
+  accepted: { label: 'Accepted', confirmationStatus: 'Accepted' },
+  rejected: { label: 'Issue Reported', confirmationStatus: 'Rejected' },
+};
 
 const assigneeName = (a: ActiveAssignmentListItem['assignee']) =>
   `${a.firstName} ${a.lastName}`.trim();
@@ -37,6 +50,7 @@ export function ActiveAssignments() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [overdueOnly, setOverdueOnly] = useState(false);
+  const [confirmationView, setConfirmationView] = useState('');
   const [page, setPage] = useState(1);
 
   // ── Data state ───────────────────────────────────────────────────────────
@@ -50,13 +64,10 @@ export function ActiveAssignments() {
   const [returnRow, setReturnRow] = useState<ActiveAssignmentListItem | null>(null);
   const [returnSaving, setReturnSaving] = useState(false);
 
-  // ── Employee feedback (Accept / Reject) ──────────────────────────────────
-  const [feedbackBusyId, setFeedbackBusyId] = useState<string | null>(null);
-  const [rejectRow, setRejectRow] = useState<ActiveAssignmentListItem | null>(null);
-  const [rejectNote, setRejectNote] = useState('');
-
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
-  const hasActiveFilters = Boolean(search || filterCategory || dateFrom || dateTo || overdueOnly);
+  const hasActiveFilters = Boolean(
+    search || filterCategory || dateFrom || dateTo || overdueOnly || confirmationView,
+  );
 
   const clearFilters = () => {
     setSearch('');
@@ -65,6 +76,7 @@ export function ActiveAssignments() {
     setDateFrom('');
     setDateTo('');
     setOverdueOnly(false);
+    setConfirmationView('');
     setPage(1);
   };
 
@@ -88,12 +100,15 @@ export function ActiveAssignments() {
     setLoading(true);
     setError(null);
     try {
+      const view = CONFIRMATION_VIEWS[confirmationView];
       const result = await getAssignments({
         search: debouncedSearch || undefined,
         categoryId: filterCategory || undefined,
         assignmentDateFrom: dateFrom || undefined,
         assignmentDateTo: dateTo || undefined,
         overdue: overdueOnly || undefined,
+        assignmentType: view?.assignmentType,
+        confirmationStatus: view?.confirmationStatus,
         page,
         limit: PER_PAGE,
       });
@@ -106,7 +121,7 @@ export function ActiveAssignments() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, filterCategory, dateFrom, dateTo, overdueOnly, page]);
+  }, [debouncedSearch, filterCategory, dateFrom, dateTo, overdueOnly, confirmationView, page]);
 
   useEffect(() => {
     load();
@@ -147,35 +162,6 @@ export function ActiveAssignments() {
     }
   };
 
-  const handleAccept = async (row: ActiveAssignmentListItem) => {
-    setFeedbackBusyId(row.id);
-    try {
-      await submitAssignmentFeedback(row.id, { status: 'Accepted' });
-      toast.success(`"${row.asset.name}" assignment accepted.`);
-      load();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Failed to submit feedback.');
-    } finally {
-      setFeedbackBusyId(null);
-    }
-  };
-
-  const handleReject = async () => {
-    if (!rejectRow || !rejectNote.trim()) return;
-    setFeedbackBusyId(rejectRow.id);
-    try {
-      await submitAssignmentFeedback(rejectRow.id, { status: 'Rejected', note: rejectNote.trim() });
-      toast.success(`"${rejectRow.asset.name}" assignment rejected.`);
-      setRejectRow(null);
-      setRejectNote('');
-      load();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Failed to submit feedback.');
-    } finally {
-      setFeedbackBusyId(null);
-    }
-  };
-
   return (
     <div className="motion-safe:animate-fade-rise">
       {/* Header */}
@@ -207,6 +193,16 @@ export function ActiveAssignments() {
             ariaLabel="Category"
             placeholder="All Categories"
             options={[{ value: '', label: 'All Categories' }, ...categories.map((c) => ({ value: c.id, label: c.name.length > 45 ? c.name.slice(0, 45) + '…' : c.name }))]}
+          />
+          <Select
+            value={confirmationView}
+            onValueChange={(v) => { setConfirmationView(v); setPage(1); }}
+            ariaLabel="Employee confirmation"
+            placeholder="All Confirmations"
+            options={[
+              { value: '', label: 'All Confirmations' },
+              ...Object.entries(CONFIRMATION_VIEWS).map(([value, v]) => ({ value, label: v.label })),
+            ]}
           />
           <div className="flex items-center gap-2">
             <DatePicker
@@ -305,23 +301,12 @@ export function ActiveAssignments() {
                     className="flex items-center gap-1 text-2sm font-medium text-foreground/70 transition-colors hover:text-foreground">
                     <Eye className="w-3.5 h-3.5" /> View Detail
                   </button>
-                  {row.confirmationStatus === 'Pending' ? (
-                    <>
-                      <button onClick={() => handleAccept(row)} disabled={feedbackBusyId === row.id}
-                        className="flex items-center gap-1 text-2sm font-semibold text-success-foreground transition-opacity hover:opacity-80 disabled:opacity-50">
-                        <Check className="w-3.5 h-3.5" /> Accept
-                      </button>
-                      <button onClick={() => { setRejectRow(row); setRejectNote(''); }} disabled={feedbackBusyId === row.id}
-                        className="flex items-center gap-1 text-2sm font-semibold text-danger transition-opacity hover:opacity-80 disabled:opacity-50">
-                        <X className="w-3.5 h-3.5" /> Reject
-                      </button>
-                    </>
-                  ) : (
-                    <button onClick={() => setReturnRow(row)}
-                      className="flex items-center gap-1 text-2sm font-semibold text-warning-foreground transition-opacity hover:opacity-80">
-                      <RotateCcw className="w-3.5 h-3.5" /> Process Return
-                    </button>
-                  )}
+                  {/* Accept / report-an-issue belongs to the employee (OAMS-251);
+                      the admin only sees the outcome in the badge above. */}
+                  <button onClick={() => setReturnRow(row)}
+                    className="flex items-center gap-1 text-2sm font-semibold text-warning-foreground transition-opacity hover:opacity-80">
+                    <RotateCcw className="w-3.5 h-3.5" /> Process Return
+                  </button>
                 </div>
               </div>
 
@@ -355,7 +340,7 @@ export function ActiveAssignments() {
 
               {row.confirmationStatus === 'Rejected' && row.confirmationNote && (
                 <div className="mt-3">
-                  <div className="micro-label mb-1">Rejection Reason</div>
+                  <div className="micro-label mb-1">Reported Issue</div>
                   <div className="text-2sm text-danger/90">{row.confirmationNote}</div>
                 </div>
               )}
@@ -394,41 +379,6 @@ export function ActiveAssignments() {
         />
       )}
 
-      {/* Reject feedback dialog */}
-      {rejectRow && (
-        <OverlayPortal>
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim backdrop-blur-[2px] motion-safe:animate-overlay-in" onClick={() => setRejectRow(null)}>
-            <div className="rounded-2xl flex flex-col w-[440px] bg-card text-card-foreground shadow-pop motion-safe:animate-pop-in" onClick={(e) => e.stopPropagation()}>
-              <div className="px-6 pt-6 pb-4">
-                <h2 className="font-bold text-base tracking-[-0.01em] text-foreground">Reject assignment</h2>
-                <p className="text-2sm text-muted-foreground mt-1">
-                  Rejecting the handover of <span className="font-medium text-foreground">{rejectRow.asset.name}</span>. Please give a reason (e.g. condition mismatch).
-                </p>
-              </div>
-              <div className="px-6 pb-2">
-                <textarea
-                  autoFocus
-                  value={rejectNote}
-                  onChange={(e) => setRejectNote(e.target.value)}
-                  rows={3}
-                  placeholder="Reason for rejection…"
-                  className="w-full rounded-control border border-input bg-input-background text-2sm text-foreground px-3 py-2 placeholder:text-muted-foreground/60 resize-y transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
-                />
-              </div>
-              <div className="flex items-center gap-3 px-6 py-4 mt-2 justify-end border-t border-border bg-muted/60 rounded-b-2xl">
-                <button onClick={() => setRejectRow(null)} disabled={feedbackBusyId === rejectRow.id}
-                  className="rounded-control border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted disabled:opacity-60">
-                  Cancel
-                </button>
-                <button onClick={handleReject} disabled={feedbackBusyId === rejectRow.id || !rejectNote.trim()}
-                  className="rounded-control px-5 py-2.5 text-sm font-semibold bg-danger text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60">
-                  {feedbackBusyId === rejectRow.id ? 'Rejecting…' : 'Reject'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </OverlayPortal>
-      )}
     </div>
   );
 }

@@ -30,9 +30,9 @@ const adminNavItems = [
   { path: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
-// Asset and history views return once the employee-scoped endpoints exist.
 const employeeNavItems = [
   { path: '/employee/dashboard', label: 'Home', icon: LayoutDashboard },
+  { path: '/employee/assets', label: 'My Assets', icon: Package },
 ];
 
 export function AppLayout({ children, role, onLogout }: LayoutProps) {
@@ -196,13 +196,16 @@ function BreadcrumbDisplay({ pathname, role }: { pathname: string; role: AppRole
     '/admin/settings': ['Settings'],
     '/admin/profile': ['Personal Profile'],
     '/employee/dashboard': ['Home'],
+    '/employee/assets': ['My Assets'],
     '/employee/profile': ['My Profile'],
   };
   const base = pathname.startsWith('/admin/inventory/')
     ? ['Asset Inventory', 'Asset Detail']
     : pathname.startsWith('/admin/users/')
       ? ['User Management', 'Employee Profile']
-      : segments[pathname];
+      : pathname.startsWith('/employee/assets/')
+        ? ['My Assets', 'Asset Details']
+        : segments[pathname];
   if (!base) return <span className="text-2sm text-muted-foreground">OAMS</span>;
   return (
     <div className="flex items-center gap-2 text-2sm">
