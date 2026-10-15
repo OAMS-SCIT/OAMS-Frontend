@@ -741,6 +741,31 @@ export interface EmployeeAssignmentItem {
   assignedBy: { id: string; firstName: string; lastName: string } | null;
 }
 
+/**
+ * A row in the employee's My Assets list (GET /api/me/assets). Only the
+ * signed-in user's currently assigned assets; `assignmentId` is the active
+ * assignment the asset is held under.
+ */
+export interface MyAssetListItem {
+  assignmentId: string;
+  asset: {
+    id: string;
+    displayId: string;
+    name: string;
+    brand: string | null;
+    model: string;
+    serialNumber: string | null;
+    status: AssetStatus;
+    category: { id: string; name: string } | null;
+    /** Primary image, or null when the asset has none. */
+    imageUrl: string | null;
+    warrantyExpiryDate: string | null;
+  };
+  assignmentDate: string;
+  assignmentType: AssignmentType;
+  confirmationStatus: AssignmentConfirmationStatus;
+}
+
 /** POST /api/assignments request body. */
 export interface CreateAssignmentPayload {
   assetId: string;

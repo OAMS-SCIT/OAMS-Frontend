@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   AlertCircle,
+  ChevronRight,
   Headphones,
   Laptop,
   Mail,
@@ -88,9 +90,17 @@ export function EmployeeDashboard() {
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Assets */}
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold mb-4 text-lg tracking-[-0.01em] text-foreground">
-            My Current Assets
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-lg tracking-[-0.01em] text-foreground">
+              My Current Assets
+            </h2>
+            <Link
+              href="/employee/assets"
+              className="flex items-center gap-1 text-2sm font-medium text-primary transition-colors hover:text-primary/80"
+            >
+              View All <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
 
           {loading ? (
             <div className="rounded-2xl flex items-center justify-center py-16 text-2sm text-muted-foreground bg-card border border-border shadow-card">
