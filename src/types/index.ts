@@ -766,6 +766,15 @@ export interface MyAssetListItem {
   confirmationStatus: AssignmentConfirmationStatus;
 }
 
+/**
+ * Values for the My Assets filter dropdowns (GET /api/me/assets/filter-options):
+ * only the categories and statuses among the signed-in user's own assets.
+ */
+export interface MyAssetFilterOptions {
+  categories: { id: string; name: string }[];
+  statuses: AssetStatus[];
+}
+
 /** POST /api/assignments request body. */
 export interface CreateAssignmentPayload {
   assetId: string;

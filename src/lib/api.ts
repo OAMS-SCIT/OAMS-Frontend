@@ -38,6 +38,7 @@ import type {
   AssetWarranties,
   AssignmentType,
   AssignmentFeedbackPayload,
+  MyAssetFilterOptions,
   MyAssetListItem,
   ResetPasswordPayload,
   ReturnAssignmentPayload,
@@ -896,9 +897,24 @@ export function getMyAssignments(
  * (GET /api/me/assets). Scoped to the JWT user on the server; takes no id.
  */
 export function getMyAssets(
-  params: { search?: string; page?: number; limit?: number } = {},
+  params: {
+    search?: string;
+    categoryId?: string;
+    status?: AssetStatus;
+    page?: number;
+    limit?: number;
+  } = {},
 ): Promise<PaginatedResult<MyAssetListItem>> {
   return request<PaginatedResult<MyAssetListItem>>('/me/assets', { query: params });
+}
+
+/**
+ * The categories and statuses among the signed-in user's own assets, for the
+ * My Assets filter dropdowns (GET /api/me/assets/filter-options). Employees
+ * can't call GET /categories, which is Admin-only.
+ */
+export function getMyAssetFilterOptions(): Promise<MyAssetFilterOptions> {
+  return request<MyAssetFilterOptions>('/me/assets/filter-options');
 }
 
 export function getAssetHistory(
