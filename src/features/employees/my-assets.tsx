@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Eye, ImageIcon, RefreshCw } from 'lucide-react';
+import { Clock, Eye, ImageIcon, RefreshCw } from 'lucide-react';
 import { ApiError, getMyAssets } from '@/lib/api';
+import { warrantyStyle } from '@/lib/warranty';
 import type { MyAssetListItem } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -93,13 +94,11 @@ export function MyAssets() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[820px]">
+              <table className="w-full min-w-[900px]">
                 <thead>
                   <tr className="bg-muted/60 border-b-2 border-border">
                     {[
-                      'Image',
-                      'Asset ID',
-                      'Asset Name',
+                      'Asset',
                       'Brand / Model',
                       'Category',
                       'Serial Number',
@@ -108,7 +107,7 @@ export function MyAssets() {
                       'Assigned Date',
                       'Actions',
                     ].map((label) => (
-                      <th key={label} className="text-left px-4 py-3 micro-label">
+                      <th key={label} className="text-left px-5 py-3 micro-label whitespace-nowrap">
                         {label}
                       </th>
                     ))}
@@ -120,43 +119,46 @@ export function MyAssets() {
                       key={row.assignmentId}
                       className={`border-b border-border/60 transition-colors hover:bg-primary/[0.04] ${i % 2 === 0 ? 'bg-card' : 'bg-muted/30'}`}
                     >
-                      <td className="px-4 py-3">
-                        <AssetThumb url={row.asset.imageUrl} name={row.asset.name} />
+                      {/* Image + name + Asset ID share one cell, like the admin lists. */}
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <AssetThumb url={row.asset.imageUrl} name={row.asset.name} />
+                          <div className="min-w-0">
+                            <div className="font-medium text-2sm text-foreground truncate max-w-[220px]" title={row.asset.name}>
+                              {row.asset.name}
+                            </div>
+                            <div className="text-2xs text-muted-foreground/80 font-mono">{row.asset.displayId}</div>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-muted-foreground/80 font-mono whitespace-nowrap">
-                        {row.asset.displayId}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="font-medium text-2sm text-foreground">{row.asset.name}</div>
-                        <PendingConfirmationPill row={row} />
-                      </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-5 py-3.5">
                         <div className="text-2sm text-foreground/80">{row.asset.brand ?? '—'}</div>
                         <div className="text-2xs text-muted-foreground/80">{row.asset.model}</div>
                       </td>
-                      <td className="px-4 py-3.5 text-2sm text-muted-foreground">
+                      <td className="px-5 py-3.5 text-2sm text-muted-foreground">
                         {row.asset.category?.name ?? '—'}
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-muted-foreground font-mono">
+                      <td className="px-5 py-3.5 text-xs text-muted-foreground font-mono">
                         {row.asset.serialNumber ?? '—'}
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-5 py-3.5">
                         <StatusBadge status={row.asset.status} />
+                        <PendingConfirmation row={row} />
                       </td>
-                      <td className="px-4 py-3.5 text-xs nums text-muted-foreground whitespace-nowrap">
+                      <td className={`px-5 py-3.5 text-xs nums whitespace-nowrap ${warrantyStyle(row.asset.warrantyExpiryDate)}`}>
                         {row.asset.warrantyExpiryDate ?? '—'}
                       </td>
-                      <td className="px-4 py-3.5 text-xs nums text-muted-foreground whitespace-nowrap">
+                      <td className="px-5 py-3.5 text-xs nums text-muted-foreground whitespace-nowrap">
                         {row.assignmentDate}
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-5 py-3.5">
                         {/* Opens the employee asset detail view, which OAMS-250 delivers. */}
                         <button
                           disabled
                           title="Asset details are coming soon"
-                          className="flex items-center gap-1.5 rounded-control px-3 py-1.5 text-xs font-medium whitespace-nowrap border border-primary/30 text-primary transition-colors hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                          className="flex items-center gap-1 text-2sm font-medium whitespace-nowrap text-foreground/70 transition-colors hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-foreground/70"
                         >
-                          <Eye className="w-3.5 h-3.5" /> View Details
+                          <Eye className="w-3.5 h-3.5" /> View
                         </button>
                       </td>
                     </tr>
@@ -200,23 +202,31 @@ export function MyAssets() {
 function AssetThumb({ url, name }: { url: string | null; name: string }) {
   if (!url) {
     return (
-      <div className="flex items-center justify-center w-10 h-10 rounded-control bg-muted" title="No image">
+      <div className="flex items-center justify-center shrink-0 w-10 h-10 rounded-control bg-muted border border-border" title="No image">
         <ImageIcon className="w-4 h-4 text-muted-foreground/50" />
       </div>
     );
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt={name} className="w-10 h-10 rounded-control object-cover border border-border" />
+    <img src={url} alt={name} className="shrink-0 w-10 h-10 rounded-control object-cover border border-border" />
   );
 }
 
-/** Flags a handover the employee still has to confirm (OAMS-251 / OAMS-252). */
-function PendingConfirmationPill({ row }: { row: MyAssetListItem }) {
+/**
+ * A short, single-line flag under the status badge for a handover the employee
+ * still has to confirm (OAMS-251 / OAMS-252). The full wording is the tooltip.
+ */
+function PendingConfirmation({ row }: { row: MyAssetListItem }) {
   if (row.confirmationStatus !== 'Pending') return null;
+  const handback = row.assignmentType === 'Handback';
   return (
-    <span className="inline-flex items-center mt-1 rounded-md px-2 py-[2px] text-2xs font-medium bg-warning-surface text-warning-foreground">
-      {row.assignmentType === 'Handback' ? 'Handback Confirmation Pending' : 'Receipt Confirmation Pending'}
-    </span>
+    <div
+      className="flex items-center gap-1 mt-1.5 text-2xs font-medium whitespace-nowrap text-warning-foreground"
+      title={handback ? 'Handback Confirmation Pending' : 'Receipt Confirmation Pending'}
+    >
+      <Clock className="w-3 h-3" />
+      {handback ? 'Handback pending' : 'Receipt pending'}
+    </div>
   );
 }
