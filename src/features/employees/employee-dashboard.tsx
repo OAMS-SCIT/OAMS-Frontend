@@ -17,6 +17,7 @@ import { ApiError, getMyAssignments } from '@/lib/api';
 import type { EmployeeAssignmentItem } from '@/types';
 import { useAuth } from '@/providers/auth-provider';
 import { ConditionBadge } from '@/components/ui/StatusBadge';
+import { PendingActions } from './pending-actions';
 
 /**
  * The employee portal landing page: the assets currently issued to the signed-in
@@ -90,6 +91,10 @@ export function EmployeeDashboard() {
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Assets */}
         <div className="flex-1 min-w-0">
+          {/* Handovers awaiting the employee's confirmation (OAMS-246). Confirming
+              one also refreshes the asset cards below. */}
+          <PendingActions onConfirmed={reload} />
+
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-lg tracking-[-0.01em] text-foreground">
               My Current Assets

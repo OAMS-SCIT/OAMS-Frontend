@@ -765,6 +765,22 @@ export interface MyAssetListItem {
   confirmationStatus: AssignmentConfirmationStatus;
 }
 
+/** One outstanding handover the employee still has to confirm (OAMS-246). */
+export interface PendingActionItem {
+  assignmentId: string;
+  assignmentDate: string;
+  asset: { id: string; displayId: string; name: string };
+}
+
+/**
+ * The dashboard's Pending Actions (GET /api/me/pending-actions): receipts of
+ * newly assigned assets and handbacks after repair awaiting confirmation.
+ */
+export interface MyPendingActions {
+  receipt: PendingActionItem[];
+  handback: PendingActionItem[];
+}
+
 /**
  * What happened at the service center before an asset was handed back to the
  * employee (OAMS-252). Work items carry names and types only, never costs.

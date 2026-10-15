@@ -42,6 +42,7 @@ import type {
   MyAssignmentConfirmation,
   MyAssetDetail,
   MyAssetFilterOptions,
+  MyPendingActions,
   MyAssetListItem,
   ResetPasswordPayload,
   ReturnAssignmentPayload,
@@ -944,6 +945,14 @@ export function confirmMyAssignment(
     `/me/assignments/${encodeURIComponent(assignmentId)}/confirmation`,
     { method: 'PATCH', body: payload },
   );
+}
+
+/**
+ * The signed-in employee's outstanding handover confirmations for the dashboard
+ * Pending Actions widget (GET /api/me/pending-actions).
+ */
+export function getMyPendingActions(): Promise<MyPendingActions> {
+  return request<MyPendingActions>('/me/pending-actions');
 }
 
 /** Handover/return photos for one of the employee's own active assignments. */
