@@ -37,7 +37,9 @@ import type {
   RetireRepairPayload,
   AssetWarranties,
   AssignmentType,
-  AssignmentFeedbackPayload,
+  AssignmentConfirmationStatus,
+  ConfirmAssignmentPayload,
+  MyAssignmentConfirmation,
   MyAssetDetail,
   MyAssetFilterOptions,
   MyAssetListItem,
@@ -802,6 +804,8 @@ export interface GetAssignmentsParams {
   assignmentDateFrom?: string;
   assignmentDateTo?: string;
   assignmentType?: AssignmentType;
+  /** The employee's handover confirmation; Pending + assignmentType gives the admin pending views. */
+  confirmationStatus?: AssignmentConfirmationStatus;
   sortBy?: 'assignmentDate' | 'expectedReturnDate' | 'createdAt';
   sortOrder?: 'ASC' | 'DESC';
   page?: number;
@@ -819,6 +823,7 @@ export function getAssignments(
     assignmentDateFrom: params.assignmentDateFrom,
     assignmentDateTo: params.assignmentDateTo,
     assignmentType: params.assignmentType,
+    confirmationStatus: params.confirmationStatus,
     sortBy: params.sortBy,
     sortOrder: params.sortOrder,
     page: params.page,
@@ -924,6 +929,30 @@ export function getMyAssetFilterOptions(): Promise<MyAssetFilterOptions> {
  */
 export function getMyAsset(assetId: string): Promise<MyAssetDetail> {
   return request<MyAssetDetail>(`/me/assets/${encodeURIComponent(assetId)}`);
+}
+
+/**
+ * The employee's response to a handover of one of their assets
+ * (PATCH /api/me/assignments/:id/confirmation): Accepted, or Rejected with a
+ * reason to report an issue. 409 when it was already confirmed.
+ */
+export function confirmMyAssignment(
+  assignmentId: string,
+  payload: ConfirmAssignmentPayload,
+): Promise<MyAssignmentConfirmation> {
+  return request<MyAssignmentConfirmation>(
+    `/me/assignments/${encodeURIComponent(assignmentId)}/confirmation`,
+    { method: 'PATCH', body: payload },
+  );
+}
+
+/** Handover/return photos for one of the employee's own active assignments. */
+export function getMyConditionImages(
+  assignmentId: string,
+): Promise<{ assigned: ConditionImageItem[]; returned: ConditionImageItem[] }> {
+  return request<{ assigned: ConditionImageItem[]; returned: ConditionImageItem[] }>(
+    `/me/assignments/${encodeURIComponent(assignmentId)}/condition-images`,
+  );
 }
 
 export function getAssetHistory(
@@ -1085,18 +1114,6 @@ export async function fetchWarrantyDocument(
   }
 
   return response.blob();
-}
-
-/** Assignments awaiting handback confirmation after a repair return (admin). */
-/** Records the employee's Accept/Reject feedback on an assignment (admin stand-in). */
-export function submitAssignmentFeedback(
-  assignmentId: string,
-  payload: AssignmentFeedbackPayload,
-): Promise<ActiveAssignmentListItem> {
-  return request<ActiveAssignmentListItem>(`/assignments/${assignmentId}/feedback`, {
-    method: 'PATCH',
-    body: payload,
-  });
 }
 
 // ── Condition Images (OAMS-257/262) ───────────────────────────────────────

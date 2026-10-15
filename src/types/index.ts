@@ -590,15 +590,14 @@ export interface AssetWarranties {
   warranties: WarrantyItem[];
 }
 
-/** A row in the admin Pending Handbacks list (GET /api/assignments/pending-handback). */
+/** General = a normal assignment; Handback = re-assigned after a repair. */
 export type AssignmentType = 'General' | 'Handback';
+/**
+ * The employee's response to a handover. Rejected means they reported an issue
+ * (shown as "Issue Reported"). Set only by the employee via
+ * PATCH /api/me/assignments/:id/confirmation (OAMS-251).
+ */
 export type AssignmentConfirmationStatus = 'Pending' | 'Accepted' | 'Rejected';
-
-/** Body for PATCH /api/assignments/:id/feedback — employee Accept/Reject. */
-export interface AssignmentFeedbackPayload {
-  status: Extract<AssignmentConfirmationStatus, 'Accepted' | 'Rejected'>;
-  note?: string;
-}
 
 // ── Upgrades ──────────────────────────────────────────────────────────────
 
@@ -777,6 +776,10 @@ export interface MyAssetDetail {
   assignmentDate: string;
   expectedReturnDate: string | null;
   conditionAtAssignment: AssetCondition | null;
+  /** When the employee accepted or reported an issue; null while Pending. */
+  confirmedAt: string | null;
+  /** The reported issue when confirmationStatus is Rejected. */
+  confirmationNote: string | null;
   asset: {
     id: string;
     displayId: string;
@@ -795,6 +798,23 @@ export interface MyAssetDetail {
     /** The category's attributes in registration-form order. */
     customAttributes: { label: string; type: string; value: string }[];
   };
+}
+
+/**
+ * Body for PATCH /api/me/assignments/:id/confirmation: the employee accepts a
+ * handover, or reports an issue (Rejected) with a required reason.
+ */
+export interface ConfirmAssignmentPayload {
+  status: Extract<AssignmentConfirmationStatus, 'Accepted' | 'Rejected'>;
+  note?: string;
+}
+
+/** Result of PATCH /api/me/assignments/:id/confirmation. */
+export interface MyAssignmentConfirmation {
+  assignmentId: string;
+  confirmationStatus: AssignmentConfirmationStatus;
+  confirmationNote: string | null;
+  confirmedAt: string;
 }
 
 /**
