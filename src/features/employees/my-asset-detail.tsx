@@ -88,6 +88,7 @@ export function MyAssetDetail() {
   const declarationDrawer = declarationOpen && params.id ? (
     <AssetDeclarationDrawer
       assetId={params.id}
+      assignmentType={detail?.assignmentType}
       onClose={() => setDeclarationOpen(false)}
       onConfirmed={reload}
     />
@@ -283,9 +284,9 @@ function HeroFact({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * The handover confirmation state for this asset (OAMS-251): a call to action
- * while receipt is Pending, then the recorded outcome. Handback confirmation
- * (OAMS-252) is shown but not yet actionable.
+ * The handover confirmation state for this asset: a call to action while the
+ * receipt (OAMS-251) or the handback after repair (OAMS-252) is Pending, then
+ * the recorded outcome.
  */
 function ConfirmationBanner({ detail, onReview }: { detail: MyAssetDetailType; onReview: () => void }) {
   const handback = detail.assignmentType === 'Handback';
@@ -299,17 +300,15 @@ function ConfirmationBanner({ detail, onReview }: { detail: MyAssetDetailType; o
         <Clock className="w-4 h-4 shrink-0" />
         <span className="flex-1 min-w-[200px]">
           {handback
-            ? 'Handback confirmation pending for this asset.'
+            ? 'This asset is back from repair. Please review its condition and confirm.'
             : 'Please review this asset and confirm you have received it.'}
         </span>
-        {!handback && (
-          <button
-            onClick={onReview}
-            className="rounded-control px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
-          >
-            Review &amp; Accept
-          </button>
-        )}
+        <button
+          onClick={onReview}
+          className="rounded-control px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
+        >
+          {handback ? 'Review & Confirm' : 'Review & Accept'}
+        </button>
       </div>
     );
   }

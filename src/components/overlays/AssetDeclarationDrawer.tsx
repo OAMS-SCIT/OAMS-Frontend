@@ -2,33 +2,67 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, CheckCircle2, ImageIcon, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ImageIcon, Wrench, X } from 'lucide-react';
 import { OverlayPortal } from './OverlayPortal';
 import { useDrawerAnimation } from './useDrawerAnimation';
 import { ImageLightbox } from './ImageLightbox';
 import { ApiError, confirmMyAssignment, getMyAsset, getMyConditionImages } from '@/lib/api';
-import type { ConditionImageItem, MyAssetDetail } from '@/types';
+import type { AssignmentType, ConditionImageItem, MyAssetDetail, MyHandbackSummary } from '@/types';
 import { ConditionBadge } from '@/components/ui/StatusBadge';
 
 interface Props {
   /** The employee's own asset whose current handover is being confirmed. */
   assetId: string;
+  /**
+   * The handover type, when the caller already knows it, so the right title
+   * shows while loading. The loaded asset detail is authoritative.
+   */
+  assignmentType?: AssignmentType;
   onClose: () => void;
   /** Called after the employee accepted or reported an issue, so the caller can reload. */
   onConfirmed: () => void;
 }
 
-const DECLARATION =
-  'I confirm that I have received the asset described above and that it is in the condition shown. ' +
-  'I accept responsibility for its care in line with the company asset policy.';
+/** Wording for a new assignment (OAMS-251) vs a handback after repair (OAMS-252). */
+const COPY = {
+  receipt: {
+    title: 'Asset Declaration',
+    subtitle: 'Review the asset, then confirm you have received it.',
+    dateLabel: 'Assigned On',
+    conditionLabel: 'Condition at Handover',
+    photosLabel: 'Condition Photos at Handover',
+    noPhotos: 'No photos were taken at handover.',
+    declaration:
+      'I confirm that I have received the asset described above and that it is in the condition shown. ' +
+      'I accept responsibility for its care in line with the company asset policy.',
+    confirm: 'Accept',
+    confirming: 'Accepting…',
+    success: 'Asset receipt confirmed successfully.',
+  },
+  handback: {
+    title: 'Handback Confirmation',
+    subtitle: 'Review the condition of your asset after repair, then confirm.',
+    dateLabel: 'Handed Back On',
+    conditionLabel: 'Condition at Handback',
+    photosLabel: 'Condition Photos at Handback',
+    noPhotos: 'No photos were taken at handback.',
+    declaration:
+      'I confirm that this asset has been returned to me after repair and that its condition is as shown above.',
+    confirm: 'Confirm',
+    confirming: 'Confirming…',
+    success: 'Handback condition confirmed successfully.',
+  },
+} as const;
 
 /**
- * The Asset Declaration (OAMS-251): the employee reviews a newly assigned
- * asset, its condition at handover and the handover photos, then Accepts it or
- * reports an issue with a reason. Loads its own data so it can be opened from
- * the My Assets list, the asset detail page or the dashboard alike.
+ * The Asset Declaration. The employee reviews an asset, its condition at
+ * handover and the handover photos, then confirms it or reports an issue with
+ * a reason. Covers a newly assigned asset (OAMS-251, "Accept") and an asset
+ * handed back after repair (OAMS-252, "Confirm", plus the repair summary).
+ * Loads its own data so it can be opened from the My Assets list, the asset
+ * detail page or the dashboard alike.
  */
-export function AssetDeclarationDrawer({ assetId, onClose, onConfirmed }: Props) {
+export function AssetDeclarationDrawer({ assetId, assignmentType, onClose, onConfirmed }: Props) {
   const { closing, requestClose } = useDrawerAnimation(onClose);
 
   const [detail, setDetail] = useState<MyAssetDetail | null>(null);
@@ -66,6 +100,9 @@ export function AssetDeclarationDrawer({ assetId, onClose, onConfirmed }: Props)
     };
   }, [assetId]);
 
+  const mode = (detail?.assignmentType ?? assignmentType) === 'Handback' ? 'handback' : 'receipt';
+  const copy = COPY[mode];
+
   const submit = async (status: 'Accepted' | 'Rejected') => {
     if (!detail) return;
     if (status === 'Rejected' && !issue.trim()) {
@@ -80,7 +117,7 @@ export function AssetDeclarationDrawer({ assetId, onClose, onConfirmed }: Props)
       });
       toast.success(
         status === 'Accepted'
-          ? 'Asset receipt confirmed successfully.'
+          ? copy.success
           : 'Issue reported. Your administrator will follow up.',
       );
       onConfirmed();
@@ -103,14 +140,14 @@ export function AssetDeclarationDrawer({ assetId, onClose, onConfirmed }: Props)
       />
       <div
         role="dialog"
-        aria-label="Asset Declaration"
+        aria-label={copy.title}
         className={`fixed top-0 right-0 bottom-0 z-50 flex flex-col w-full max-w-[520px] bg-card text-card-foreground shadow-drawer rounded-l-[16px] ${closing ? 'motion-safe:animate-drawer-out' : 'motion-safe:animate-drawer-in'}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <div>
-            <h2 className="font-bold text-lg tracking-[-0.02em] text-foreground">Asset Declaration</h2>
-            <p className="text-2sm text-muted-foreground mt-0.5">Review the asset, then confirm you have received it.</p>
+            <h2 className="font-bold text-lg tracking-[-0.02em] text-foreground">{copy.title}</h2>
+            <p className="text-2sm text-muted-foreground mt-0.5">{copy.subtitle}</p>
           </div>
           <button
             onClick={requestClose}
@@ -139,9 +176,9 @@ export function AssetDeclarationDrawer({ assetId, onClose, onConfirmed }: Props)
                   <SummaryItem label="Brand / Model" value={[asset.brand, asset.model].filter(Boolean).join(' ') || '—'} />
                   <SummaryItem label="Serial Number" value={asset.serialNumber ?? '—'} mono />
                   <SummaryItem label="Category" value={asset.category?.name ?? '—'} />
-                  <SummaryItem label="Assigned On" value={detail.assignmentDate} />
+                  <SummaryItem label={copy.dateLabel} value={detail.assignmentDate} />
                   <div>
-                    <div className="text-2xs text-muted-foreground/80 mb-1">Condition at Handover</div>
+                    <div className="text-2xs text-muted-foreground/80 mb-1">{copy.conditionLabel}</div>
                     {detail.conditionAtAssignment ? (
                       <ConditionBadge condition={detail.conditionAtAssignment} />
                     ) : (
@@ -151,14 +188,16 @@ export function AssetDeclarationDrawer({ assetId, onClose, onConfirmed }: Props)
                 </div>
               </div>
 
+              {mode === 'handback' && detail.handback && <RepairSummary repair={detail.handback} />}
+
               {/* Handover photos */}
               <div>
                 <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-foreground/80">
-                  <ImageIcon className="w-3.5 h-3.5" /> Condition Photos at Handover
+                  <ImageIcon className="w-3.5 h-3.5" /> {copy.photosLabel}
                 </div>
                 {photos.length === 0 ? (
                   <div className="rounded-lg px-4 py-3 text-2sm text-muted-foreground bg-muted/40 border border-dashed border-border">
-                    No photos were taken at handover.
+                    {copy.noPhotos}
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 gap-2">
@@ -187,7 +226,7 @@ export function AssetDeclarationDrawer({ assetId, onClose, onConfirmed }: Props)
                   {/* Declaration */}
                   <div className="rounded-lg p-4 bg-secondary/60 border border-primary/20">
                     <div className="text-2xs uppercase tracking-[0.04em] text-primary mb-1.5">Declaration</div>
-                    <p className="text-2sm leading-relaxed text-foreground/90">{DECLARATION}</p>
+                    <p className="text-2sm leading-relaxed text-foreground/90">{copy.declaration}</p>
                   </div>
 
                   {/* Report an issue */}
@@ -262,7 +301,7 @@ export function AssetDeclarationDrawer({ assetId, onClose, onConfirmed }: Props)
                     disabled={saving}
                     className="rounded-control px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground shadow-[0_2px_12px_rgba(29,78,216,0.25)] transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
                   >
-                    {saving ? 'Accepting…' : 'Accept'}
+                    {saving ? copy.confirming : copy.confirm}
                   </button>
                 )}
               </>
@@ -281,6 +320,48 @@ export function AssetDeclarationDrawer({ assetId, onClose, onConfirmed }: Props)
         />
       )}
     </OverlayPortal>
+  );
+}
+
+/** What the service center did, shown before the employee confirms a handback (OAMS-252). */
+function RepairSummary({ repair }: { repair: MyHandbackSummary }) {
+  return (
+    <div className="rounded-lg p-4 bg-muted/50 border border-border">
+      <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-foreground/80">
+        <Wrench className="w-3.5 h-3.5" /> Repair Summary
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        <SummaryItem label="Service Vendor" value={repair.vendor ?? '—'} />
+        <SummaryItem label="Outcome" value={repair.outcome ?? '—'} />
+        <SummaryItem label="Sent On" value={new Date(repair.sentAt).toLocaleDateString()} />
+        <SummaryItem label="Returned On" value={repair.returnDate ?? '—'} />
+      </div>
+      <div className="mt-3">
+        <div className="text-2xs text-muted-foreground/80 mb-0.5">Reason for Repair</div>
+        <div className="text-2sm text-foreground">{repair.reason}</div>
+      </div>
+      {repair.workDone.length > 0 && (
+        <div className="mt-3">
+          <div className="text-2xs text-muted-foreground/80 mb-1">Work Done</div>
+          <ul className="space-y-1">
+            {repair.workDone.map((item, i) => (
+              <li key={`${item.itemName}-${i}`} className="flex items-center justify-between gap-3 text-2sm text-foreground">
+                <span className="min-w-0 truncate">{item.itemName}</span>
+                <span className="shrink-0 rounded-full px-2 py-[1px] text-2xs font-medium bg-secondary text-secondary-foreground">
+                  {item.itemType}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {repair.notes && (
+        <div className="mt-3">
+          <div className="text-2xs text-muted-foreground/80 mb-0.5">Notes</div>
+          <div className="text-2sm text-foreground">{repair.notes}</div>
+        </div>
+      )}
+    </div>
   );
 }
 

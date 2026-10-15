@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, Clock, Eye, ImageIcon, RefreshCw, Search, X } from 'lucide-react';
 import { ApiError, getMyAssetFilterOptions, getMyAssets } from '@/lib/api';
 import { warrantyStyle } from '@/lib/warranty';
-import type { AssetStatus, MyAssetFilterOptions, MyAssetListItem } from '@/types';
+import type { AssetStatus, AssignmentType, MyAssetFilterOptions, MyAssetListItem } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Select } from '@/components/ui/Select';
@@ -111,7 +111,7 @@ export function MyAssets() {
   const reload = useCallback(() => setVersion((v) => v + 1), []);
 
   // The asset whose Asset Declaration is open (OAMS-251), if any.
-  const [declarationAssetId, setDeclarationAssetId] = useState<string | null>(null);
+  const [declaration, setDeclaration] = useState<{ assetId: string; type: AssignmentType } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -311,7 +311,10 @@ export function MyAssets() {
                       </td>
                       <td className="px-5 py-3.5">
                         <StatusBadge status={row.asset.status} />
-                        <PendingConfirmation row={row} onReview={() => setDeclarationAssetId(row.asset.id)} />
+                        <PendingConfirmation
+                          row={row}
+                          onReview={() => setDeclaration({ assetId: row.asset.id, type: row.assignmentType })}
+                        />
                       </td>
                       <td className={`px-5 py-3.5 text-xs nums whitespace-nowrap ${warrantyStyle(row.asset.warrantyExpiryDate)}`}>
                         {row.asset.warrantyExpiryDate ?? '—'}
@@ -362,10 +365,11 @@ export function MyAssets() {
         )}
       </div>
 
-      {declarationAssetId && (
+      {declaration && (
         <AssetDeclarationDrawer
-          assetId={declarationAssetId}
-          onClose={() => setDeclarationAssetId(null)}
+          assetId={declaration.assetId}
+          assignmentType={declaration.type}
+          onClose={() => setDeclaration(null)}
           onConfirmed={reload}
         />
       )}
@@ -405,26 +409,19 @@ function PendingConfirmation({ row, onReview }: { row: MyAssetListItem; onReview
     );
   }
   if (row.confirmationStatus !== 'Pending') return null;
-  // Handback confirmation (OAMS-252) isn't actionable yet, so it stays a plain label.
-  if (row.assignmentType === 'Handback') {
-    return (
-      <div
-        className="flex items-center gap-1 mt-1.5 text-2xs font-medium whitespace-nowrap text-warning-foreground"
-        title="Handback Confirmation Pending"
-      >
-        <Clock className="w-3 h-3" />
-        Handback pending
-      </div>
-    );
-  }
+  const handback = row.assignmentType === 'Handback';
   return (
     <button
       onClick={onReview}
       className="flex items-center gap-1 mt-1.5 text-2xs font-medium whitespace-nowrap text-warning-foreground underline-offset-2 transition-opacity hover:underline hover:opacity-80"
-      title="Receipt Confirmation Pending: review and accept this asset"
+      title={
+        handback
+          ? 'Handback Confirmation Pending: review and confirm the condition after repair'
+          : 'Receipt Confirmation Pending: review and accept this asset'
+      }
     >
       <Clock className="w-3 h-3" />
-      Receipt pending
+      {handback ? 'Handback pending' : 'Receipt pending'}
     </button>
   );
 }
